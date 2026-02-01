@@ -1,0 +1,204 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}{{ t('bookings') }} #{{ booking.id }} - {{ t('admin') }}{% endblock %}
+{% block page_title %}{{ t('bookings') }} #{{ booking.id }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Booking Details -->
+    <div class="col-lg-8">
+        <div class="table-card">
+            <h5 class="mb-4">
+                <i class="fas fa-info-circle me-2" style="color: #E57625;"></i>
+                {% if current_lang == 'ku' %}زانیاری حجز{% elif current_lang == 'ar' %}تفاصيل الحجز{% else %}Booking Details{% endif %}
+            </h5>
+
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <p class="text-muted mb-1">{{ t('customer_name') }}</p>
+                    <h6>{{ booking.customer_name or '-' }}</h6>
+                </div>
+                <div class="col-md-6">
+                    <p class="text-muted mb-1">{{ t('customer_phone') }}</p>
+                    <h6>
+                        {% if booking.customer_phone %}
+                        <a href="tel:{{ booking.customer_phone }}">{{ booking.customer_phone }}</a>
+                        {% else %}
+                        -
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="col-md-6">
+                    <p class="text-muted mb-1">{{ t('customer_email') }}</p>
+                    <h6>{{ booking.customer_email or '-' }}</h6>
+                </div>
+                <div class="col-md-6">
+                    <p class="text-muted mb-1">{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</p>
+                    <h6>
+                        {% if booking.status == 'pending' %}
+                        <span class="badge badge-pending">{{ t('pending') }}</span>
+                        {% elif booking.status == 'confirmed' %}
+                        <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
+                        {% elif booking.status == 'cancelled' %}
+                        <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
+                        {% else %}
+                        <span class="badge badge-completed">{{ t('completed') }}</span>
+                        {% endif %}
+                    </h6>
+                </div>
+
+                <div class="col-12"><hr></div>
+
+                <div class="col-md-6">
+                    <p class="text-muted mb-1">{{ t('select_stadium') }}</p>
+                    <h6>{{ booking.stadium.name if booking.stadium else '-' }}</h6>
+                </div>
+                <div class="col-md-6">
+                    <p class="text-muted mb-1">{{ t('select_date') }}</p>
+                    <h6>{{ booking.date or '-' }}</h6>
+                </div>
+                <div class="col-md-6">
+                    <p class="text-muted mb-1">{{ t('select_time') }}</p>
+                    <h6>{{ booking.start_hour|default(0) }}:00 - {{ booking.end_hour|default(0) }}:00</h6>
+                </div>
+                <div class="col-md-6">
+                    <p class="text-muted mb-1">{{ t('duration') }}</p>
+                    <h6>{{ booking.duration_hours|default(1) }} {{ t('hour') if booking.duration_hours == 1 else t('hours') }}</h6>
+                </div>
+
+                <div class="col-12"><hr></div>
+
+                <div class="col-md-4">
+                    <p class="text-muted mb-1">{{ t('price') }}</p>
+                    <h6>{{ "{:,.0f}".format(booking.base_price|default(0)) }} {{ t('iqd') }}</h6>
+                </div>
+                <div class="col-md-4">
+                    <p class="text-muted mb-1">{{ t('discount') }}</p>
+                    <h6 class="text-success">
+                        {% if booking.discount_percentage and booking.discount_percentage > 0 %}
+                        -{{ "{:,.0f}".format(booking.discount_amount|default(0)) }} {{ t('iqd') }} ({{ booking.discount_percentage }}%)
+                        {% else %}
+                        -
+                        {% endif %}
+                    </h6>
+                </div>
+                <div class="col-md-4">
+                    <p class="text-muted mb-1">{{ t('total') }}</p>
+                    <h5 style="color: #E57625;">{{ "{:,.0f}".format(booking.total_price|default(0)) }} {{ t('iqd') }}</h5>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="col-lg-4">
+        <div class="table-card">
+            <h5 class="mb-4">
+                <i class="fas fa-cogs me-2" style="color: #E57625;"></i>
+                {{ t('actions') }}
+            </h5>
+
+            {% if booking.status == 'pending' %}
+            <button class="btn btn-success w-100 mb-2" id="btn-confirm">
+                <i class="fas fa-check me-2"></i>{{ t('confirm') }}
+            </button>
+            <button class="btn btn-danger w-100 mb-2" id="btn-cancel">
+                <i class="fas fa-times me-2"></i>{{ t('cancel') }}
+            </button>
+            {% elif booking.status == 'confirmed' %}
+            <button class="btn btn-info w-100 mb-2" id="btn-complete">
+                <i class="fas fa-check-double me-2"></i>
+                {% if current_lang == 'ku' %}تەواوکردن{% elif current_lang == 'ar' %}إكمال{% else %}Complete{% endif %}
+            </button>
+            <button class="btn btn-danger w-100 mb-2" id="btn-cancel">
+                <i class="fas fa-times me-2"></i>{{ t('cancel') }}
+            </button>
+            {% endif %}
+
+            <hr>
+
+            <a href="{{ url_for('admin.manage_bookings') }}" class="btn btn-outline-secondary w-100">
+                <i class="fas fa-arrow-{% if is_rtl %}right{% else %}left{% endif %} me-2"></i>{{ t('back') }}
+            </a>
+        </div>
+
+        <!-- Notes -->
+        <div class="table-card mt-4">
+            <h5 class="mb-4">
+                <i class="fas fa-sticky-note me-2" style="color: #E57625;"></i>
+                {{ t('notes') }}
+            </h5>
+            <textarea class="form-control" rows="4" id="booking-notes" placeholder="{% if current_lang == 'ku' %}تێبینی زیادبکە...{% elif current_lang == 'ar' %}أضف ملاحظة...{% else %}Add notes...{% endif %}">{{ booking.notes or '' }}</textarea>
+            <button class="btn btn-outline-primary w-100 mt-2" id="btn-save-notes">
+                <i class="fas fa-save me-2"></i>{{ t('save') }}
+            </button>
+        </div>
+
+        <!-- Created At -->
+        <div class="table-card mt-4">
+            <p class="text-muted mb-1">
+                {% if current_lang == 'ku' %}دروستکراوە لە{% elif current_lang == 'ar' %}تم الإنشاء في{% else %}Created at{% endif %}
+            </p>
+            <h6>{{ booking.created_at.strftime('%Y-%m-%d %H:%M') if booking.created_at else '-' }}</h6>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const bookingId = {{ booking.id }};
+
+async function updateStatus(status) {
+    const response = await fetch(`/admin/api/booking/${bookingId}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+    });
+
+    if (response.ok) {
+        location.reload();
+    } else {
+        alert('{% if current_lang == "ku" %}هەڵە ڕوویدا{% elif current_lang == "ar" %}حدث خطأ{% else %}An error occurred{% endif %}');
+    }
+}
+
+// Confirm button
+document.getElementById('btn-confirm')?.addEventListener('click', () => {
+    if (confirm('{% if current_lang == "ku" %}دڵنیایت لە دڵنیاکردنەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من التأكيد؟{% else %}Are you sure you want to confirm?{% endif %}')) {
+        updateStatus('confirmed');
+    }
+});
+
+// Cancel button
+document.getElementById('btn-cancel')?.addEventListener('click', () => {
+    if (confirm('{% if current_lang == "ku" %}دڵنیایت لە هەڵوەشاندنەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من الإلغاء؟{% else %}Are you sure you want to cancel?{% endif %}')) {
+        updateStatus('cancelled');
+    }
+});
+
+// Complete button
+document.getElementById('btn-complete')?.addEventListener('click', () => {
+    if (confirm('{% if current_lang == "ku" %}دڵنیایت لە تەواوکردن؟{% elif current_lang == "ar" %}هل أنت متأكد من الإكمال؟{% else %}Are you sure you want to mark as complete?{% endif %}')) {
+        updateStatus('completed');
+    }
+});
+
+// Save notes button
+document.getElementById('btn-save-notes')?.addEventListener('click', async () => {
+    const notes = document.getElementById('booking-notes').value;
+
+    const response = await fetch(`/admin/api/booking/${bookingId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes })
+    });
+
+    if (response.ok) {
+        alert('{% if current_lang == "ku" %}تێبینی پاشەکەوتکرا{% elif current_lang == "ar" %}تم حفظ الملاحظة{% else %}Notes saved{% endif %}');
+    } else {
+        alert('{% if current_lang == "ku" %}هەڵە ڕوویدا{% elif current_lang == "ar" %}حدث خطأ{% else %}An error occurred{% endif %}');
+    }
+});
+</script>
+{% endblock %}

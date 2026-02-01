@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ t('site_name') }} - {{ t('order_success') }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card text-center">
+                <div class="card-body py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-check-circle fa-5x text-success"></i>
+                    </div>
+
+                    <h2 class="mb-3" style="color: #1a1a2e;">{{ t('order_success') }}! 🎉</h2>
+
+                    <p class="text-muted mb-4">
+                        {% if current_lang == 'ku' %}
+                        داواکاریەکەت بە سەرکەوتوویی تۆمارکرا
+                        {% elif current_lang == 'ar' %}
+                        تم تسجيل طلبك بنجاح
+                        {% else %}
+                        Your order has been registered successfully
+                        {% endif %}
+                    </p>
+
+                    <div class="bg-light rounded p-4 mb-4">
+                        <p class="mb-2">
+                            {% if current_lang == 'ku' %}ژمارەی داواکاری{% elif current_lang == 'ar' %}رقم الطلب{% else %}Order Number{% endif %}
+                        </p>
+                        <h3 style="color: #E57625;">#{{ order.id }}</h3>
+                    </div>
+
+                    <div class="alert alert-info text-start">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {% if current_lang == 'ku' %}
+                        پەیوەندیت پێوە دەکەین بۆ دووپاتکردنەوەی داواکاری
+                        {% elif current_lang == 'ar' %}
+                        سنتواصل معك لتأكيد الطلب
+                        {% else %}
+                        We will contact you to confirm your order
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex gap-3 justify-content-center">
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-home me-2"></i>{{ t('home') }}
+                        </a>
+                        <a href="{{ url_for('store.products') }}" class="btn btn-warning">
+                            <i class="fas fa-store me-2"></i>{{ t('continue_shopping') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

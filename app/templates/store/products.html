@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ t('site_name') }} - {{ t('store') }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="text-center mb-5" style="color: #1a1a2e;">
+        <i class="fas fa-store me-2" style="color: #E57625;"></i>{{ t('store') }}
+    </h1>
+
+    <!-- Categories Filter -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <a href="{{ url_for('store.products') }}" class="btn {% if not current_category %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                    {{ t('all') }}
+                </a>
+                {% for category in categories %}
+                <a href="{{ url_for('store.products', category=category.id) }}" class="btn {% if current_category == category.id %}btn-warning{% else %}btn-outline-warning{% endif %}">
+                    {{ category.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="row g-4">
+        {% if products %}
+            {% for product in products %}
+            <div class="col-md-6 col-lg-4 col-xl-3">
+                <div class="card h-100 product-card">
+                    <div class="position-relative">
+                        <img src="{{ url_for('static', filename='images/products/' + (product.image or 'default.jpg')) }}"
+                             class="card-img-top"
+                             alt="{{ product.name }}"
+                             style="height: 200px; object-fit: cover;"
+                             onerror="this.src='https://via.placeholder.com/300x200?text=Product'">
+
+                        {% if product.stock <= 0 %}
+                        <span class="badge bg-danger position-absolute top-0 end-0 m-2">{{ t('out_of_stock') }}</span>
+                        {% elif product.stock < 5 %}
+                        <span class="badge bg-warning position-absolute top-0 end-0 m-2">
+                            {% if current_lang == 'ku' %}تەنها {{ product.stock }}{% elif current_lang == 'ar' %}فقط {{ product.stock }}{% else %}Only {{ product.stock }}{% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <div class="card-body d-flex flex-column">
+                        <h5 class="card-title">{{ product.name }}</h5>
+                        <p class="card-text text-muted small flex-grow-1">{{ product.description[:80] if product.description else '' }}{% if product.description and product.description|length > 80 %}...{% endif %}</p>
+
+                        <div class="mt-auto">
+                            <p class="fw-bold fs-5 mb-2" style="color: #E57625;">
+                                {{ "{:,.0f}".format(product.price|default(0)) }} {{ t('iqd') }}
+                            </p>
+
+                            {% if product.stock and product.stock > 0 %}
+                            <button class="btn btn-warning w-100 add-to-cart"
+                                    data-product-id="{{ product.id }}"
+                                    data-product-name="{{ product.name }}"
+                                    data-product-price="{{ product.price }}">
+                                <i class="fas fa-cart-plus me-2"></i>{{ t('add_to_cart') }}
+                            </button>
+                            {% else %}
+                            <button class="btn btn-secondary w-100" disabled>
+                                {{ t('out_of_stock') }}
+                            </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12 text-center py-5">
+                <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">{{ t('no_products') }}</h4>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Cart Floating Button -->
+<a href="{{ url_for('store.cart') }}" class="btn btn-warning btn-lg rounded-circle position-fixed shadow-lg"
+   style="bottom: 30px; {% if is_rtl %}left{% else %}right{% endif %}: 30px; width: 60px; height: 60px; z-index: 1000;">
+    <i class="fas fa-shopping-cart"></i>
+    <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+        0
+    </span>
+</a>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Cart functionality
+let cart = JSON.parse(localStorage.getItem('padelCart')) || [];
+
+function updateCartCount() {
+    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+    document.getElementById('cart-count').textContent = count;
+}
+
+document.querySelectorAll('.add-to-cart').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const productId = this.dataset.productId;
+        const productName = this.dataset.productName;
+        const productPrice = parseFloat(this.dataset.productPrice);
+
+        const existingItem = cart.find(item => item.id === productId);
+
+        if (existingItem) {
+            existingItem.quantity += 1;
+        } else {
+            cart.push({
+                id: productId,
+                name: productName,
+                price: productPrice,
+                quantity: 1
+            });
+        }
+
+        localStorage.setItem('padelCart', JSON.stringify(cart));
+        updateCartCount();
+
+        // Visual feedback
+        this.innerHTML = '<i class="fas fa-check me-2"></i>{{ t("added") }}';
+        this.classList.remove('btn-warning');
+        this.classList.add('btn-success');
+
+        setTimeout(() => {
+            this.innerHTML = '<i class="fas fa-cart-plus me-2"></i>{{ t("add_to_cart") }}';
+            this.classList.remove('btn-success');
+            this.classList.add('btn-warning');
+        }, 1500);
+    });
+});
+
+// Initialize cart count on page load
+updateCartCount();
+</script>
+{% endblock %}

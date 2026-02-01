@@ -1,0 +1,189 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}{{ t('users') }} - {{ t('admin') }}{% endblock %}
+{% block page_title %}{{ t('users') }}{% endblock %}
+
+{% block content %}
+<div class="table-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="fas fa-users me-2" style="color: #E57625;"></i>
+            {% if current_lang == 'ku' %}بەڕێوەبردنی بەکارهێنەران{% elif current_lang == 'ar' %}إدارة المستخدمين{% else %}Manage Users{% endif %}
+        </h5>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#userModal">
+            <i class="fas fa-plus me-2"></i>{{ t('add') }}
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>{% if current_lang == 'ku' %}ناوی بەکارهێنەر{% elif current_lang == 'ar' %}اسم المستخدم{% else %}Username{% endif %}</th>
+                    <th>{{ t('customer_email') }}</th>
+                    <th>{% if current_lang == 'ku' %}ڕۆڵ{% elif current_lang == 'ar' %}الدور{% else %}Role{% endif %}</th>
+                    <th>{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
+                    <th>{{ t('actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        {% if user.role == 'super_admin' %}
+                        <span class="badge bg-danger">Super Admin</span>
+                        {% else %}
+                        <span class="badge bg-primary">Admin</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                        <span class="badge bg-success">{% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}نشط{% else %}Active{% endif %}</span>
+                        {% else %}
+                        <span class="badge bg-secondary">{% if current_lang == 'ku' %}ناچالاک{% elif current_lang == 'ar' %}غير نشط{% else %}Inactive{% endif %}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if user.id != current_user.id %}
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary btn-edit"
+                                    data-id="{{ user.id }}"
+                                    data-username="{{ user.username }}"
+                                    data-email="{{ user.email }}"
+                                    data-role="{{ user.role }}"
+                                    data-active="{{ user.is_active }}">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger btn-delete" data-id="{{ user.id }}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        {% else %}
+                        <span class="text-muted">{% if current_lang == 'ku' %}تۆ{% elif current_lang == 'ar' %}أنت{% else %}You{% endif %}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- User Modal -->
+<div class="modal fade" id="userModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">
+                    {% if current_lang == 'ku' %}زیادکردنی بەکارهێنەر{% elif current_lang == 'ar' %}إضافة مستخدم{% else %}Add User{% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="userForm">
+                <div class="modal-body">
+                    <input type="hidden" id="user-id">
+
+                    <div class="mb-3">
+                        <label class="form-label">{% if current_lang == 'ku' %}ناوی بەکارهێنەر{% elif current_lang == 'ar' %}اسم المستخدم{% else %}Username{% endif %} *</label>
+                        <input type="text" id="user-username" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ t('customer_email') }} *</label>
+                        <input type="email" id="user-email" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{% if current_lang == 'ku' %}وشەی نهێنی{% elif current_lang == 'ar' %}كلمة المرور{% else %}Password{% endif %} <span id="password-hint" class="text-muted"></span></label>
+                        <input type="password" id="user-password" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{% if current_lang == 'ku' %}ڕۆڵ{% elif current_lang == 'ar' %}الدور{% else %}Role{% endif %}</label>
+                        <select id="user-role" class="form-select">
+                            <option value="admin">Admin</option>
+                            <option value="super_admin">Super Admin</option>
+                        </select>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" id="user-active" class="form-check-input" checked>
+                        <label class="form-check-label" for="user-active">
+                            {% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}نشط{% else %}Active{% endif %}
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const modal = new bootstrap.Modal(document.getElementById('userModal'));
+
+document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('modalTitle').textContent = '{% if current_lang == "ku" %}دەستکاری بەکارهێنەر{% elif current_lang == "ar" %}تعديل المستخدم{% else %}Edit User{% endif %}';
+        document.getElementById('user-id').value = this.dataset.id;
+        document.getElementById('user-username').value = this.dataset.username;
+        document.getElementById('user-email').value = this.dataset.email;
+        document.getElementById('user-role').value = this.dataset.role;
+        document.getElementById('user-active').checked = this.dataset.active === 'True';
+        document.getElementById('user-password').value = '';
+        modal.show();
+    });
+});
+
+document.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        if (!confirm('{% if current_lang == "ku" %}دڵنیایت لە سڕینەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من الحذف؟{% else %}Are you sure?{% endif %}')) return;
+
+        const response = await fetch(`/admin/api/user/${this.dataset.id}`, { method: 'DELETE' });
+        if (response.ok) location.reload();
+    });
+});
+
+document.getElementById('userForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('user-id').value;
+    const data = {
+        username: document.getElementById('user-username').value,
+        email: document.getElementById('user-email').value,
+        role: document.getElementById('user-role').value,
+        is_active: document.getElementById('user-active').checked
+    };
+
+    const password = document.getElementById('user-password').value;
+    if (password) data.password = password;
+
+    const url = id ? `/admin/api/user/${id}` : '/admin/api/user';
+    const method = id ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    if (response.ok) location.reload();
+});
+
+document.querySelector('[data-bs-target="#userModal"]').addEventListener('click', function() {
+    document.getElementById('modalTitle').textContent = '{% if current_lang == "ku" %}زیادکردنی بەکارهێنەر{% elif current_lang == "ar" %}إضافة مستخدم{% else %}Add User{% endif %}';
+    document.getElementById('userForm').reset();
+    document.getElementById('user-id').value = '';
+    document.getElementById('user-active').checked = true;
+});
+</script>
+{% endblock %}

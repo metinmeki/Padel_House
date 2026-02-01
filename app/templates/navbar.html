@@ -1,0 +1,108 @@
+<!-- app/templates/navbar.html -->
+<!-- Language-aware Navbar with Kurdish as default -->
+<nav class="navbar navbar-expand-lg sticky-top shadow" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+    <div class="container">
+        <!-- Logo -->
+        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+            <img src="{{ url_for('static', filename='images/logo_navbar.png') }}" alt="Padel House" height="45" class="me-2" onerror="this.style.display='none'">
+            <span class="fw-bold" style="color: #E57625;">{{ t('site_name') }}</span>
+        </a>
+
+        <!-- Mobile Toggle -->
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <i class="fas fa-bars text-white"></i>
+        </button>
+
+        <!-- Nav Items -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <!-- Center Navigation Links -->
+            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-2">
+                <li class="nav-item">
+                    <a class="nav-link px-3 text-white {% if request.endpoint == 'main.index' %}active fw-bold{% endif %}" href="{{ url_for('main.index') }}">
+                        <i class="fas fa-home me-1" style="color: #E57625;"></i> {{ t('home') }}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link px-3 text-white {% if 'booking' in request.endpoint|default('', true) %}active fw-bold{% endif %}" href="{{ url_for('booking.booking_page') }}">
+                        <i class="fas fa-calendar-check me-1" style="color: #E57625;"></i> {{ t('booking') }}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link px-3 text-white {% if 'store' in request.endpoint|default('', true) %}active fw-bold{% endif %}" href="{{ url_for('store.products') }}">
+                        <i class="fas fa-store me-1" style="color: #E57625;"></i> {{ t('store') }}
+                    </a>
+                </li>
+            </ul>
+
+            <!-- Right Side: Language + Admin -->
+            <div class="d-flex align-items-center gap-3">
+                <!-- ============================================ -->
+                <!-- LANGUAGE SWITCHER - FIXED VERSION -->
+                <!-- ============================================ -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center gap-2"
+                            type="button"
+                            id="languageDropdown"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false">
+                        <span>{{ language_flags[current_lang] }}</span>
+                        <span>{{ language_names[current_lang] }}</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+                        {% for lang in languages %}
+                        <li>
+                            <a class="dropdown-item d-flex align-items-center gap-2 {% if lang == current_lang %}active bg-primary{% endif %}"
+                               href="{{ url_for('main.set_language', lang=lang) }}">
+                                <span>{{ language_flags[lang] }}</span>
+                                <span>{{ language_names[lang] }}</span>
+                                {% if lang == current_lang %}
+                                <i class="fas fa-check ms-auto"></i>
+                                {% endif %}
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <!-- Admin Button -->
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-warning btn-sm">
+                    <i class="fas fa-user-shield me-1"></i> {{ t('admin') }}
+                </a>
+                {% else %}
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-warning btn-sm">
+                    <i class="fas fa-sign-in-alt me-1"></i> {{ t('login') }}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</nav>
+
+<style>
+    .navbar .nav-link {
+        transition: all 0.3s ease;
+        border-radius: 8px;
+    }
+    .navbar .nav-link:hover {
+        background: rgba(229, 118, 37, 0.2);
+        transform: translateY(-2px);
+    }
+    .navbar .nav-link.active {
+        background: rgba(229, 118, 37, 0.3);
+        color: #E57625 !important;
+    }
+    .dropdown-menu {
+        min-width: 150px;
+    }
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+    }
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+    }
+    .dropdown-item.active {
+        background-color: #E57625 !important;
+        color: white !important;
+    }
+</style>

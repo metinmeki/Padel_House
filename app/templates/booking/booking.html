@@ -1,0 +1,454 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ t('site_name') }} - {{ t('booking') }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .time-slot {
+        padding: 10px 15px;
+        margin: 5px;
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        min-width: 80px;
+    }
+    .time-slot:hover:not(.booked) {
+        border-color: #E57625;
+        background: rgba(229, 118, 37, 0.1);
+    }
+    .time-slot.selected {
+        border-color: #E57625;
+        background: #E57625;
+        color: white;
+    }
+    .time-slot.booked {
+        background: #dc3545;
+        color: white;
+        cursor: not-allowed;
+        opacity: 0.7;
+    }
+    .time-slot.discount {
+        border-color: #28a745;
+    }
+    .time-slot.discount::after {
+        content: '-25%';
+        display: block;
+        font-size: 10px;
+        color: #28a745;
+    }
+    .time-slot.selected.discount::after {
+        color: white;
+    }
+    .stadium-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 3px solid transparent;
+    }
+    .stadium-card:hover {
+        transform: translateY(-5px);
+        border-color: #E57625;
+    }
+    .stadium-card.selected {
+        border-color: #E57625;
+        box-shadow: 0 0 20px rgba(229, 118, 37, 0.3);
+    }
+    .summary-card {
+        position: sticky;
+        top: 100px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="text-center mb-5" style="color: #1a1a2e;">
+        <i class="fas fa-calendar-check me-2" style="color: #E57625;"></i>{{ t('booking') }}
+    </h1>
+
+    <div class="row g-4">
+        <!-- Booking Form -->
+        <div class="col-lg-8">
+            <!-- Step 1: Select Stadium -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <span class="badge bg-warning me-2">1</span>
+                        {{ t('select_stadium') }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% for stadium in stadiums %}
+                        <div class="col-md-6">
+                            <div class="card stadium-card h-100" data-stadium-id="{{ stadium.id }}" data-price="{{ stadium.price_per_hour }}">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-futbol fa-2x mb-3" style="color: #E57625;"></i>
+                                    <h5 class="card-title">{{ stadium.name }}</h5>
+                                    <p class="card-text text-muted">{{ stadium.location }}</p>
+                                    <p class="fw-bold" style="color: #E57625;">
+                                        {{ "{:,.0f}".format(stadium.price_per_hour|default(50000)) }} {{ t('iqd') }}/{{ t('hour') }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Select Date -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <span class="badge bg-warning me-2">2</span>
+                        {{ t('select_date') }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <input type="date" id="booking-date" class="form-control form-control-lg">
+                </div>
+            </div>
+
+            <!-- Step 3: Select Time -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <span class="badge bg-warning me-2">3</span>
+                        {{ t('select_time') }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <span class="badge bg-success me-2">{{ t('available') }}</span>
+                        <span class="badge bg-danger me-2">{{ t('booked') }}</span>
+                        <span class="badge bg-outline-success border border-success text-success me-2">{{ t('discount') }} 25%</span>
+                    </div>
+                    <div id="time-slots" class="d-flex flex-wrap">
+                        <p class="text-muted w-100 text-center py-4">
+                            {% if current_lang == 'ku' %}
+                            تکایە یاریگا و بەروار هەڵبژێرە
+                            {% elif current_lang == 'ar' %}
+                            يرجى اختيار الملعب والتاريخ
+                            {% else %}
+                            Please select stadium and date
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Duration -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <span class="badge bg-warning me-2">4</span>
+                        {{ t('duration') }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="duration" id="duration1" value="1" checked>
+                        <label class="btn btn-outline-warning" for="duration1">1 {{ t('hour') }}</label>
+
+                        <input type="radio" class="btn-check" name="duration" id="duration2" value="2">
+                        <label class="btn btn-outline-warning" for="duration2">2 {{ t('hours') }}</label>
+
+                        <input type="radio" class="btn-check" name="duration" id="duration3" value="3">
+                        <label class="btn btn-outline-warning" for="duration3">3 {{ t('hours') }}</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 5: Customer Info -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <span class="badge bg-warning me-2">5</span>
+                        {% if current_lang == 'ku' %}زانیاری{% elif current_lang == 'ar' %}المعلومات{% else %}Information{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('customer_name') }} *</label>
+                            <input type="text" id="customer-name" class="form-control" placeholder="{{ t('your_name') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">{{ t('customer_phone') }} *</label>
+                            <input type="tel" id="customer-phone" class="form-control" placeholder="07xxxxxxxxx" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">{{ t('customer_email') }}</label>
+                            <input type="email" id="customer-email" class="form-control" placeholder="{{ t('your_email') }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Booking Summary -->
+        <div class="col-lg-4">
+            <div class="card summary-card">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-receipt me-2"></i>
+                        {% if current_lang == 'ku' %}پوختەی حجز{% elif current_lang == 'ar' %}ملخص الحجز{% else %}Booking Summary{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted">{{ t('select_stadium') }}</small>
+                        <p id="summary-stadium" class="fw-bold mb-0">-</p>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">{{ t('select_date') }}</small>
+                        <p id="summary-date" class="fw-bold mb-0">-</p>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">{{ t('select_time') }}</small>
+                        <p id="summary-time" class="fw-bold mb-0">-</p>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">{{ t('duration') }}</small>
+                        <p id="summary-duration" class="fw-bold mb-0">1 {{ t('hour') }}</p>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-2 d-flex justify-content-between">
+                        <span>{{ t('price') }}</span>
+                        <span id="summary-price">0 {{ t('iqd') }}</span>
+                    </div>
+                    <div class="mb-2 d-flex justify-content-between text-success" id="discount-row" style="display: none !important;">
+                        <span>{{ t('discount') }} (25%)</span>
+                        <span id="summary-discount">-0 {{ t('iqd') }}</span>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between fw-bold fs-5">
+                        <span>{{ t('total') }}</span>
+                        <span id="summary-total" style="color: #E57625;">0 {{ t('iqd') }}</span>
+                    </div>
+
+                    <button id="confirm-booking" class="btn btn-warning w-100 mt-4 btn-lg" disabled>
+                        <i class="fas fa-check me-2"></i>{{ t('confirm_booking') }}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TRANSLATIONS = {
+    hour: "{{ t('hour') }}",
+    hours: "{{ t('hours') }}",
+    iqd: "{{ t('iqd') }}",
+    available: "{{ t('available') }}",
+    booked: "{{ t('booked') }}",
+    booking_success: "{% if current_lang == 'ku' %}حجز سەرکەوتوو بوو{% elif current_lang == 'ar' %}تم الحجز بنجاح{% else %}Booking successful{% endif %}",
+    booking_failed: "{% if current_lang == 'ku' %}حجز سەرنەکەوت{% elif current_lang == 'ar' %}فشل الحجز{% else %}Booking failed{% endif %}",
+    fill_required: "{% if current_lang == 'ku' %}تکایە ناو و ژمارە بنووسە{% elif current_lang == 'ar' %}يرجى ملء الحقول المطلوبة{% else %}Please fill required fields{% endif %}"
+};
+
+class BookingSystem {
+    constructor() {
+        this.stadiumId = null;
+        this.stadiumName = null;
+        this.pricePerHour = 0;
+        this.selectedDate = null;
+        this.selectedHour = null;
+        this.duration = 1;
+        this.isDiscount = false;
+
+        this.init();
+    }
+
+    init() {
+        // Set minimum date to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('booking-date').min = today;
+        document.getElementById('booking-date').value = today;
+        this.selectedDate = today;
+
+        // Stadium selection
+        document.querySelectorAll('.stadium-card').forEach(card => {
+            card.addEventListener('click', () => this.selectStadium(card));
+        });
+
+        // Date selection
+        document.getElementById('booking-date').addEventListener('change', (e) => {
+            this.selectedDate = e.target.value;
+            this.selectedHour = null;
+            this.loadTimeSlots();
+            this.updateSummary();
+        });
+
+        // Duration selection
+        document.querySelectorAll('input[name="duration"]').forEach(input => {
+            input.addEventListener('change', (e) => {
+                this.duration = parseInt(e.target.value);
+                this.updateSummary();
+            });
+        });
+
+        // Confirm booking
+        document.getElementById('confirm-booking').addEventListener('click', () => this.confirmBooking());
+    }
+
+    selectStadium(card) {
+        document.querySelectorAll('.stadium-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+
+        this.stadiumId = card.dataset.stadiumId;
+        this.stadiumName = card.querySelector('.card-title').textContent;
+        this.pricePerHour = parseInt(card.dataset.price) || 50000;
+
+        this.selectedHour = null;
+        this.loadTimeSlots();
+        this.updateSummary();
+    }
+
+    async loadTimeSlots() {
+        if (!this.stadiumId || !this.selectedDate) return;
+
+        const container = document.getElementById('time-slots');
+        container.innerHTML = '<p class="text-center w-100 py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></p>';
+
+        try {
+            const response = await fetch(`/booking/api/availability?stadium_id=${this.stadiumId}&date=${this.selectedDate}`);
+
+            if (!response.ok) {
+                throw new Error('Failed to load slots');
+            }
+
+            const slots = await response.json();
+
+            container.innerHTML = '';
+
+            // Check if slots is an array
+            if (!Array.isArray(slots)) {
+                throw new Error('Invalid response format');
+            }
+
+            if (slots.length === 0) {
+                container.innerHTML = '<p class="text-muted w-100 text-center py-4">{% if current_lang == "ku" %}هیچ کاتێک بەردەست نییە{% elif current_lang == "ar" %}لا توجد أوقات متاحة{% else %}No time slots available{% endif %}</p>';
+                return;
+            }
+
+            slots.forEach(slot => {
+                const div = document.createElement('div');
+
+                // Handle both naming conventions
+                const isBooked = slot.is_booked || slot.booked || false;
+                const isDiscount = slot.is_discount || slot.discount || false;
+                const displayTime = slot.time || slot.display || `${slot.hour}:00`;
+
+                div.className = `time-slot ${isBooked ? 'booked' : ''} ${isDiscount ? 'discount' : ''}`;
+                div.dataset.hour = slot.hour;
+                div.dataset.discount = isDiscount;
+                div.textContent = displayTime;
+
+                if (!isBooked) {
+                    div.addEventListener('click', () => this.selectTime(div, slot));
+                }
+
+                container.appendChild(div);
+            });
+        } catch (error) {
+            console.error('Error loading time slots:', error);
+            container.innerHTML = '<p class="text-danger w-100 text-center py-4">{% if current_lang == "ku" %}هەڵە لە بارکردن{% elif current_lang == "ar" %}خطأ في التحميل{% else %}Error loading time slots{% endif %}</p>';
+        }
+    }
+
+    selectTime(element, slot) {
+        document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
+        element.classList.add('selected');
+
+        this.selectedHour = slot.hour;
+        this.isDiscount = slot.is_discount || slot.discount || false;
+        this.updateSummary();
+    }
+
+    updateSummary() {
+        document.getElementById('summary-stadium').textContent = this.stadiumName || '-';
+        document.getElementById('summary-date').textContent = this.selectedDate || '-';
+        document.getElementById('summary-time').textContent = this.selectedHour !== null ? `${this.selectedHour}:00` : '-';
+        document.getElementById('summary-duration').textContent = `${this.duration} ${this.duration === 1 ? TRANSLATIONS.hour : TRANSLATIONS.hours}`;
+
+        const basePrice = this.pricePerHour * this.duration;
+        const discount = this.isDiscount ? basePrice * 0.25 : 0;
+        const total = basePrice - discount;
+
+        document.getElementById('summary-price').textContent = `${basePrice.toLocaleString()} ${TRANSLATIONS.iqd}`;
+
+        const discountRow = document.getElementById('discount-row');
+        if (this.isDiscount && discount > 0) {
+            discountRow.style.cssText = 'display: flex !important';
+            document.getElementById('summary-discount').textContent = `-${discount.toLocaleString()} ${TRANSLATIONS.iqd}`;
+        } else {
+            discountRow.style.cssText = 'display: none !important';
+        }
+
+        document.getElementById('summary-total').textContent = `${total.toLocaleString()} ${TRANSLATIONS.iqd}`;
+
+        // Enable/disable confirm button
+        const canConfirm = this.stadiumId && this.selectedDate && this.selectedHour !== null;
+        document.getElementById('confirm-booking').disabled = !canConfirm;
+    }
+
+    async confirmBooking() {
+        const customerName = document.getElementById('customer-name').value.trim();
+        const customerPhone = document.getElementById('customer-phone').value.trim();
+        const customerEmail = document.getElementById('customer-email').value.trim();
+
+        if (!customerName || !customerPhone) {
+            alert(TRANSLATIONS.fill_required);
+            return;
+        }
+
+        const btn = document.getElementById('confirm-booking');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>...';
+
+        try {
+            const response = await fetch('/booking/api/create-booking', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    stadium_id: this.stadiumId,
+                    date: this.selectedDate,
+                    start_hour: this.selectedHour,
+                    duration_hours: this.duration,
+                    customer_name: customerName,
+                    customer_phone: customerPhone,
+                    customer_email: customerEmail
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                window.location.href = `/booking/confirmation/${result.booking_id}`;
+            } else {
+                alert(TRANSLATIONS.booking_failed + ': ' + (result.message || 'Unknown error'));
+                btn.disabled = false;
+                btn.innerHTML = `<i class="fas fa-check me-2"></i>{{ t('confirm_booking') }}`;
+            }
+        } catch (error) {
+            console.error('Booking error:', error);
+            alert(TRANSLATIONS.booking_failed);
+            btn.disabled = false;
+            btn.innerHTML = `<i class="fas fa-check me-2"></i>{{ t('confirm_booking') }}`;
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => new BookingSystem());
+</script>
+{% endblock %}

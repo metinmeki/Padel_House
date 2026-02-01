@@ -1,0 +1,245 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}{% if current_lang == 'ku' %}پۆلەکان{% elif current_lang == 'ar' %}التصنيفات{% else %}Categories{% endif %} - {{ t('admin') }}{% endblock %}
+{% block page_title %}{% if current_lang == 'ku' %}پۆلەکان{% elif current_lang == 'ar' %}التصنيفات{% else %}Categories{% endif %}{% endblock %}
+
+{% block content %}
+<div class="table-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="fas fa-tags me-2" style="color: #E57625;"></i>
+            {% if current_lang == 'ku' %}بەڕێوەبردنی پۆلەکان{% elif current_lang == 'ar' %}إدارة التصنيفات{% else %}Manage Categories{% endif %}
+        </h5>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#categoryModal">
+            <i class="fas fa-plus me-2"></i>{{ t('add') }}
+        </button>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>کوردی</th>
+                    <th>العربية</th>
+                    <th>English</th>
+                    <th>{{ t('products') }}</th>
+                    <th>{{ t('actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if categories %}
+                    {% for category in categories %}
+                    <tr>
+                        <td>{{ category.id }}</td>
+                        <td>{{ category.name_ku or '-' }}</td>
+                        <td>{{ category.name_ar or '-' }}</td>
+                        <td>{{ category.name_en or '-' }}</td>
+                        <td>
+                            <span class="badge bg-primary">{{ category.products|length }}</span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary btn-edit"
+                                        data-id="{{ category.id }}"
+                                        data-name-ku="{{ category.name_ku or '' }}"
+                                        data-name-ar="{{ category.name_ar or '' }}"
+                                        data-name-en="{{ category.name_en or '' }}"
+                                        data-desc-ku="{{ category.description_ku or '' }}"
+                                        data-desc-ar="{{ category.description_ar or '' }}"
+                                        data-desc-en="{{ category.description_en or '' }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-delete" data-id="{{ category.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-4 text-muted">
+                        {% if current_lang == 'ku' %}هیچ پۆلێک نییە{% elif current_lang == 'ar' %}لا توجد تصنيفات{% else %}No categories found{% endif %}
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Category Modal -->
+<div class="modal fade" id="categoryModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">
+                    {% if current_lang == 'ku' %}زیادکردنی پۆل{% elif current_lang == 'ar' %}إضافة تصنيف{% else %}Add Category{% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="categoryForm">
+                <div class="modal-body">
+                    <input type="hidden" id="category-id">
+
+                    <!-- Language Tabs -->
+                    <ul class="nav nav-tabs mb-3" role="tablist">
+                        <li class="nav-item">
+                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-ku" type="button">
+                                🇮🇶 کوردی *
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ar" type="button">
+                                🇸🇦 العربية
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-en" type="button">
+                                🇬🇧 English
+                            </button>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- Kurdish Tab -->
+                        <div class="tab-pane fade show active" id="tab-ku">
+                            <div class="mb-3">
+                                <label class="form-label">ناوی پۆل (کوردی) *</label>
+                                <input type="text" id="name-ku" class="form-control" dir="rtl" required
+                                       placeholder="ناوی پۆلەکە بە کوردی">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">وەسف (کوردی)</label>
+                                <textarea id="desc-ku" class="form-control" rows="2" dir="rtl"
+                                          placeholder="وەسفی پۆلەکە بە کوردی"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Arabic Tab -->
+                        <div class="tab-pane fade" id="tab-ar">
+                            <div class="mb-3">
+                                <label class="form-label">اسم التصنيف (العربية)</label>
+                                <input type="text" id="name-ar" class="form-control" dir="rtl"
+                                       placeholder="اسم التصنيف بالعربية">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">الوصف (العربية)</label>
+                                <textarea id="desc-ar" class="form-control" rows="2" dir="rtl"
+                                          placeholder="وصف التصنيف بالعربية"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- English Tab -->
+                        <div class="tab-pane fade" id="tab-en">
+                            <div class="mb-3">
+                                <label class="form-label">Category Name (English)</label>
+                                <input type="text" id="name-en" class="form-control" dir="ltr"
+                                       placeholder="Category name in English">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Description (English)</label>
+                                <textarea id="desc-en" class="form-control" rows="2" dir="ltr"
+                                          placeholder="Category description in English"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        {% if current_lang == 'ku' %}
+                        تەنها کوردی پێویستە، زمانەکانی تر ئارەزوومەندانەن
+                        {% elif current_lang == 'ar' %}
+                        الكردية مطلوبة فقط، اللغات الأخرى اختيارية
+                        {% else %}
+                        Only Kurdish is required, other languages are optional
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+
+// Edit category
+document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('modalTitle').textContent = '{% if current_lang == "ku" %}دەستکاری پۆل{% elif current_lang == "ar" %}تعديل التصنيف{% else %}Edit Category{% endif %}';
+        document.getElementById('category-id').value = this.dataset.id;
+        document.getElementById('name-ku').value = this.dataset.nameKu;
+        document.getElementById('name-ar').value = this.dataset.nameAr;
+        document.getElementById('name-en').value = this.dataset.nameEn;
+        document.getElementById('desc-ku').value = this.dataset.descKu;
+        document.getElementById('desc-ar').value = this.dataset.descAr;
+        document.getElementById('desc-en').value = this.dataset.descEn;
+        modal.show();
+    });
+});
+
+// Delete category
+document.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        if (!confirm('{% if current_lang == "ku" %}دڵنیایت لە سڕینەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من الحذف؟{% else %}Are you sure you want to delete?{% endif %}')) return;
+
+        const response = await fetch(`/admin/api/category/${this.dataset.id}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            location.reload();
+        } else {
+            const result = await response.json();
+            alert(result.message || 'Error deleting category');
+        }
+    });
+});
+
+// Save category
+document.getElementById('categoryForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('category-id').value;
+    const data = {
+        name_ku: document.getElementById('name-ku').value,
+        name_ar: document.getElementById('name-ar').value,
+        name_en: document.getElementById('name-en').value,
+        description_ku: document.getElementById('desc-ku').value,
+        description_ar: document.getElementById('desc-ar').value,
+        description_en: document.getElementById('desc-en').value
+    };
+
+    const url = id ? `/admin/api/category/${id}` : '/admin/api/category';
+    const method = id ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    if (response.ok) {
+        location.reload();
+    } else {
+        const result = await response.json();
+        alert(result.message || 'Error saving category');
+    }
+});
+
+// Reset modal
+document.querySelector('[data-bs-target="#categoryModal"]').addEventListener('click', function() {
+    document.getElementById('modalTitle').textContent = '{% if current_lang == "ku" %}زیادکردنی پۆل{% elif current_lang == "ar" %}إضافة تصنيف{% else %}Add Category{% endif %}';
+    document.getElementById('categoryForm').reset();
+    document.getElementById('category-id').value = '';
+});
+</script>
+{% endblock %}

@@ -1,0 +1,143 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}{{ t('bookings') }} - {{ t('admin') }}{% endblock %}
+{% block page_title %}{{ t('bookings') }}{% endblock %}
+
+{% block content %}
+<div class="table-card">
+    <!-- Filters -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <label class="form-label">{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</label>
+            <select id="filter-status" class="form-select">
+                <option value="">{{ t('all') }}</option>
+                <option value="pending">{{ t('pending') }}</option>
+                <option value="confirmed">{{ t('confirmed') }}</option>
+                <option value="completed">{{ t('completed') }}</option>
+                <option value="cancelled">{{ t('cancelled') }}</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">{{ t('select_stadium') }}</label>
+            <select id="filter-stadium" class="form-select">
+                <option value="">{{ t('all') }}</option>
+                {% for stadium in stadiums %}
+                <option value="{{ stadium.id }}">{{ stadium.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">{{ t('select_date') }}</label>
+            <input type="date" id="filter-date" class="form-control">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">{{ t('search') }}</label>
+            <input type="text" id="filter-search" class="form-control" placeholder="{% if current_lang == 'ku' %}ناو یان ژمارە{% elif current_lang == 'ar' %}الاسم أو الرقم{% else %}Name or phone{% endif %}">
+        </div>
+    </div>
+
+    <!-- Bookings Table -->
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>{{ t('customer_name') }}</th>
+                    <th>{{ t('customer_phone') }}</th>
+                    <th>{{ t('select_stadium') }}</th>
+                    <th>{{ t('select_date') }}</th>
+                    <th>{{ t('select_time') }}</th>
+                    <th>{{ t('total') }}</th>
+                    <th>{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
+                    <th>{{ t('actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if bookings %}
+                    {% for booking in bookings %}
+                    <tr>
+                        <td>{{ booking.id }}</td>
+                        <td>{{ booking.customer_name }}</td>
+                        <td>{{ booking.customer_phone }}</td>
+                        <td>{{ booking.stadium.name if booking.stadium else '-' }}</td>
+                        <td>{{ booking.date }}</td>
+                        <td>{{ booking.start_hour|default(0) }}:00 - {{ booking.end_hour|default(0) }}:00</td>
+                        <td>{% if booking.total_price %}{{ "{:,.0f}".format(booking.total_price) }}{% else %}0{% endif %} {{ t('iqd') }}</td>
+                        <td>
+                            {% if booking.status == 'pending' %}
+                            <span class="badge badge-pending">{{ t('pending') }}</span>
+                            {% elif booking.status == 'confirmed' %}
+                            <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
+                            {% elif booking.status == 'cancelled' %}
+                            <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
+                            {% else %}
+                            <span class="badge badge-completed">{{ t('completed') }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}" class="btn btn-outline-primary" title="{{ t('view') }}">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                {% if booking.status == 'pending' %}
+                                <button class="btn btn-outline-success btn-confirm" data-id="{{ booking.id }}" title="{{ t('confirm') }}">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-cancel" data-id="{{ booking.id }}" title="{{ t('cancel') }}">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                <tr>
+                    <td colspan="9" class="text-center py-4 text-muted">{{ t('no_bookings') }}</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Confirm booking
+document.querySelectorAll('.btn-confirm').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        if (!confirm('{% if current_lang == "ku" %}دڵنیایت لە دڵنیاکردنەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من التأكيد؟{% else %}Are you sure you want to confirm?{% endif %}')) return;
+
+        const id = this.dataset.id;
+        const response = await fetch(`/admin/api/booking/${id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'confirmed' })
+        });
+
+        if (response.ok) {
+            location.reload();
+        }
+    });
+});
+
+// Cancel booking
+document.querySelectorAll('.btn-cancel').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        if (!confirm('{% if current_lang == "ku" %}دڵنیایت لە هەڵوەشاندنەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من الإلغاء؟{% else %}Are you sure you want to cancel?{% endif %}')) return;
+
+        const id = this.dataset.id;
+        const response = await fetch(`/admin/api/booking/${id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'cancelled' })
+        });
+
+        if (response.ok) {
+            location.reload();
+        }
+    });
+});
+</script>
+{% endblock %}

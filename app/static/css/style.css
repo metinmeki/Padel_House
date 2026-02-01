@@ -1,0 +1,556 @@
+/* ===== Padel House - Orange Theme ===== */
+/* Primary: #E57625 (Orange) */
+/* Secondary: #212121 (Dark) */
+
+/* ===== CSS Variables ===== */
+:root {
+    --primary-color: #E57625;
+    --primary-dark: #c9621d;
+    --primary-light: #f08a3d;
+    --secondary-color: #212121;
+    --secondary-light: #333333;
+    --success-color: #28a745;
+    --danger-color: #dc3545;
+    --warning-color: #ffc107;
+    --white: #ffffff;
+    --gray-100: #f8f9fa;
+    --gray-200: #e9ecef;
+}
+
+/* ===== Global Styles ===== */
+* {
+    font-family: 'Cairo', sans-serif;
+}
+
+body {
+    background-color: var(--gray-100);
+}
+
+/* ===== Override Bootstrap Primary Color ===== */
+.text-primary {
+    color: #E57625 !important;
+}
+
+.bg-primary {
+    background-color: #E57625 !important;
+}
+
+.btn-primary {
+    background-color: #E57625 !important;
+    border-color: #E57625 !important;
+}
+
+.btn-primary:hover {
+    background-color: #c9621d !important;
+    border-color: #c9621d !important;
+}
+
+.btn-outline-primary {
+    color: #E57625 !important;
+    border-color: #E57625 !important;
+}
+
+.btn-outline-primary:hover {
+    background-color: #E57625 !important;
+    color: white !important;
+}
+
+.border-primary {
+    border-color: #E57625 !important;
+}
+
+/* Override Bootstrap Success to Orange for some elements */
+.btn-success {
+    background: linear-gradient(135deg, #E57625 0%, #c9621d 100%) !important;
+    border: none !important;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #c9621d 0%, #a85518 100%) !important;
+}
+
+/* ===== Hero Section ===== */
+.hero-section {
+    background: linear-gradient(135deg, #212121 0%, #333333 100%);
+    min-height: 70vh;
+    display: flex;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.min-vh-50 {
+    min-height: 50vh;
+}
+
+/* ===== Cards ===== */
+.card {
+    border-radius: 15px;
+    border: none;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15) !important;
+}
+
+/* ===== Booking Slots ===== */
+.time-slot {
+    padding: 15px;
+    margin: 5px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    font-weight: 600;
+}
+
+.time-slot.available {
+    background-color: #d4edda;
+    border: 2px solid #28a745;
+    color: #28a745;
+}
+
+.time-slot.available:hover {
+    background-color: #28a745;
+    color: white;
+}
+
+.time-slot.booked {
+    background-color: #f8d7da;
+    border: 2px solid #dc3545;
+    color: #dc3545;
+    cursor: not-allowed;
+}
+
+.time-slot.discount {
+    background-color: #fff3cd;
+    border: 2px solid #ffc107;
+    color: #856404;
+}
+
+.time-slot.discount:hover {
+    background-color: #ffc107;
+    color: #000;
+}
+
+.time-slot.selected {
+    background-color: #E57625;
+    border-color: #E57625;
+    color: white;
+}
+
+/* ===== Stadium Card ===== */
+.stadium-card {
+    background: white;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+.stadium-card h4 {
+    color: #E57625;
+    border-bottom: 3px solid #E57625;
+    padding-bottom: 10px;
+}
+
+/* ===== Buttons ===== */
+.btn {
+    border-radius: 10px;
+    padding: 10px 25px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #E57625 0%, #c9621d 100%) !important;
+    border: none !important;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #c9621d 0%, #a85518 100%) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(229, 118, 37, 0.4);
+}
+
+.btn-dark {
+    background: linear-gradient(135deg, #212121 0%, #333333 100%);
+    border: none;
+}
+
+.btn-dark:hover {
+    background: linear-gradient(135deg, #333333 0%, #444 100%);
+}
+
+.btn-outline-primary {
+    border: 2px solid #E57625 !important;
+    color: #E57625 !important;
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: #E57625 !important;
+    color: white !important;
+}
+
+.btn-outline-light {
+    border: 2px solid white;
+    color: white;
+}
+
+.btn-outline-light:hover {
+    background: white;
+    color: #212121;
+}
+
+/* ===== Navbar ===== */
+.navbar {
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    background: white !important;
+}
+
+.navbar-brand {
+    font-size: 1.5rem;
+}
+
+.navbar-brand img {
+    height: 45px;
+}
+
+.nav-link {
+    color: #212121 !important;
+    font-weight: 600;
+    padding: 10px 15px !important;
+    transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+    color: #E57625 !important;
+}
+
+.nav-link.active {
+    color: #E57625 !important;
+}
+
+/* ===== Footer ===== */
+footer {
+    background: linear-gradient(135deg, #212121 0%, #333333 100%) !important;
+}
+
+footer a {
+    text-decoration: none;
+    transition: color 0.3s ease;
+}
+
+footer a:hover {
+    color: #E57625 !important;
+}
+
+/* ===== Product Card ===== */
+.product-card {
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.product-card img {
+    height: 200px;
+    object-fit: cover;
+}
+
+.product-card .card-body {
+    padding: 20px;
+}
+
+.product-price {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #E57625;
+}
+
+/* ===== Cart ===== */
+.cart-item {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.cart-badge {
+    background: #dc3545;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    position: relative;
+    top: -5px;
+}
+
+/* ===== Admin Dashboard ===== */
+.stat-card {
+    border-radius: 15px;
+    padding: 25px;
+    color: white;
+    transition: transform 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: scale(1.05);
+}
+
+.stat-card.bookings {
+    background: linear-gradient(135deg, #E57625 0%, #c9621d 100%);
+}
+
+.stat-card.orders {
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+}
+
+.stat-card.products {
+    background: linear-gradient(135deg, #6f42c1 0%, #59359a 100%);
+}
+
+.stat-card.pending {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+}
+
+.stat-card h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+}
+
+/* ===== Tables ===== */
+.table {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.table thead {
+    background-color: #212121;
+    color: white;
+}
+
+/* ===== Alerts ===== */
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+/* ===== Modal ===== */
+.modal-content {
+    border-radius: 20px;
+    border: none;
+}
+
+.modal-header {
+    background-color: #E57625;
+    color: white;
+    border-radius: 20px 20px 0 0;
+}
+
+/* ===== Forms ===== */
+.form-control, .form-select {
+    border-radius: 10px;
+    padding: 12px 15px;
+    border: 2px solid #e9ecef;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: #E57625;
+    box-shadow: 0 0 0 0.2rem rgba(229, 118, 37, 0.25);
+}
+
+/* ===== Badge ===== */
+.badge {
+    border-radius: 20px;
+    padding: 5px 15px;
+}
+
+.badge-primary, .bg-primary {
+    background-color: #E57625 !important;
+}
+
+/* ===== Section Headers ===== */
+.section-title {
+    color: #212121;
+    font-weight: 700;
+    position: relative;
+    display: inline-block;
+    padding-bottom: 15px;
+}
+
+.section-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    height: 4px;
+    background: #E57625;
+    border-radius: 2px;
+}
+
+/* ===== Feature Cards - ORANGE ICONS ===== */
+.feature-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #E57625 0%, #c9621d 100%) !important;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    color: white !important;
+    font-size: 2rem;
+}
+
+/* Override any green colors */
+.feature-icon.bg-success,
+.feature-icon.bg-primary,
+.bg-success .feature-icon {
+    background: linear-gradient(135deg, #E57625 0%, #c9621d 100%) !important;
+}
+
+/* ===== Pricing Card ===== */
+.pricing-card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease;
+}
+
+.pricing-card:hover {
+    transform: translateY(-10px);
+}
+
+.pricing-card .price {
+    font-size: 3rem;
+    font-weight: 700;
+    color: #E57625;
+}
+
+.pricing-card .currency {
+    font-size: 1rem;
+    color: #666;
+}
+
+/* ===== Discount Badge ===== */
+.discount-badge {
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #212121;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: 700;
+    display: inline-block;
+}
+
+/* ===== Loading Spinner ===== */
+.spinner-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.spinner-overlay .spinner-border {
+    color: #E57625;
+    width: 3rem;
+    height: 3rem;
+}
+
+/* ===== Text Colors ===== */
+.text-primary {
+    color: #E57625 !important;
+}
+
+.text-orange {
+    color: #E57625 !important;
+}
+
+.text-success {
+    color: #E57625 !important;
+}
+
+/* ===== Icon Colors - FORCE ORANGE ===== */
+.fa-trophy,
+.fa-clock,
+.fa-percentage,
+.fa-medal,
+.fa-tag,
+.fa-calendar-alt,
+.fa-check-circle {
+    color: #E57625 !important;
+}
+
+/* Cards with icons */
+.card .feature-icon,
+.card .rounded-circle {
+    background: linear-gradient(135deg, #E57625 0%, #c9621d 100%) !important;
+    color: white !important;
+}
+
+/* ===== Stadium Cards ===== */
+.stadium-icon {
+    background: linear-gradient(135deg, #E57625 0%, #c9621d 100%);
+}
+
+/* ===== Animations ===== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in-up {
+    animation: fadeInUp 0.6s ease forwards;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+    .hero-section {
+        min-height: 60vh;
+        text-align: center;
+    }
+    
+    .navbar-brand img {
+        height: 35px;
+    }
+    
+    .pricing-card .price {
+        font-size: 2rem;
+    }
+}
+
+/* ===== FORCE ALL GREEN TO ORANGE ===== */
+[class*="success"] {
+    --bs-success: #E57625;
+    --bs-success-rgb: 229, 118, 37;
+}
+
+.bg-success {
+    background-color: #E57625 !important;
+}
+
+.text-success {
+    color: #E57625 !important;
+}
+
+.border-success {
+    border-color: #E57625 !important;
+}

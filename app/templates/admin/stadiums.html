@@ -1,0 +1,186 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}{{ t('stadiums') }} - {{ t('admin') }}{% endblock %}
+{% block page_title %}{{ t('stadiums') }}{% endblock %}
+
+{% block content %}
+<div class="table-card">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+            <i class="fas fa-futbol me-2" style="color: #E57625;"></i>
+            {% if current_lang == 'ku' %}بەڕێوەبردنی یاریگاکان{% elif current_lang == 'ar' %}إدارة الملاعب{% else %}Manage Stadiums{% endif %}
+        </h5>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#stadiumModal">
+            <i class="fas fa-plus me-2"></i>{{ t('add') }}
+        </button>
+    </div>
+
+    <div class="row g-4">
+        {% for stadium in stadiums %}
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h5 class="card-title">{{ stadium.name }}</h5>
+                            <p class="text-muted mb-2">{{ stadium.location }}</p>
+                            <p class="mb-2">{{ stadium.description }}</p>
+                            <h5 style="color: #E57625;">{{ "{:,.0f}".format(stadium.price_per_hour) }} {{ t('iqd') }}/{{ t('hour') }}</h5>
+                        </div>
+                        <span class="badge {% if stadium.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                            {% if stadium.is_active %}
+                                {% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}نشط{% else %}Active{% endif %}
+                            {% else %}
+                                {% if current_lang == 'ku' %}ناچالاک{% elif current_lang == 'ar' %}غير نشط{% else %}Inactive{% endif %}
+                            {% endif %}
+                        </span>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary btn-edit"
+                                data-id="{{ stadium.id }}"
+                                data-name="{{ stadium.name }}"
+                                data-description="{{ stadium.description }}"
+                                data-location="{{ stadium.location }}"
+                                data-price="{{ stadium.price_per_hour }}"
+                                data-active="{{ stadium.is_active }}">
+                            <i class="fas fa-edit me-1"></i>{{ t('edit') }}
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger btn-delete" data-id="{{ stadium.id }}">
+                            <i class="fas fa-trash me-1"></i>{{ t('delete') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12 text-center py-5">
+            <i class="fas fa-futbol fa-4x text-muted mb-3"></i>
+            <p class="text-muted">{% if current_lang == 'ku' %}هیچ یاریگایەک نییە{% elif current_lang == 'ar' %}لا توجد ملاعب{% else %}No stadiums found{% endif %}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Stadium Modal -->
+<div class="modal fade" id="stadiumModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">
+                    {% if current_lang == 'ku' %}زیادکردنی یاریگا{% elif current_lang == 'ar' %}إضافة ملعب{% else %}Add Stadium{% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="stadiumForm">
+                <div class="modal-body">
+                    <input type="hidden" id="stadium-id">
+
+                    <div class="mb-3">
+                        <label class="form-label">{% if current_lang == 'ku' %}ناو{% elif current_lang == 'ar' %}الاسم{% else %}Name{% endif %} *</label>
+                        <input type="text" id="stadium-name" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{% if current_lang == 'ku' %}وەسف{% elif current_lang == 'ar' %}الوصف{% else %}Description{% endif %}</label>
+                        <textarea id="stadium-description" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{% if current_lang == 'ku' %}شوێن{% elif current_lang == 'ar' %}الموقع{% else %}Location{% endif %}</label>
+                        <input type="text" id="stadium-location" class="form-control">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">{{ t('price') }} ({{ t('iqd') }}/{{ t('hour') }}) *</label>
+                        <input type="number" id="stadium-price" class="form-control" required>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" id="stadium-active" class="form-check-input" checked>
+                        <label class="form-check-label" for="stadium-active">
+                            {% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}نشط{% else %}Active{% endif %}
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
+                    <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const modal = new bootstrap.Modal(document.getElementById('stadiumModal'));
+
+// Edit stadium
+document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', function() {
+        document.getElementById('modalTitle').textContent = '{% if current_lang == "ku" %}دەستکاری یاریگا{% elif current_lang == "ar" %}تعديل الملعب{% else %}Edit Stadium{% endif %}';
+        document.getElementById('stadium-id').value = this.dataset.id;
+        document.getElementById('stadium-name').value = this.dataset.name;
+        document.getElementById('stadium-description').value = this.dataset.description;
+        document.getElementById('stadium-location').value = this.dataset.location;
+        document.getElementById('stadium-price').value = this.dataset.price;
+        document.getElementById('stadium-active').checked = this.dataset.active === 'True';
+        modal.show();
+    });
+});
+
+// Delete stadium
+document.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        if (!confirm('{% if current_lang == "ku" %}دڵنیایت لە سڕینەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من الحذف؟{% else %}Are you sure you want to delete?{% endif %}')) return;
+
+        const response = await fetch(`/admin/api/stadium/${this.dataset.id}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            location.reload();
+        }
+    });
+});
+
+// Save stadium
+document.getElementById('stadiumForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('stadium-id').value;
+    const data = {
+        name: document.getElementById('stadium-name').value,
+        description: document.getElementById('stadium-description').value,
+        location: document.getElementById('stadium-location').value,
+        price_per_hour: parseInt(document.getElementById('stadium-price').value),
+        is_active: document.getElementById('stadium-active').checked
+    };
+
+    const url = id ? `/admin/api/stadium/${id}` : '/admin/api/stadium';
+    const method = id ? 'PUT' : 'POST';
+
+    const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+
+    if (response.ok) {
+        location.reload();
+    }
+});
+
+// Reset modal on open for new stadium
+document.querySelector('[data-bs-target="#stadiumModal"]').addEventListener('click', function() {
+    document.getElementById('modalTitle').textContent = '{% if current_lang == "ku" %}زیادکردنی یاریگا{% elif current_lang == "ar" %}إضافة ملعب{% else %}Add Stadium{% endif %}';
+    document.getElementById('stadiumForm').reset();
+    document.getElementById('stadium-id').value = '';
+    document.getElementById('stadium-active').checked = true;
+});
+</script>
+{% endblock %}

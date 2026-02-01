@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ t('site_name') }} - {{ t('cart') }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="text-center mb-5" style="color: #1a1a2e;">
+        <i class="fas fa-shopping-cart me-2" style="color: #E57625;"></i>{{ t('cart') }}
+    </h1>
+
+    <div class="row g-4">
+        <!-- Cart Items -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <div id="cart-items">
+                        <!-- Cart items will be loaded here by JavaScript -->
+                    </div>
+
+                    <div id="empty-cart" class="text-center py-5" style="display: none;">
+                        <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">{{ t('empty_cart') }}</h4>
+                        <a href="{{ url_for('store.products') }}" class="btn btn-warning mt-3">
+                            <i class="fas fa-store me-2"></i>{{ t('continue_shopping') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top: 100px;">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-receipt me-2"></i>
+                        {% if current_lang == 'ku' %}کۆی گشتی{% elif current_lang == 'ar' %}ملخص الطلب{% else %}Order Summary{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>{{ t('products') }}</span>
+                        <span id="items-count">0</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>{{ t('total') }}</span>
+                        <span id="subtotal">0 {{ t('iqd') }}</span>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between fw-bold fs-5">
+                        <span>{{ t('total') }}</span>
+                        <span id="total" style="color: #E57625;">0 {{ t('iqd') }}</span>
+                    </div>
+
+                    <a href="{{ url_for('store.checkout') }}" id="checkout-btn" class="btn btn-warning w-100 mt-4 btn-lg">
+                        <i class="fas fa-credit-card me-2"></i>{{ t('checkout') }}
+                    </a>
+
+                    <a href="{{ url_for('store.products') }}" class="btn btn-outline-secondary w-100 mt-2">
+                        <i class="fas fa-arrow-left me-2"></i>{{ t('continue_shopping') }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TRANS = {
+    iqd: "{{ t('iqd') }}",
+    remove: "{{ t('remove') }}",
+    quantity: "{{ t('quantity') }}"
+};
+
+let cart = JSON.parse(localStorage.getItem('padelCart')) || [];
+
+function renderCart() {
+    const container = document.getElementById('cart-items');
+    const emptyCart = document.getElementById('empty-cart');
+    const checkoutBtn = document.getElementById('checkout-btn');
+
+    if (cart.length === 0) {
+        container.style.display = 'none';
+        emptyCart.style.display = 'block';
+        checkoutBtn.classList.add('disabled');
+        updateSummary();
+        return;
+    }
+
+    container.style.display = 'block';
+    emptyCart.style.display = 'none';
+    checkoutBtn.classList.remove('disabled');
+
+    container.innerHTML = cart.map((item, index) => `
+        <div class="d-flex align-items-center border-bottom py-3">
+            <div class="flex-grow-1">
+                <h6 class="mb-1">${item.name}</h6>
+                <p class="text-muted mb-0">${item.price.toLocaleString()} ${TRANS.iqd}</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(${index}, -1)">
+                    <i class="fas fa-minus"></i>
+                </button>
+                <span class="px-3 fw-bold">${item.quantity}</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(${index}, 1)">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger ms-2" onclick="removeItem(${index})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="ms-4 text-end" style="min-width: 100px;">
+                <strong style="color: #E57625;">${(item.price * item.quantity).toLocaleString()} ${TRANS.iqd}</strong>
+            </div>
+        </div>
+    `).join('');
+
+    updateSummary();
+}
+
+function updateQuantity(index, change) {
+    cart[index].quantity += change;
+    if (cart[index].quantity <= 0) {
+        cart.splice(index, 1);
+    }
+    localStorage.setItem('padelCart', JSON.stringify(cart));
+    renderCart();
+}
+
+function removeItem(index) {
+    cart.splice(index, 1);
+    localStorage.setItem('padelCart', JSON.stringify(cart));
+    renderCart();
+}
+
+function updateSummary() {
+    const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    document.getElementById('items-count').textContent = itemsCount;
+    document.getElementById('subtotal').textContent = `${total.toLocaleString()} ${TRANS.iqd}`;
+    document.getElementById('total').textContent = `${total.toLocaleString()} ${TRANS.iqd}`;
+}
+
+// Initialize
+renderCart();
+</script>
+{% endblock %}

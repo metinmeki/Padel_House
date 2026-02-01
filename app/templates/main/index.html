@@ -1,0 +1,336 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ t('site_name') }} - {{ t('home') }}{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section position-relative overflow-hidden" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 80vh;">
+    <div class="container py-5">
+        <div class="row align-items-center min-vh-75">
+            <div class="col-lg-6 text-white">
+                <h1 class="display-4 fw-bold mb-4">
+                    {{ t('welcome') }} 🎾
+                </h1>
+                <p class="lead mb-4 opacity-75">
+                    {{ t('best_courts') }}
+                </p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <a href="{{ url_for('booking.booking_page') }}" class="btn btn-warning btn-lg px-4">
+                        <i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}
+                    </a>
+                    <a href="{{ url_for('store.products') }}" class="btn btn-outline-light btn-lg px-4">
+                        <i class="fas fa-store me-2"></i>{{ t('store') }}
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center mt-5 mt-lg-0">
+                <!-- CHANGED: Using mascott.png instead of hero_padel.png -->
+                <img src="{{ url_for('static', filename='images/mascott.png') }}" alt="Padel House" class="img-fluid" style="max-height: 400px;">
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            <!-- Feature 1 -->
+            <div class="col-md-4">
+                <div class="card h-100 text-center p-4 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-trophy fa-3x" style="color: #E57625;"></i>
+                        </div>
+                        <h5 class="card-title">{{ t('professional_courts') if t else 'ملاعب احترافية' }}</h5>
+                        <p class="card-text text-muted">
+                            {% if current_lang == 'ku' %}
+                            یاریگای پڕۆفیشناڵ بە ستانداردی نێودەوڵەتی
+                            {% elif current_lang == 'ar' %}
+                            ملاعب بمواصفات عالمية
+                            {% else %}
+                            Professional courts with international standards
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="col-md-4">
+                <div class="card h-100 text-center p-4 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-clock fa-3x" style="color: #E57625;"></i>
+                        </div>
+                        <h5 class="card-title">{{ t('easy_booking') if t else 'حجز سهل' }}</h5>
+                        <p class="card-text text-muted">
+                            {% if current_lang == 'ku' %}
+                            نۆرەی ئاسان و خێرا لە هەموو کاتێک
+                            {% elif current_lang == 'ar' %}
+                            احجز بسهولة في أي وقت
+                            {% else %}
+                            Easy and fast booking anytime
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="col-md-4">
+                <div class="card h-100 text-center p-4 border-0 shadow-sm">
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <i class="fas fa-shopping-bag fa-3x" style="color: #E57625;"></i>
+                        </div>
+                        <h5 class="card-title">{{ t('store') }}</h5>
+                        <p class="card-text text-muted">
+                            {% if current_lang == 'ku' %}
+                            ڕاکێت، تۆپ و پێداویستی یاری
+                            {% elif current_lang == 'ar' %}
+                            مضارب وكرات ومستلزمات اللعب
+                            {% else %}
+                            Rackets, balls and accessories
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Stadiums Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5" style="color: #1a1a2e;">{{ t('stadiums') }}</h2>
+        <div class="row g-4">
+            <!-- Stadium 1 -->
+            <div class="col-md-6">
+                <div class="card h-100 overflow-hidden border-0 shadow">
+                    <!-- CHANGED: Using mascot_1.png instead of stadium1.jpg -->
+                    <img src="{{ url_for('static', filename='images/mascot_1.png') }}" class="card-img-top" alt="Stadium 1" style="height: 250px; object-fit: contain; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ t('stadium_1') }}</h5>
+                        <p class="card-text">
+                            <span class="badge bg-success">{{ t('available') }}</span>
+                        </p>
+                        <p class="text-muted">
+                            {% if current_lang == 'ku' %}
+                            یاریگایەکی پڕۆفیشناڵ بە باشترین ئامێرەکان
+                            {% elif current_lang == 'ar' %}
+                            ملعب احترافي مجهز بأحدث المعدات
+                            {% else %}
+                            Professional court with latest equipment
+                            {% endif %}
+                        </p>
+                        <a href="{{ url_for('booking.booking_page') }}" class="btn btn-outline-warning">
+                            <i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stadium 2 -->
+            <div class="col-md-6">
+                <div class="card h-100 overflow-hidden border-0 shadow">
+                    <!-- CHANGED: Using mascot_2.png instead of stadium2.jpg -->
+                    <img src="{{ url_for('static', filename='images/mascot_2.png') }}" class="card-img-top" alt="Stadium 2" style="height: 250px; object-fit: contain; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ t('stadium_2') }}</h5>
+                        <p class="card-text">
+                            <span class="badge bg-success">{{ t('available') }}</span>
+                        </p>
+                        <p class="text-muted">
+                            {% if current_lang == 'ku' %}
+                            یاریگایەکی کوالیتی بەرز لەگەڵ رووناکی باش
+                            {% elif current_lang == 'ar' %}
+                            ملعب عالي الجودة مع إضاءة ممتازة
+                            {% else %}
+                            High quality court with excellent lighting
+                            {% endif %}
+                        </p>
+                        <a href="{{ url_for('booking.booking_page') }}" class="btn btn-outline-warning">
+                            <i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Products Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <h2 style="color: #1a1a2e;">{{ t('our_products') if t else 'منتجاتنا' }}</h2>
+            <a href="{{ url_for('store.products') }}" class="btn btn-outline-warning">
+                {{ t('view_all') if t else 'عرض الكل' }} <i class="fas fa-arrow-left ms-2"></i>
+            </a>
+        </div>
+        <div class="row g-4">
+            {% if featured_products %}
+                {% for product in featured_products[:4] %}
+                <div class="col-6 col-md-3">
+                    <div class="card h-100 border-0 shadow-sm product-card">
+                        <div class="position-relative">
+                            {% if product.image %}
+                            <img src="{{ url_for('static', filename='images/products/' + product.image) }}"
+                                 class="card-img-top" alt="{{ product.name }}"
+                                 style="height: 180px; object-fit: cover;"
+                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/300x180?text=Product'">
+                            {% else %}
+                            <img src="https://via.placeholder.com/300x180?text=Product"
+                                 class="card-img-top" alt="{{ product.name }}"
+                                 style="height: 180px; object-fit: cover;">
+                            {% endif %}
+                        </div>
+                        <div class="card-body text-center">
+                            <h6 class="card-title">{{ product.name }}</h6>
+                            <p class="text-warning fw-bold mb-2">{{ "{:,.0f}".format(product.price or 0) }} {{ t('iqd') }}</p>
+                            <button class="btn btn-sm btn-warning add-to-cart" data-product-id="{{ product.id }}">
+                                <i class="fas fa-cart-plus me-1"></i> {{ t('add_to_cart') if t else 'أضف للسلة' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12 text-center py-5">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">{{ t('no_products') if t else 'لا توجد منتجات حالياً' }}</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+<!-- Pricing Section -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <h2 class="text-center mb-5" style="color: #1a1a2e;">{{ t('pricing') if t else 'الأسعار' }}</h2>
+        <div class="row justify-content-center">
+            <div class="col-lg-6">
+                <div class="card border-0 shadow text-center p-4">
+                    <div class="card-body">
+                        <h4 class="mb-4" style="color: #E57625;">
+                            <i class="fas fa-tag me-2"></i>
+                            {% if current_lang == 'ku' %}
+                            داشکاندن 25% لە 12-16
+                            {% elif current_lang == 'ar' %}
+                            خصم 25% من 12-16
+                            {% else %}
+                            25% Discount 12-16
+                            {% endif %}
+                        </h4>
+
+                        <div class="row text-center mb-4">
+                            <div class="col-6">
+                                <h5 class="text-muted mb-1">{{ t('normal_price') if t else 'السعر العادي' }}</h5>
+                                <h3 style="color: #1a1a2e;">80,000 <small>{{ t('iqd') }}/{{ t('hour') if t else 'ساعة' }}</small></h3>
+                            </div>
+                            <div class="col-6">
+                                <h5 class="text-muted mb-1">{{ t('discount_price') if t else 'سعر الخصم' }}</h5>
+                                <h3 style="color: #E57625;">60,000 <small>{{ t('iqd') }}/{{ t('hour') if t else 'ساعة' }}</small></h3>
+                            </div>
+                        </div>
+
+                        <ul class="list-unstyled text-start mb-4">
+                            <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: #E57625;"></i>
+                                {% if current_lang == 'ku' %}نۆرە بێ پارەدانی پێشوەخت{% elif current_lang == 'ar' %}حجز بدون دفع مسبق{% else %}Book without prepayment{% endif %}
+                            </li>
+                            <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: #E57625;"></i>
+                                {% if current_lang == 'ku' %}هەڵوەشاندنەوەی خۆڕایی پێش 24 کاتژمێر{% elif current_lang == 'ar' %}إلغاء مجاني قبل 24 ساعة{% else %}Free cancellation before 24 hours{% endif %}
+                            </li>
+                            <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: #E57625;"></i>
+                                {% if current_lang == 'ku' %}ئامێرەکان بۆ کرێ بەردەستن{% elif current_lang == 'ar' %}معدات متوفرة للإيجار{% else %}Equipment available for rent{% endif %}
+                            </li>
+                        </ul>
+
+                        <a href="{{ url_for('booking.booking_page') }}" class="btn btn-warning btn-lg w-100">
+                            <i class="fas fa-calendar-alt me-2"></i>{{ t('book_now') }}
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- CTA Section -->
+<section class="py-5 text-white" style="background: linear-gradient(135deg, #212121 0%, #333 100%);">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h3 class="mb-3">
+                    {% if current_lang == 'ku' %}
+                    ئامادەی بۆ یاری؟
+                    {% elif current_lang == 'ar' %}
+                    جاهز للعب؟
+                    {% else %}
+                    Ready to play?
+                    {% endif %}
+                </h3>
+                <p class="mb-0 opacity-75">
+                    {% if current_lang == 'ku' %}
+                    ئێستا نۆرەی یاریگاکەت بکە و چێژ لە باشترین ئەزموونی پادڵ وەربگرە
+                    {% elif current_lang == 'ar' %}
+                    احجز ملعبك الآن واستمتع بأفضل تجربة بادل في المدينة
+                    {% else %}
+                    Book your court now and enjoy the best padel experience in the city
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+                <a href="{{ url_for('booking.booking_page') }}" class="btn btn-warning btn-lg">
+                    <i class="fas fa-arrow-left me-2"></i>{{ t('book_now') }}
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Add to cart functionality
+document.querySelectorAll('.add-to-cart').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const productId = this.dataset.productId;
+        fetch('/store/cart/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                product_id: productId,
+                quantity: 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.success) {
+                // Update cart count in navbar
+                const cartBadge = document.querySelector('.cart-badge');
+                if(cartBadge) {
+                    cartBadge.textContent = data.cart_count;
+                }
+                // Show success toast
+                showToast('{{ t("added_to_cart") if t else "تمت الإضافة للسلة" }}', 'success');
+            }
+        });
+    });
+});
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+    toast.style.cssText = 'top: 100px; right: 20px; z-index: 9999; min-width: 250px;';
+    toast.innerHTML = `<i class="fas fa-check-circle me-2"></i>${message}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+</script>
+{% endblock %}

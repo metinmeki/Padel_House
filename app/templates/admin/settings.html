@@ -1,0 +1,182 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}{{ t('settings') }} - {{ t('admin') }}{% endblock %}
+{% block page_title %}{{ t('settings') }}{% endblock %}
+
+{% block content %}
+<form id="settingsForm">
+    <div class="row g-4">
+        <!-- Booking Settings -->
+        <div class="col-lg-6">
+            <div class="table-card h-100">
+                <h5 class="mb-4">
+                    <i class="fas fa-calendar-check me-2" style="color: #E57625;"></i>
+                    {% if current_lang == 'ku' %}ڕێکخستنی حجز{% elif current_lang == 'ar' %}إعدادات الحجز{% else %}Booking Settings{% endif %}
+                </h5>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">{% if current_lang == 'ku' %}کاتی کردنەوە{% elif current_lang == 'ar' %}وقت الافتتاح{% else %}Opening Hour{% endif %}</label>
+                        <select id="opening_hour" class="form-select">
+                            {% for h in range(24) %}
+                            <option value="{{ h }}" {% if settings.opening_hour == h %}selected{% endif %}>{{ h }}:00</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{% if current_lang == 'ku' %}کاتی داخستن{% elif current_lang == 'ar' %}وقت الإغلاق{% else %}Closing Hour{% endif %}</label>
+                        <select id="closing_hour" class="form-select">
+                            {% for h in range(24) %}
+                            <option value="{{ h }}" {% if settings.closing_hour == h %}selected{% endif %}>{{ h }}:00</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">{{ t('price') }} ({{ t('iqd') }}/{{ t('hour') }})</label>
+                        <input type="number" id="price_per_hour" class="form-control" value="{{ settings.price_per_hour }}">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Discount Settings -->
+        <div class="col-lg-6">
+            <div class="table-card h-100">
+                <h5 class="mb-4">
+                    <i class="fas fa-percent me-2" style="color: #E57625;"></i>
+                    {% if current_lang == 'ku' %}ڕێکخستنی داشکاندن{% elif current_lang == 'ar' %}إعدادات الخصم{% else %}Discount Settings{% endif %}
+                </h5>
+
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">{% if current_lang == 'ku' %}ڕێژەی داشکاندن{% elif current_lang == 'ar' %}نسبة الخصم{% else %}Discount Percentage{% endif %} (%)</label>
+                        <input type="number" id="discount_percentage" class="form-control" value="{{ settings.discount_percentage }}" min="0" max="100">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{% if current_lang == 'ku' %}دەستپێکی داشکاندن{% elif current_lang == 'ar' %}بداية الخصم{% else %}Discount Start{% endif %}</label>
+                        <select id="discount_start_hour" class="form-select">
+                            {% for h in range(24) %}
+                            <option value="{{ h }}" {% if settings.discount_start_hour == h %}selected{% endif %}>{{ h }}:00</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{% if current_lang == 'ku' %}کۆتایی داشکاندن{% elif current_lang == 'ar' %}نهاية الخصم{% else %}Discount End{% endif %}</label>
+                        <select id="discount_end_hour" class="form-select">
+                            {% for h in range(24) %}
+                            <option value="{{ h }}" {% if settings.discount_end_hour == h %}selected{% endif %}>{{ h }}:00</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Settings -->
+        <div class="col-lg-6">
+            <div class="table-card h-100">
+                <h5 class="mb-4">
+                    <i class="fas fa-phone me-2" style="color: #E57625;"></i>
+                    {% if current_lang == 'ku' %}زانیاری پەیوەندی{% elif current_lang == 'ar' %}معلومات الاتصال{% else %}Contact Information{% endif %}
+                </h5>
+
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">{% if current_lang == 'ku' %}ناوی سایت{% elif current_lang == 'ar' %}اسم الموقع{% else %}Site Name{% endif %}</label>
+                        <input type="text" id="site_name" class="form-control" value="{{ settings.site_name }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{{ t('customer_phone') }}</label>
+                        <input type="text" id="phone" class="form-control" value="{{ settings.phone }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">{{ t('customer_email') }}</label>
+                        <input type="email" id="email" class="form-control" value="{{ settings.email }}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">{{ t('address') }}</label>
+                        <textarea id="address" class="form-control" rows="2">{{ settings.address }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Social Media -->
+        <div class="col-lg-6">
+            <div class="table-card h-100">
+                <h5 class="mb-4">
+                    <i class="fas fa-share-alt me-2" style="color: #E57625;"></i>
+                    {% if current_lang == 'ku' %}تۆڕە کۆمەڵایەتییەکان{% elif current_lang == 'ar' %}وسائل التواصل{% else %}Social Media{% endif %}
+                </h5>
+
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label"><i class="fab fa-facebook me-2"></i>Facebook</label>
+                        <input type="url" id="facebook" class="form-control" value="{{ settings.facebook or '' }}" placeholder="https://facebook.com/...">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label"><i class="fab fa-instagram me-2"></i>Instagram</label>
+                        <input type="url" id="instagram" class="form-control" value="{{ settings.instagram or '' }}" placeholder="https://instagram.com/...">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label"><i class="fab fa-whatsapp me-2"></i>WhatsApp</label>
+                        <input type="text" id="whatsapp" class="form-control" value="{{ settings.whatsapp or '' }}" placeholder="+9647xxxxxxxxx">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary btn-lg px-5">
+            <i class="fas fa-save me-2"></i>{{ t('save') }}
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('settingsForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const data = {
+        opening_hour: parseInt(document.getElementById('opening_hour').value),
+        closing_hour: parseInt(document.getElementById('closing_hour').value),
+        price_per_hour: parseInt(document.getElementById('price_per_hour').value),
+        discount_percentage: parseInt(document.getElementById('discount_percentage').value),
+        discount_start_hour: parseInt(document.getElementById('discount_start_hour').value),
+        discount_end_hour: parseInt(document.getElementById('discount_end_hour').value),
+        site_name: document.getElementById('site_name').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        address: document.getElementById('address').value,
+        facebook: document.getElementById('facebook').value,
+        instagram: document.getElementById('instagram').value,
+        whatsapp: document.getElementById('whatsapp').value
+    };
+
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>...';
+
+    try {
+        const response = await fetch('/admin/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            alert('{% if current_lang == "ku" %}پاشەکەوتکرا!{% elif current_lang == "ar" %}تم الحفظ!{% else %}Saved!{% endif %}');
+        }
+    } catch (error) {
+        alert('Error saving settings');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-2"></i>{{ t("save") }}';
+    }
+});
+</script>
+{% endblock %}

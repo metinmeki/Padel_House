@@ -1,0 +1,183 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}{{ t('dashboard') }} - {{ t('admin') }}{% endblock %}
+{% block page_title %}{{ t('dashboard') }}{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="row g-4 mb-4">
+    <!-- Today's Bookings -->
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">
+                        {% if current_lang == 'ku' %}حجزەکانی ئەمڕۆ{% elif current_lang == 'ar' %}حجوزات اليوم{% else %}Today's Bookings{% endif %}
+                    </p>
+                    <h3 class="mb-0">{{ today_bookings|default(0) }}</h3>
+                </div>
+                <div class="icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Bookings -->
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">
+                        {% if current_lang == 'ku' %}حجزی چاوەڕوان{% elif current_lang == 'ar' %}حجوزات معلقة{% else %}Pending Bookings{% endif %}
+                    </p>
+                    <h3 class="mb-0">{{ pending_bookings|default(0) }}</h3>
+                </div>
+                <div class="icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's Orders -->
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">
+                        {% if current_lang == 'ku' %}داواکاریەکانی ئەمڕۆ{% elif current_lang == 'ar' %}طلبات اليوم{% else %}Today's Orders{% endif %}
+                    </p>
+                    <h3 class="mb-0">{{ today_orders|default(0) }}</h3>
+                </div>
+                <div class="icon bg-success bg-opacity-10 text-success">
+                    <i class="fas fa-shopping-bag"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Revenue -->
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">
+                        {% if current_lang == 'ku' %}داهاتی ئەمڕۆ{% elif current_lang == 'ar' %}إيرادات اليوم{% else %}Today's Revenue{% endif %}
+                    </p>
+                    <h3 class="mb-0">{{ "{:,.0f}".format(today_revenue|default(0)) }}</h3>
+                </div>
+                <div class="icon bg-info bg-opacity-10 text-info">
+                    <i class="fas fa-money-bill-wave"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Recent Bookings -->
+    <div class="col-lg-6">
+        <div class="table-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-check me-2" style="color: #E57625;"></i>
+                    {% if current_lang == 'ku' %}دوایین حجزەکان{% elif current_lang == 'ar' %}آخر الحجوزات{% else %}Recent Bookings{% endif %}
+                </h5>
+                <a href="{{ url_for('admin.manage_bookings') }}" class="btn btn-sm btn-outline-primary">
+                    {{ t('view') }}
+                </a>
+            </div>
+
+            {% if recent_bookings %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>{{ t('customer_name') }}</th>
+                            <th>{{ t('select_stadium') }}</th>
+                            <th>{{ t('select_date') }}</th>
+                            <th>{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for booking in recent_bookings %}
+                        <tr>
+                            <td>{{ booking.customer_name }}</td>
+                            <td>{{ booking.stadium.name if booking.stadium else '-' }}</td>
+                            <td>{{ booking.date }}</td>
+                            <td>
+                                {% if booking.status == 'pending' %}
+                                <span class="badge badge-pending">{{ t('pending') }}</span>
+                                {% elif booking.status == 'confirmed' %}
+                                <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
+                                {% elif booking.status == 'cancelled' %}
+                                <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
+                                {% else %}
+                                <span class="badge badge-completed">{{ t('completed') }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-4">{{ t('no_bookings') }}</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Recent Orders -->
+    <div class="col-lg-6">
+        <div class="table-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0">
+                    <i class="fas fa-shopping-bag me-2" style="color: #E57625;"></i>
+                    {% if current_lang == 'ku' %}دوایین داواکاریەکان{% elif current_lang == 'ar' %}آخر الطلبات{% else %}Recent Orders{% endif %}
+                </h5>
+                <a href="{{ url_for('admin.manage_orders') }}" class="btn btn-sm btn-outline-primary">
+                    {{ t('view') }}
+                </a>
+            </div>
+
+            {% if recent_orders %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>{{ t('customer_name') }}</th>
+                            <th>{{ t('total') }}</th>
+                            <th>{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr>
+                            <td>{{ order.id }}</td>
+                            <td>{{ order.customer_name }}</td>
+                            <td>{{ "{:,.0f}".format(order.total_price|default(0)) }} {{ t('iqd') }}</td>
+                            <td>
+                                {% if order.status == 'pending' %}
+                                <span class="badge badge-pending">{{ t('pending') }}</span>
+                                {% elif order.status == 'confirmed' %}
+                                <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
+                                {% elif order.status == 'delivered' %}
+                                <span class="badge badge-completed">{{ t('delivered') }}</span>
+                                {% else %}
+                                <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center py-4">{{ t('no_orders') }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

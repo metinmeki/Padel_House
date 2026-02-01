@@ -1,0 +1,256 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ t('site_name') }} - {{ t('checkout') }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h1 class="text-center mb-5" style="color: #1a1a2e;">
+        <i class="fas fa-credit-card me-2" style="color: #E57625;"></i>{{ t('checkout') }}
+    </h1>
+
+    <div class="row g-4">
+        <!-- Customer Info Form -->
+        <div class="col-lg-8">
+            <form id="checkout-form">
+                <!-- Customer Information -->
+                <div class="card mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user me-2" style="color: #E57625;"></i>
+                            {% if current_lang == 'ku' %}زانیاری کڕیار{% elif current_lang == 'ar' %}معلومات العميل{% else %}Customer Information{% endif %}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">{{ t('customer_name') }} *</label>
+                                <input type="text" id="customer-name" class="form-control" placeholder="{{ t('your_name') }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">{{ t('customer_phone') }} *</label>
+                                <input type="tel" id="customer-phone" class="form-control" placeholder="07xxxxxxxxx" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">{{ t('customer_email') }}</label>
+                                <input type="email" id="customer-email" class="form-control" placeholder="{{ t('your_email') }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Delivery Method -->
+                <div class="card mb-4">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-truck me-2" style="color: #E57625;"></i>
+                            {{ t('delivery_method') }}
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="delivery" id="pickup" value="pickup" checked>
+                            <label class="form-check-label" for="pickup">
+                                <strong>{{ t('pickup') }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    {% if current_lang == 'ku' %}وەرگرتن لە پادڵ هاوس{% elif current_lang == 'ar' %}استلام من بادل هاوس{% else %}Pick up from Padel House{% endif %}
+                                </small>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="delivery" id="delivery" value="delivery">
+                            <label class="form-check-label" for="delivery">
+                                <strong>{{ t('delivery') }}</strong>
+                                <br>
+                                <small class="text-muted">
+                                    {% if current_lang == 'ku' %}گەیاندن بۆ ناونیشانەکەت{% elif current_lang == 'ar' %}توصيل إلى عنوانك{% else %}Delivery to your address{% endif %}
+                                </small>
+                            </label>
+                        </div>
+
+                        <!-- Delivery Address (hidden by default) -->
+                        <div id="address-section" class="mt-4" style="display: none;">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">{{ t('area') }} *</label>
+                                    <select id="area" class="form-select">
+                                        <option value="">
+                                            {% if current_lang == 'ku' %}ناوچە هەڵبژێرە{% elif current_lang == 'ar' %}اختر المنطقة{% else %}Select area{% endif %}
+                                        </option>
+                                        <option value="malta">{% if current_lang == 'ku' %}ماڵتا{% elif current_lang == 'ar' %}مالطا{% else %}Malta{% endif %}</option>
+                                        <option value="shindoxa">{% if current_lang == 'ku' %}شێندۆخا{% elif current_lang == 'ar' %}شندوخا{% else %}Shindoxa{% endif %}</option>
+                                        <option value="masike">{% if current_lang == 'ku' %}ماسیکە{% elif current_lang == 'ar' %}ماسيكة{% else %}Masike{% endif %}</option>
+                                        <option value="baroshke">{% if current_lang == 'ku' %}بارۆشکە{% elif current_lang == 'ar' %}باروشكة{% else %}Baroshke{% endif %}</option>
+                                        <option value="azadi">{% if current_lang == 'ku' %}ئازادی{% elif current_lang == 'ar' %}آزادي{% else %}Azadi{% endif %}</option>
+                                        <option value="other">{% if current_lang == 'ku' %}تر{% elif current_lang == 'ar' %}أخرى{% else %}Other{% endif %}</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">{{ t('address') }} *</label>
+                                    <input type="text" id="address" class="form-control" placeholder="{% if current_lang == 'ku' %}ناونیشانی تەواو{% elif current_lang == 'ar' %}العنوان الكامل{% else %}Full address{% endif %}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">{{ t('notes') }}</label>
+                                    <textarea id="notes" class="form-control" rows="2" placeholder="{% if current_lang == 'ku' %}تێبینی زیادە{% elif current_lang == 'ar' %}ملاحظات إضافية{% else %}Additional notes{% endif %}"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Order Summary -->
+        <div class="col-lg-4">
+            <div class="card sticky-top" style="top: 100px;">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-receipt me-2"></i>
+                        {% if current_lang == 'ku' %}کۆی داواکاری{% elif current_lang == 'ar' %}ملخص الطلب{% else %}Order Summary{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="order-items">
+                        <!-- Items will be loaded here -->
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>{{ t('products') }}</span>
+                        <span id="items-total">0 {{ t('iqd') }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2" id="delivery-fee-row" style="display: none;">
+                        <span>{% if current_lang == 'ku' %}کرێی گەیاندن{% elif current_lang == 'ar' %}رسوم التوصيل{% else %}Delivery Fee{% endif %}</span>
+                        <span id="delivery-fee">5,000 {{ t('iqd') }}</span>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between fw-bold fs-5">
+                        <span>{{ t('total') }}</span>
+                        <span id="grand-total" style="color: #E57625;">0 {{ t('iqd') }}</span>
+                    </div>
+
+                    <button id="place-order" class="btn btn-warning w-100 mt-4 btn-lg">
+                        <i class="fas fa-check me-2"></i>{{ t('place_order') }}
+                    </button>
+
+                    <a href="{{ url_for('store.cart') }}" class="btn btn-outline-secondary w-100 mt-2">
+                        <i class="fas fa-arrow-left me-2"></i>{{ t('back') }}
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TRANS = {
+    iqd: "{{ t('iqd') }}",
+    place_order: "{{ t('place_order') }}",
+    order_success: "{{ t('order_success') }}"
+};
+
+let cart = JSON.parse(localStorage.getItem('padelCart')) || [];
+const deliveryFee = 5000;
+
+function renderOrderItems() {
+    const container = document.getElementById('order-items');
+
+    if (cart.length === 0) {
+        window.location.href = "{{ url_for('store.cart') }}";
+        return;
+    }
+
+    container.innerHTML = cart.map(item => `
+        <div class="d-flex justify-content-between mb-2">
+            <span>${item.name} x${item.quantity}</span>
+            <span>${(item.price * item.quantity).toLocaleString()} ${TRANS.iqd}</span>
+        </div>
+    `).join('');
+
+    updateTotals();
+}
+
+function updateTotals() {
+    const itemsTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const isDelivery = document.getElementById('delivery').checked;
+    const total = isDelivery ? itemsTotal + deliveryFee : itemsTotal;
+
+    document.getElementById('items-total').textContent = `${itemsTotal.toLocaleString()} ${TRANS.iqd}`;
+    document.getElementById('delivery-fee-row').style.display = isDelivery ? 'flex' : 'none';
+    document.getElementById('grand-total').textContent = `${total.toLocaleString()} ${TRANS.iqd}`;
+}
+
+// Delivery method change
+document.querySelectorAll('input[name="delivery"]').forEach(input => {
+    input.addEventListener('change', function() {
+        document.getElementById('address-section').style.display = this.value === 'delivery' ? 'block' : 'none';
+        updateTotals();
+    });
+});
+
+// Place order
+document.getElementById('place-order').addEventListener('click', async function() {
+    const name = document.getElementById('customer-name').value.trim();
+    const phone = document.getElementById('customer-phone').value.trim();
+    const email = document.getElementById('customer-email').value.trim();
+    const deliveryMethod = document.querySelector('input[name="delivery"]:checked').value;
+
+    if (!name || !phone) {
+        alert('{% if current_lang == "ku" %}تکایە ناو و ژمارەی مۆبایل بنووسە{% elif current_lang == "ar" %}يرجى إدخال الاسم ورقم الهاتف{% else %}Please enter name and phone{% endif %}');
+        return;
+    }
+
+    if (deliveryMethod === 'delivery') {
+        const area = document.getElementById('area').value;
+        const address = document.getElementById('address').value.trim();
+        if (!area || !address) {
+            alert('{% if current_lang == "ku" %}تکایە ناوچە و ناونیشان بنووسە{% elif current_lang == "ar" %}يرجى إدخال المنطقة والعنوان{% else %}Please enter area and address{% endif %}');
+            return;
+        }
+    }
+
+    const btn = this;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>...';
+
+    try {
+        const response = await fetch('/store/api/order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                customer_name: name,
+                customer_phone: phone,
+                customer_email: email,
+                delivery_method: deliveryMethod,
+                area: document.getElementById('area').value,
+                address: document.getElementById('address').value,
+                notes: document.getElementById('notes').value,
+                items: cart
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            localStorage.removeItem('padelCart');
+            window.location.href = `/store/order-success/${result.order_id}`;
+        } else {
+            alert(result.message || 'Error placing order');
+        }
+    } catch (error) {
+        alert('Error placing order');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="fas fa-check me-2"></i>${TRANS.place_order}`;
+    }
+});
+
+// Initialize
+renderOrderItems();
+</script>
+{% endblock %}

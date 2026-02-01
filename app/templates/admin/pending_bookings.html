@@ -1,0 +1,201 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}
+{% if current_lang == 'ku' %}حجزە هەڵپەسێردراوەکان{% elif current_lang == 'ar' %}الحجوزات المعلقة{% else %}Pending Bookings{% endif %} - {{ t('admin') }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .booking-card {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border-right: 4px solid #ffc107;
+        transition: all 0.3s ease;
+    }
+    .booking-card:hover {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+    .booking-card.approved { border-right-color: #28a745; opacity: 0.7; }
+    .booking-card.rejected { border-right-color: #dc3545; opacity: 0.7; }
+    .customer-phone { font-size: 1.2rem; font-weight: 600; color: var(--primary-color); }
+    .customer-phone a { color: var(--primary-color); text-decoration: none; }
+    .booking-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+    }
+    .info-item { background: #f8f9fa; padding: 10px 15px; border-radius: 8px; }
+    .info-item label { font-size: 0.75rem; color: #6c757d; display: block; margin-bottom: 3px; }
+    .info-item span { font-weight: 600; color: #333; }
+    .action-buttons { display: flex; gap: 10px; margin-top: 15px; }
+    .btn-approve { background: #28a745; border: none; color: #fff; padding: 10px 25px; border-radius: 8px; font-weight: 600; }
+    .btn-approve:hover { background: #218838; color: #fff; }
+    .btn-reject { background: #dc3545; border: none; color: #fff; padding: 10px 25px; border-radius: 8px; font-weight: 600; }
+    .btn-reject:hover { background: #c82333; color: #fff; }
+    .btn-call { background: #17a2b8; border: none; color: #fff; padding: 10px 25px; border-radius: 8px; font-weight: 600; }
+    .btn-call:hover { background: #138496; color: #fff; }
+    .empty-state { text-align: center; padding: 60px 20px; background: #fff; border-radius: 12px; }
+    .empty-state i { font-size: 4rem; color: #28a745; margin-bottom: 20px; }
+    .price-tag { font-size: 1.1rem; font-weight: 700; color: #28a745; }
+    .discount-badge { background: #ffc107; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; }
+    .time-ago { font-size: 0.8rem; color: #6c757d; }
+    .rejection-reason { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; min-height: 80px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">
+                <i class="fas fa-clock text-warning me-2"></i>
+                {% if current_lang == 'ku' %}حجزە هەڵپەسێردراوەکان{% elif current_lang == 'ar' %}الحجوزات المعلقة{% else %}Pending Bookings{% endif %}
+            </h2>
+            <p class="text-muted mb-0">
+                {% if current_lang == 'ar' %}تواصل مع العملاء وقم بتأكيد الحجوزات{% else %}Contact customers and confirm bookings{% endif %}
+            </p>
+        </div>
+        <span class="badge bg-warning text-dark fs-5 p-2">{{ bookings|length }} {% if current_lang == 'ar' %}قيد الانتظار{% else %}Pending{% endif %}</span>
+    </div>
+    
+    {% if bookings %}
+    <div class="bookings-list">
+        {% for booking in bookings %}
+        <div class="booking-card" id="booking-{{ booking.id }}">
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <h5 class="mb-1"><i class="fas fa-user me-2 text-secondary"></i>{{ booking.customer_name }}</h5>
+                    <div class="customer-phone">
+                        <i class="fas fa-phone me-2"></i>
+                        <a href="tel:{{ booking.customer_phone }}">{{ booking.customer_phone }}</a>
+                    </div>
+                    {% if booking.customer_email %}
+                    <small class="text-muted"><i class="fas fa-envelope me-1"></i>{{ booking.customer_email }}</small>
+                    {% endif %}
+                    <div class="time-ago mt-2">
+                        <i class="fas fa-clock me-1"></i>{{ booking.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="booking-info">
+                        <div class="info-item">
+                            <label>{% if current_lang == 'ar' %}الملعب{% else %}Stadium{% endif %}</label>
+                            <span><i class="fas fa-futbol me-1 text-primary"></i>{{ booking.stadium.name }}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>{% if current_lang == 'ar' %}التاريخ{% else %}Date{% endif %}</label>
+                            <span><i class="fas fa-calendar me-1 text-success"></i>{{ booking.date.strftime('%Y-%m-%d') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>{% if current_lang == 'ar' %}الوقت{% else %}Time{% endif %}</label>
+                            <span><i class="fas fa-clock me-1 text-info"></i>{{ booking.start_time.strftime('%H:%M') }} - {{ booking.end_time.strftime('%H:%M') }}</span>
+                        </div>
+                        <div class="info-item">
+                            <label>{% if current_lang == 'ar' %}السعر{% else %}Price{% endif %}</label>
+                            <span class="price-tag">
+                                {% if booking.discount_percentage > 0 %}<span class="discount-badge">-{{ booking.discount_percentage }}%</span>{% endif %}
+                                {{ "{:,.0f}".format(booking.final_price) }} IQD
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="action-buttons flex-column">
+                        <a href="tel:{{ booking.customer_phone }}" class="btn btn-call w-100 mb-2">
+                            <i class="fas fa-phone me-2"></i>{% if current_lang == 'ar' %}اتصال{% else %}Call{% endif %}
+                        </a>
+                        <button class="btn btn-approve w-100 mb-2" onclick="approveBooking({{ booking.id }})">
+                            <i class="fas fa-check me-2"></i>{% if current_lang == 'ar' %}قبول{% else %}Approve{% endif %}
+                        </button>
+                        <button class="btn btn-reject w-100" onclick="showRejectModal({{ booking.id }})">
+                            <i class="fas fa-times me-2"></i>{% if current_lang == 'ar' %}رفض{% else %}Reject{% endif %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <h4>{% if current_lang == 'ar' %}لا توجد حجوزات معلقة!{% else %}No Pending Bookings!{% endif %}</h4>
+        <p>{% if current_lang == 'ar' %}جميع الحجوزات تمت معالجتها{% else %}All bookings have been processed{% endif %}</p>
+        <a href="{{ url_for('admin.manage_bookings') }}" class="btn btn-outline-primary mt-3">
+            <i class="fas fa-list me-2"></i>{% if current_lang == 'ar' %}عرض كل الحجوزات{% else %}View All Bookings{% endif %}
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Rejection Modal -->
+<div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-times-circle text-danger me-2"></i>{% if current_lang == 'ar' %}رفض الحجز{% else %}Reject Booking{% endif %}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>{% if current_lang == 'ar' %}هل أنت متأكد من رفض هذا الحجز؟{% else %}Are you sure you want to reject this booking?{% endif %}</p>
+                <div class="mb-3">
+                    <label class="form-label">{% if current_lang == 'ar' %}سبب الرفض (اختياري){% else %}Rejection Reason (Optional){% endif %}</label>
+                    <textarea id="rejectionReason" class="rejection-reason" placeholder="{% if current_lang == 'ar' %}اكتب السبب...{% else %}Enter reason...{% endif %}"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% if current_lang == 'ar' %}إلغاء{% else %}Cancel{% endif %}</button>
+                <button type="button" class="btn btn-danger" id="confirmRejectBtn"><i class="fas fa-times me-2"></i>{% if current_lang == 'ar' %}رفض{% else %}Reject{% endif %}</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentBookingId = null;
+
+function approveBooking(bookingId) {
+    if (!confirm('{% if current_lang == "ar" %}هل أنت متأكد من قبول هذا الحجز؟{% else %}Approve this booking?{% endif %}')) return;
+    
+    fetch(`/admin/api/booking/${bookingId}/approve`, { method: 'POST', headers: {'Content-Type': 'application/json'} })
+    .then(r => r.json())
+    .then(data => {
+        alert(data.message);
+        if (data.success) {
+            document.getElementById(`booking-${bookingId}`).style.display = 'none';
+            location.reload();
+        }
+    });
+}
+
+function showRejectModal(bookingId) {
+    currentBookingId = bookingId;
+    document.getElementById('rejectionReason').value = '';
+    new bootstrap.Modal(document.getElementById('rejectModal')).show();
+}
+
+document.getElementById('confirmRejectBtn').addEventListener('click', function() {
+    if (!currentBookingId) return;
+    const reason = document.getElementById('rejectionReason').value;
+    
+    fetch(`/admin/api/booking/${currentBookingId}/reject`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ reason: reason })
+    })
+    .then(r => r.json())
+    .then(data => {
+        bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+        alert(data.message);
+        if (data.success) location.reload();
+    });
+});
+</script>
+{% endblock %}

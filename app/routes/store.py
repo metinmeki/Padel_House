@@ -11,32 +11,23 @@ store_bp = Blueprint('store', __name__)
 @store_bp.route('/')
 def products():
     """عرض المنتجات مع الفلترة حسب الفئة"""
-    selected_category = request.args.get('category')
+    # ✅ FIXED: Get category ID directly (not name mapping)
+    category_id = request.args.get('category', type=int)
     categories = Category.query.filter_by(is_active=True).all()
 
-    if selected_category:
-        category_map = {
-            'racket': 'المضارب',
-            'ball': 'الكرات',
-            'shirt': 'الملابس',
-            'accessory': 'الإكسسوارات'
-        }
-        category_name = category_map.get(selected_category)
-        if category_name:
-            category = Category.query.filter_by(name=category_name).first()
-            if category:
-                products = Product.query.filter_by(is_active=True, category_id=category.id).all()
-            else:
-                products = Product.query.filter_by(is_active=True).all()
-        else:
-            products = Product.query.filter_by(is_active=True).all()
-    else:
-        products = Product.query.filter_by(is_active=True).all()
+    # ✅ Base query - only website products
+    query = Product.query.filter_by(is_active=True, show_in_website=True)
+
+    # ✅ Filter by category if selected
+    if category_id:
+        query = query.filter_by(category_id=category_id)
+
+    products = query.all()
 
     return render_template('store/products.html',
                            categories=categories,
                            products=products,
-                           selected_category=selected_category)
+                           current_category=category_id)
 
 
 @store_bp.route('/product/<int:product_id>')
@@ -46,7 +37,8 @@ def product_detail(product_id):
     related_products = Product.query.filter(
         Product.category_id == product.category_id,
         Product.id != product.id,
-        Product.is_active == True
+        Product.is_active == True,
+        Product.show_in_website == True
     ).limit(4).all()
     return render_template('store/product_detail.html',
                            product=product,
@@ -205,9 +197,6 @@ def checkout():
                            subtotal=total)
 
 
-# ============================================
-# API ENDPOINT FOR AJAX ORDER - مُصحح كاملاً
-# ============================================
 @store_bp.route('/api/order', methods=['POST'])
 def api_place_order():
     """API endpoint for placing orders via AJAX"""
@@ -222,7 +211,6 @@ def api_place_order():
         area = data.get('area', '')
         notes = data.get('notes', '')
 
-        # دعم localStorage و session cart
         cart_items = data.get('items', [])
         if not cart_items:
             cart_items = session.get('cart', [])
@@ -233,7 +221,6 @@ def api_place_order():
         if not customer_name or not customer_phone:
             return jsonify({'success': False, 'message': 'الاسم ورقم الهاتف مطلوبان'}), 400
 
-        # حساب الإجمالي والمنتجات
         total = 0
         items_list = []
         order_items_data = []
@@ -247,8 +234,7 @@ def api_place_order():
                 subtotal = product.price * quantity
                 total += subtotal
 
-                # ✅ حل مشكلة name/title
-                product_name = getattr(product, 'title', getattr(product, 'name', 'منتج'))
+                product_name = product.get_name('ku') if hasattr(product, 'get_name') else getattr(product, 'name_ku', getattr(product, 'name', 'منتج'))
                 items_list.append(f"{product_name} x{quantity}")
 
                 order_items_data.append({
@@ -260,11 +246,9 @@ def api_place_order():
         if not order_items_data:
             return jsonify({'success': False, 'message': 'لم يتم العثور على منتجات صالحة'}), 400
 
-        # رسوم التوصيل
         if delivery_method == 'delivery':
-            total += 5000  # 5000 IQD
+            total += 5000
 
-        # ✅ إنشاء الطلب بدون delivery_method
         order_address = f"{area} - {address}" if delivery_method == 'delivery' else 'استلام من المتجر'
 
         order = Order(
@@ -280,7 +264,6 @@ def api_place_order():
         db.session.add(order)
         db.session.flush()
 
-        # إضافة عناصر الطلب وتحديث المخزون
         for item_data in order_items_data:
             product = item_data['product']
             order_item = OrderItem(
@@ -291,22 +274,18 @@ def api_place_order():
             )
             db.session.add(order_item)
 
-            # تحديث المخزون بحماية
             if hasattr(product, 'stock') and product.stock >= item_data['quantity']:
                 product.stock -= item_data['quantity']
 
         db.session.commit()
 
-        # 🔔 إشعار الأدمن
         flash('🔔 طلب متجر جديد! يرجى المراجعة', 'admin')
 
-        # Google Sheets
         try:
             send_order_to_sheet(order, " | ".join(items_list))
         except Exception as e:
             print(f"Google Sheets error: {e}")
 
-        # تفريغ السلة
         session['cart'] = []
         session.modified = True
 
@@ -343,7 +322,6 @@ def place_order():
             flash('الاسم ورقم الهاتف مطلوبان', 'error')
             return redirect(url_for('store.checkout'))
 
-        # حساب الإجمالي
         total = 0
         items_list = []
 
@@ -351,7 +329,7 @@ def place_order():
             product = Product.query.get(item['product_id'])
             if product:
                 total += product.price * item['quantity']
-                product_name = getattr(product, 'title', getattr(product, 'name', 'منتج'))
+                product_name = product.get_name('ku') if hasattr(product, 'get_name') else getattr(product, 'name_ku', getattr(product, 'name', 'منتج'))
                 items_list.append(f"{product_name} x{item['quantity']}")
 
         order_address = f"{area} - {address}" if delivery_method == 'delivery' else 'استلام من المتجر'
@@ -387,11 +365,9 @@ def place_order():
 
         db.session.commit()
 
-        # إشعارات
         flash('🔔 طلب متجر جديد!', 'admin')
         flash('تم إرسال طلبك بنجاح!', 'success')
 
-        # Google Sheets
         try:
             send_order_to_sheet(order, " | ".join(items_list))
         except Exception as e:

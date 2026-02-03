@@ -32,6 +32,15 @@
         color: #E57625;
         font-weight: 600;
     }
+    .visibility-box {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        border: 1px solid #e9ecef;
+    }
+    .visibility-box .form-check {
+        margin-bottom: 0;
+    }
 </style>
 {% endblock %}
 
@@ -48,10 +57,16 @@
                 {% if current_lang == 'ku' %}زیادکردن و دەستکاری و سڕینەوەی بەرهەمەکان{% elif current_lang == 'ar' %}إضافة وتعديل وحذف المنتجات{% else %}Add, edit and delete products{% endif %}
             </p>
         </div>
-        <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addProductModal">
-            <i class="fas fa-plus me-2"></i>
-            {% if current_lang == 'ku' %}زیادکردنی بەرهەم{% elif current_lang == 'ar' %}إضافة منتج{% else %}Add Product{% endif %}
-        </button>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.print_barcodes') }}" class="btn btn-outline-secondary btn-lg">
+                <i class="fas fa-barcode me-2"></i>
+                {% if current_lang == 'ku' %}چاپی باڕکۆد{% elif current_lang == 'ar' %}طباعة الباركود{% else %}Print Barcodes{% endif %}
+            </a>
+            <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addProductModal">
+                <i class="fas fa-plus me-2"></i>
+                {% if current_lang == 'ku' %}زیادکردنی بەرهەم{% elif current_lang == 'ar' %}إضافة منتج{% else %}Add Product{% endif %}
+            </button>
+        </div>
     </div>
 
     <!-- Stats -->
@@ -120,11 +135,10 @@
                             <th>#</th>
                             <th>{% if current_lang == 'ku' %}وێنە{% elif current_lang == 'ar' %}الصورة{% else %}Image{% endif %}</th>
                             <th>کوردی</th>
-                            <th>العربية</th>
-                            <th>English</th>
                             <th>{% if current_lang == 'ku' %}پۆل{% elif current_lang == 'ar' %}التصنيف{% else %}Category{% endif %}</th>
                             <th>{% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %}</th>
-                            <th>{% if current_lang == 'ku' %}ئەنبار{% elif current_lang == 'ar' %}المخزون{% else %}Stock{% endif %}</th>
+                            <th>{% if current_lang == 'ku' %}باڕکۆد{% elif current_lang == 'ar' %}الباركود{% else %}Barcode{% endif %}</th>
+                            <th>{% if current_lang == 'ku' %}شوێن{% elif current_lang == 'ar' %}الظهور{% else %}Visibility{% endif %}</th>
                             <th>{% if current_lang == 'ku' %}بار{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
                             <th>{% if current_lang == 'ku' %}کردارەکان{% elif current_lang == 'ar' %}إجراءات{% else %}Actions{% endif %}</th>
                         </tr>
@@ -143,8 +157,6 @@
                                 {% endif %}
                             </td>
                             <td>{{ product.name_ku or '-' }}</td>
-                            <td>{{ product.name_ar or '-' }}</td>
-                            <td>{{ product.name_en or '-' }}</td>
                             <td>
                                 {% if product.category %}
                                 <span class="badge bg-secondary">{{ product.category.get_name(current_lang) }}</span>
@@ -154,12 +166,21 @@
                             </td>
                             <td><strong style="color:#E57625;">{{ "{:,.0f}".format(product.price) }}</strong> {{ t('iqd') }}</td>
                             <td>
-                                {% if product.stock <= 0 %}
-                                <span class="badge bg-danger">{% if current_lang == 'ku' %}نەماوە{% elif current_lang == 'ar' %}نفذ{% else %}Out{% endif %}</span>
-                                {% elif product.stock < 5 %}
-                                <span class="badge bg-warning text-dark">{{ product.stock }}</span>
+                                {% if product.barcode %}
+                                <code class="bg-light text-dark px-2 py-1 rounded" style="font-size: 11px;">{{ product.barcode }}</code>
+                                <button class="btn btn-sm btn-link p-0 ms-1" onclick="copyBarcode('{{ product.barcode }}')" title="Copy">
+                                    <i class="fas fa-copy text-muted"></i>
+                                </button>
                                 {% else %}
-                                <span class="badge bg-success">{{ product.stock }}</span>
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if product.show_in_website %}
+                                <span class="badge bg-info" title="{% if current_lang == 'ku' %}ماڵپەڕ{% elif current_lang == 'ar' %}الموقع{% else %}Website{% endif %}">🌐</span>
+                                {% endif %}
+                                {% if product.show_in_pos %}
+                                <span class="badge bg-dark" title="POS">💻</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -181,7 +202,10 @@
                                     data-category_id="{{ product.category_id or '' }}"
                                     data-price="{{ product.price }}"
                                     data-stock="{{ product.stock }}"
-                                    data-is_active="{{ product.is_active }}">
+                                    data-is_active="{{ product.is_active }}"
+                                    data-show_in_website="{{ product.show_in_website }}"
+                                    data-show_in_pos="{{ product.show_in_pos }}"
+                                    data-barcode="{{ product.barcode or '' }}">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <button class="btn btn-sm btn-outline-warning toggle-product" data-id="{{ product.id }}">
@@ -194,7 +218,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="10" class="text-center py-5">
+                            <td colspan="9" class="text-center py-5">
                                 <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
                                 <p class="text-muted">{% if current_lang == 'ku' %}هیچ بەرهەمێک نییە{% elif current_lang == 'ar' %}لا توجد منتجات{% else %}No products found{% endif %}</p>
                             </td>
@@ -298,7 +322,7 @@
                         </div>
                     </div>
 
-                    <!-- Image & Status -->
+                    <!-- Image -->
                     <div class="row mt-3">
                         <div class="col-md-8">
                             <label class="form-label">{% if current_lang == 'ku' %}وێنەی بەرهەم{% elif current_lang == 'ar' %}صورة المنتج{% else %}Product Image{% endif %}</label>
@@ -312,7 +336,42 @@
                         </div>
                     </div>
 
-                    <div class="alert alert-info mt-3">
+                    <!-- ✅ Visibility Options - INSIDE THE FORM -->
+                    <div class="visibility-box mt-3">
+                        <label class="form-label fw-bold mb-2">
+                            <i class="fas fa-eye me-1"></i>
+                            {% if current_lang == 'ku' %}شوێنی پیشاندان{% elif current_lang == 'ar' %}مكان الظهور{% else %}Visibility{% endif %}
+                        </label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="addShowInWebsite" name="show_in_website" checked>
+                                    <label class="form-check-label" for="addShowInWebsite">
+                                        🌐 {% if current_lang == 'ku' %}ماڵپەڕ (بۆ کڕیاران){% elif current_lang == 'ar' %}الموقع (للزبائن){% else %}Website (for customers){% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="addShowInPos" name="show_in_pos" checked>
+                                    <label class="form-check-label" for="addShowInPos">
+                                        💻 {% if current_lang == 'ku' %}POS (بۆ کارمەندان){% elif current_lang == 'ar' %}POS (للموظفين){% else %}POS (for staff){% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <small class="text-muted mt-2 d-block">
+                            {% if current_lang == 'ku' %}
+                            ☕ خواردنەوە و خواردن: تەنها POS هەڵبژێرە | 🎾 کەلوپەل: هەردووکیان هەڵبژێرە
+                            {% elif current_lang == 'ar' %}
+                            ☕ المشروبات والطعام: اختر POS فقط | 🎾 المعدات: اختر كليهما
+                            {% else %}
+                            ☕ Drinks & Food: Select POS only | 🎾 Equipment: Select both
+                            {% endif %}
+                        </small>
+                    </div>
+
+                    <div class="alert alert-info mt-3 mb-0">
                         <i class="fas fa-info-circle me-2"></i>
                         {% if current_lang == 'ku' %}
                         تەنها کوردی پێویستە، زمانەکانی تر ئارەزوومەندانەن
@@ -437,6 +496,32 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- ✅ Visibility Options - INSIDE THE EDIT FORM -->
+                    <div class="visibility-box mt-3">
+                        <label class="form-label fw-bold mb-2">
+                            <i class="fas fa-eye me-1"></i>
+                            {% if current_lang == 'ku' %}شوێنی پیشاندان{% elif current_lang == 'ar' %}مكان الظهور{% else %}Visibility{% endif %}
+                        </label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="editShowInWebsite" name="show_in_website">
+                                    <label class="form-check-label" for="editShowInWebsite">
+                                        🌐 {% if current_lang == 'ku' %}ماڵپەڕ (بۆ کڕیاران){% elif current_lang == 'ar' %}الموقع (للزبائن){% else %}Website (for customers){% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="editShowInPos" name="show_in_pos">
+                                    <label class="form-check-label" for="editShowInPos">
+                                        💻 {% if current_lang == 'ku' %}POS (بۆ کارمەندان){% elif current_lang == 'ar' %}POS (للموظفين){% else %}POS (for staff){% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
@@ -451,6 +536,13 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Copy barcode to clipboard
+    window.copyBarcode = function(barcode) {
+        navigator.clipboard.writeText(barcode).then(() => {
+            alert('{% if current_lang == "ku" %}باڕکۆد کۆپی کرا{% elif current_lang == "ar" %}تم نسخ الباركود{% else %}Barcode copied{% endif %}');
+        });
+    };
+
     // Filter by category
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -485,6 +577,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         let formData = new FormData(this);
         formData.set('is_active', document.getElementById('addIsActive').checked ? 'true' : 'false');
+        formData.set('show_in_website', document.getElementById('addShowInWebsite').checked ? 'true' : 'false');
+        formData.set('show_in_pos', document.getElementById('addShowInPos').checked ? 'true' : 'false');
 
         let btn = this.querySelector('button[type="submit"]');
         btn.disabled = true;
@@ -525,6 +619,8 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('editPrice').value = this.dataset.price;
             document.getElementById('editStock').value = this.dataset.stock;
             document.getElementById('editIsActive').checked = this.dataset.is_active === 'True';
+            document.getElementById('editShowInWebsite').checked = this.dataset.show_in_website === 'True';
+            document.getElementById('editShowInPos').checked = this.dataset.show_in_pos === 'True';
             new bootstrap.Modal(document.getElementById('editProductModal')).show();
         });
     });
@@ -535,6 +631,8 @@ document.addEventListener('DOMContentLoaded', function() {
         let productId = document.getElementById('editProductId').value;
         let formData = new FormData(this);
         formData.set('is_active', document.getElementById('editIsActive').checked ? 'true' : 'false');
+        formData.set('show_in_website', document.getElementById('editShowInWebsite').checked ? 'true' : 'false');
+        formData.set('show_in_pos', document.getElementById('editShowInPos').checked ? 'true' : 'false');
 
         fetch(`/admin/api/product/${productId}`, {
             method: 'POST',

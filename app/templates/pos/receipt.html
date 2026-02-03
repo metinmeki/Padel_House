@@ -1,0 +1,179 @@
+{% extends 'pos/base_pos.html' %}
+
+{% block title %}فاتورة #{{ session.id }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    @media print {
+        body * { visibility: hidden; }
+        .receipt-container, .receipt-container * { visibility: visible; }
+        .receipt-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 80mm;
+            background: #fff !important;
+            color: #000 !important;
+        }
+        .no-print { display: none !important; }
+    }
+
+    .receipt-container {
+        background: #fff;
+        color: #000;
+        max-width: 350px;
+        margin: 0 auto;
+        padding: 20px;
+        border-radius: 10px;
+    }
+
+    .receipt-header {
+        text-align: center;
+        border-bottom: 2px dashed #000;
+        padding-bottom: 15px;
+        margin-bottom: 15px;
+    }
+
+    .receipt-items {
+        border-top: 1px dashed #000;
+        border-bottom: 1px dashed #000;
+        padding: 10px 0;
+    }
+
+    .receipt-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+    }
+
+    .receipt-total {
+        font-size: 1.3rem;
+        font-weight: bold;
+        text-align: center;
+        padding: 15px 0;
+    }
+
+    .receipt-footer {
+        text-align: center;
+        padding-top: 15px;
+        font-size: 0.85rem;
+        border-top: 2px dashed #000;
+    }
+
+    .discount-row {
+        color: green;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <!-- أزرار التحكم -->
+        <div class="d-flex justify-content-between mb-4 no-print">
+            <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-right me-2"></i>رجوع
+            </a>
+            <div>
+                <button onclick="window.print()" class="btn btn-pos">
+                    <i class="fas fa-print me-2"></i>طباعة
+                </button>
+                <a href="{{ url_for('pos.index') }}" class="btn btn-pos-success">
+                    <i class="fas fa-plus me-2"></i>جلسة جديدة
+                </a>
+            </div>
+        </div>
+
+        <!-- الفاتورة -->
+        <div class="receipt-container">
+            <div class="receipt-header">
+                <h3>🏠 PADEL HOUSE</h3>
+                <p class="mb-0">دهوك، العراق</p>
+                <p class="mb-0">📞 +964 750 123 4567</p>
+            </div>
+
+            <div class="receipt-info mb-3">
+                <div class="d-flex justify-content-between">
+                    <span>رقم الفاتورة:</span>
+                    <strong>#{{ '%05d' % session.id }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>التاريخ:</span>
+                    <span>{{ session.created_at.strftime('%Y-%m-%d') }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>الوقت:</span>
+                    <span>{{ session.start_time.strftime('%H:%M') }} - {{ session.end_time.strftime('%H:%M') if session.end_time else '' }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span>الموقع:</span>
+                    <span>{{ session.get_location_name() }}</span>
+                </div>
+                {% if session.customer_name %}
+                <div class="d-flex justify-content-between">
+                    <span>الزبون:</span>
+                    <span>{{ session.customer_name }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="receipt-items">
+                <!-- وقت اللعب -->
+                {% if session.session_type == 'stadium' and session.play_time_price > 0 %}
+                <div class="receipt-item" style="background: #fff3cd; padding: 5px; margin: 0 -5px;">
+                    <span>⏱️ وقت اللعب ({{ (session.play_time_minutes / 60)|int }} ساعة)</span>
+                    <span>{{ '{:,.0f}'.format(session.play_time_price) }}</span>
+                </div>
+                {% endif %}
+
+                <!-- المنتجات -->
+                {% for item in items %}
+                <div class="receipt-item">
+                    <span>{{ item.product.name_ku }} × {{ item.quantity }}</span>
+                    <span>{{ '{:,.0f}'.format(item.price * item.quantity) }}</span>
+                </div>
+                {% endfor %}
+
+                <!-- المجموع الفرعي -->
+                <div class="receipt-item" style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
+                    <span>المجموع الفرعي:</span>
+                    <span>{{ '{:,.0f}'.format(session.play_time_price + session.get_orders_total()) }}</span>
+                </div>
+
+                <!-- الخصومات -->
+                {% if session.auto_discount > 0 %}
+                <div class="receipt-item discount-row">
+                    <span>🏷️ خصم (12-16):</span>
+                    <span>-{{ '{:,.0f}'.format(session.auto_discount) }}</span>
+                </div>
+                {% endif %}
+
+                {% if session.manual_discount > 0 %}
+                <div class="receipt-item discount-row">
+                    <span>✂️ خصم يدوي:</span>
+                    <span>-{{ '{:,.0f}'.format(session.manual_discount) }}</span>
+                </div>
+                {% if session.discount_note %}
+                <div class="receipt-item" style="font-size: 0.8rem; color: #666;">
+                    <span>({{ session.discount_note }})</span>
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+
+            <div class="receipt-total">
+                الصافي: {{ '{:,.0f}'.format(session.total_amount) }} IQD
+            </div>
+
+            <div style="text-align: center; padding: 10px 0;">
+                <span>طريقة الدفع: {{ 'نقدي 💵' if session.payment_method == 'cash' else 'بطاقة 💳' }}</span>
+            </div>
+
+            <div class="receipt-footer">
+                <p>✨ شكراً لزيارتكم! ✨</p>
+                <p class="mb-0">🎾 PADEL HOUSE 🎾</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

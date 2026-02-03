@@ -24,17 +24,21 @@ class Product(db.Model):
     image = db.Column(db.String(200))
     is_active = db.Column(db.Boolean, default=True)
 
-    # ✅ BARCODE FIELDS - الجديد!
-    barcode = db.Column(db.String(13), unique=True, nullable=True)
-    barcode_image = db.Column(db.String(255), nullable=True)
+    # يظهر بالموقع أو POS
+    show_in_website = db.Column(db.Boolean, default=True)
+    show_in_pos = db.Column(db.Boolean, default=True)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    # باركود
+    barcode = db.Column(db.String(50), unique=True, nullable=True)
 
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+    # Relationship
+    category = db.relationship('Category', back_populates='products')
     def __repr__(self):
         return f'<Product {self.name_ku}>'
 
     def get_name(self, lang='ku'):
-        """Get name in specified language"""
         names = {
             'ku': self.name_ku,
             'ar': self.name_ar or self.name_ku,
@@ -43,7 +47,6 @@ class Product(db.Model):
         return names.get(lang, self.name_ku)
 
     def get_description(self, lang='ku'):
-        """Get description in specified language"""
         descriptions = {
             'ku': self.description_ku,
             'ar': self.description_ar or self.description_ku,
@@ -51,19 +54,7 @@ class Product(db.Model):
         }
         return descriptions.get(lang, self.description_ku)
 
-    def has_barcode(self):
-        """تحقق من وجود باركود"""
-        return bool(self.barcode and self.barcode_image)
-
-    def get_display_name(self):
-        """اسم العرض مع الباركود"""
-        name = self.get_name('ku')
-        if self.barcode:
-            return f"{name} ({self.barcode})"
-        return name
-
     def to_dict(self):
-        """JSON representation مع دعم Barcode"""
         return {
             'id': self.id,
             'name_ku': self.name_ku,
@@ -74,9 +65,7 @@ class Product(db.Model):
             'stock': self.stock,
             'image': self.image,
             'is_active': self.is_active,
-            # ✅ إضافة Barcode
-            'barcode': self.barcode,
-            'barcode_image': self.barcode_image,
-            'has_barcode': self.has_barcode(),
-            'display_name': self.get_display_name()
+            'show_in_website': self.show_in_website,
+            'show_in_pos': self.show_in_pos,
+            'barcode': self.barcode
         }

@@ -2,99 +2,1062 @@
 
 {% block title %}{{ t('site_name') }} - {{ t('home') }}{% endblock %}
 
+{% block extra_css %}
+<style>
+:root {
+    --primary: #E57625;
+    --primary-light: #ff8c42;
+    --primary-dark: #c9621c;
+    --dark: #1a1a2e;
+    --darker: #0f0f1a;
+    --light: #f8f9fa;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-40px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(3deg); }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(229, 118, 37, 0.4); }
+    50% { box-shadow: 0 0 40px rgba(229, 118, 37, 0.7); }
+}
+
+@keyframes gradient-shift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+@keyframes bounce-soft {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.fade-in { animation: fadeIn 1s ease forwards; }
+.slide-in { animation: slideIn 1s ease forwards; }
+.float-anim { animation: float 4s ease-in-out infinite; }
+.delay-1 { animation-delay: 0.2s; opacity: 0; }
+.delay-2 { animation-delay: 0.4s; opacity: 0; }
+.delay-3 { animation-delay: 0.6s; opacity: 0; }
+
+/* ===== HERO SECTION ===== */
+.hero {
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 50%, #16213e 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+}
+
+.hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 100%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(229, 118, 37, 0.1) 0%, transparent 50%);
+    animation: gradient-shift 10s ease infinite;
+    background-size: 200% 200%;
+}
+
+.hero-particles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+
+.particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: var(--primary);
+    border-radius: 50%;
+    opacity: 0.3;
+    animation: float 8s ease-in-out infinite;
+}
+
+.particle:nth-child(1) { top: 20%; left: 10%; animation-delay: 0s; }
+.particle:nth-child(2) { top: 60%; left: 20%; animation-delay: 1s; width: 8px; height: 8px; }
+.particle:nth-child(3) { top: 30%; left: 70%; animation-delay: 2s; }
+.particle:nth-child(4) { top: 70%; left: 80%; animation-delay: 3s; width: 10px; height: 10px; }
+.particle:nth-child(5) { top: 40%; left: 50%; animation-delay: 4s; }
+.particle:nth-child(6) { top: 80%; left: 40%; animation-delay: 5s; width: 4px; height: 4px; }
+
+.hero-content {
+    position: relative;
+    z-index: 10;
+}
+
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(229, 118, 37, 0.15);
+    border: 1px solid rgba(229, 118, 37, 0.3);
+    padding: 10px 20px;
+    border-radius: 50px;
+    color: var(--primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 24px;
+    backdrop-filter: blur(10px);
+}
+
+.hero-badge i {
+    animation: bounce-soft 2s ease-in-out infinite;
+}
+
+.hero-title {
+    font-size: clamp(3rem, 6vw, 5rem);
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 24px;
+    text-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+}
+
+.hero-title span {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.hero-subtitle {
+    font-size: 1.25rem;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 500px;
+    line-height: 1.8;
+    margin-bottom: 40px;
+}
+
+.hero-buttons {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.btn-primary-glow {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    border: none;
+    padding: 18px 40px;
+    font-size: 1.1rem;
+    font-weight: 700;
+    border-radius: 14px;
+    color: #fff;
+    box-shadow: 0 10px 40px rgba(229, 118, 37, 0.4);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-primary-glow::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-primary-glow:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 20px 50px rgba(229, 118, 37, 0.5);
+}
+
+.btn-primary-glow:hover::before {
+    left: 100%;
+}
+
+.btn-glass {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    padding: 16px 38px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 14px;
+    color: #fff;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.btn-glass:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-4px);
+    color: #fff;
+}
+
+.hero-image-wrapper {
+    position: relative;
+}
+
+.hero-image {
+    max-height: 550px;
+    filter: drop-shadow(0 30px 60px rgba(0, 0, 0, 0.5));
+    animation: float 5s ease-in-out infinite;
+}
+
+.hero-image-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(229, 118, 37, 0.3) 0%, transparent 70%);
+    filter: blur(60px);
+    z-index: -1;
+}
+
+.hero-stats {
+    display: flex;
+    gap: 40px;
+    margin-top: 50px;
+    padding-top: 30px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hero-stat {
+    text-align: center;
+}
+
+.hero-stat-number {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.hero-stat-label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 8px;
+}
+
+/* ===== SECTION STYLES ===== */
+.section {
+    padding: 100px 0;
+}
+
+.section-dark {
+    background: linear-gradient(180deg, var(--dark) 0%, var(--darker) 100%);
+}
+
+.section-light {
+    background: #fff;
+}
+
+.section-gray {
+    background: var(--light);
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.section-badge {
+    display: inline-block;
+    background: rgba(229, 118, 37, 0.1);
+    color: var(--primary);
+    padding: 8px 20px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 16px;
+}
+
+.section-dark .section-title {
+    color: #fff;
+}
+
+.section-subtitle {
+    font-size: 1.1rem;
+    color: #666;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.section-dark .section-subtitle {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+/* ===== FEATURES ===== */
+.feature-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 40px 30px;
+    text-align: center;
+    box-shadow: 0 10px 50px rgba(0, 0, 0, 0.05);
+    transition: all 0.4s ease;
+    border: 1px solid #eee;
+    height: 100%;
+}
+
+.feature-card:hover {
+    transform: translateY(-12px);
+    box-shadow: 0 25px 80px rgba(229, 118, 37, 0.12);
+    border-color: rgba(229, 118, 37, 0.2);
+}
+
+.feature-icon {
+    width: 90px;
+    height: 90px;
+    margin: 0 auto 24px;
+    background: linear-gradient(135deg, rgba(229, 118, 37, 0.1), rgba(229, 118, 37, 0.05));
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.4s ease;
+}
+
+.feature-card:hover .feature-icon {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    transform: scale(1.1) rotate(5deg);
+}
+
+.feature-icon i {
+    font-size: 2.2rem;
+    color: var(--primary);
+    transition: all 0.4s ease;
+}
+
+.feature-card:hover .feature-icon i {
+    color: #fff;
+}
+
+.feature-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 12px;
+}
+
+.feature-text {
+    color: #666;
+    line-height: 1.7;
+}
+
+/* ===== STADIUMS ===== */
+.stadium-card {
+    background: #fff;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+    transition: all 0.5s ease;
+    height: 100%;
+}
+
+.stadium-card:hover {
+    transform: translateY(-15px);
+    box-shadow: 0 30px 80px rgba(229, 118, 37, 0.15);
+}
+
+.stadium-image {
+    position: relative;
+    height: 280px;
+    overflow: hidden;
+    background: linear-gradient(135deg, var(--dark), var(--darker));
+}
+
+.stadium-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: 20px;
+    transition: transform 0.6s ease;
+}
+
+.stadium-card:hover .stadium-image img {
+    transform: scale(1.1);
+}
+
+.stadium-badge {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+}
+
+.stadium-number {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    font-size: 5rem;
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.1);
+    line-height: 1;
+}
+
+.stadium-body {
+    padding: 30px;
+}
+
+.stadium-name {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 12px;
+}
+
+.stadium-features {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.stadium-feature {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.stadium-feature i {
+    color: var(--primary);
+}
+
+.btn-stadium {
+    background: var(--dark);
+    color: #fff;
+    padding: 14px 30px;
+    border-radius: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.btn-stadium:hover {
+    background: var(--primary);
+    color: #fff;
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(229, 118, 37, 0.3);
+}
+
+/* ===== PRODUCTS ===== */
+.products-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 50px;
+}
+
+.products-header .section-header {
+    text-align: left;
+    margin-bottom: 0;
+}
+
+.btn-view-all {
+    background: transparent;
+    border: 2px solid var(--primary);
+    color: var(--primary);
+    padding: 12px 28px;
+    border-radius: 30px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-view-all:hover {
+    background: var(--primary);
+    color: #fff;
+}
+
+.product-card {
+    background: #fff;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
+    transition: all 0.4s ease;
+    cursor: pointer;
+    height: 100%;
+}
+
+.product-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 25px 70px rgba(229, 118, 37, 0.12);
+}
+
+.product-image {
+    position: relative;
+    height: 220px;
+    overflow: hidden;
+    background: var(--light);
+}
+
+.product-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.product-card:hover .product-image img {
+    transform: scale(1.1);
+}
+
+.product-badge {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.product-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(26, 26, 46, 0.9), transparent 60%);
+    opacity: 0;
+    transition: all 0.4s ease;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 25px;
+}
+
+.product-card:hover .product-overlay {
+    opacity: 1;
+}
+
+.btn-quick-view {
+    background: #fff;
+    color: var(--dark);
+    padding: 12px 28px;
+    border-radius: 30px;
+    font-weight: 600;
+    transform: translateY(30px);
+    transition: all 0.4s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.product-card:hover .btn-quick-view {
+    transform: translateY(0);
+}
+
+.product-body {
+    padding: 25px;
+    text-align: center;
+}
+
+.product-category {
+    font-size: 0.8rem;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+}
+
+.product-name {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 12px;
+}
+
+.product-price {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.product-price small {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #999;
+}
+
+/* ===== PRICING ===== */
+.pricing-card {
+    background: #fff;
+    border-radius: 32px;
+    padding: 50px;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.pricing-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+}
+
+.pricing-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    padding: 14px 28px;
+    border-radius: 50px;
+    font-weight: 700;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(229, 118, 37, 0.3);
+}
+
+.pricing-time {
+    color: #666;
+    font-size: 1rem;
+    margin-bottom: 30px;
+}
+
+.pricing-prices {
+    display: flex;
+    justify-content: center;
+    gap: 50px;
+    margin-bottom: 35px;
+    padding-bottom: 35px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.pricing-item {
+    text-align: center;
+}
+
+.pricing-label {
+    font-size: 0.9rem;
+    color: #888;
+    margin-bottom: 10px;
+}
+
+.pricing-value {
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--dark);
+    line-height: 1;
+}
+
+.pricing-value.highlight {
+    color: var(--primary);
+}
+
+.pricing-unit {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #888;
+}
+
+.pricing-features {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 35px;
+}
+
+.pricing-features li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 0;
+    color: #555;
+    font-size: 1.05rem;
+}
+
+.pricing-features li i {
+    width: 24px;
+    height: 24px;
+    background: rgba(229, 118, 37, 0.1);
+    color: var(--primary);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+}
+
+.btn-pricing {
+    width: 100%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    border: none;
+    padding: 18px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    border-radius: 14px;
+    color: #fff;
+    transition: all 0.4s ease;
+    box-shadow: 0 10px 40px rgba(229, 118, 37, 0.3);
+}
+
+.btn-pricing:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 50px rgba(229, 118, 37, 0.4);
+}
+
+/* ===== CTA ===== */
+.cta {
+    background: linear-gradient(135deg, var(--dark), var(--darker));
+    padding: 100px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.cta::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    right: -100px;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(229, 118, 37, 0.2), transparent 70%);
+    filter: blur(60px);
+}
+
+.cta-content {
+    position: relative;
+    z-index: 10;
+}
+
+.cta-title {
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 20px;
+}
+
+.cta-text {
+    font-size: 1.2rem;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 500px;
+}
+
+/* ===== MODAL ===== */
+.product-modal .modal-content {
+    border: none;
+    border-radius: 28px;
+    overflow: hidden;
+}
+
+.product-modal .modal-body {
+    padding: 0;
+}
+
+.modal-product-image {
+    height: 100%;
+    min-height: 400px;
+    object-fit: cover;
+}
+
+.modal-product-details {
+    padding: 40px;
+}
+
+.modal-product-category {
+    display: inline-block;
+    background: rgba(229, 118, 37, 0.1);
+    color: var(--primary);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+}
+
+.modal-product-name {
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 16px;
+}
+
+.modal-product-price {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--primary);
+    margin-bottom: 20px;
+}
+
+.modal-product-description {
+    color: #666;
+    line-height: 1.8;
+    margin-bottom: 25px;
+}
+
+.modal-stock-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    font-weight: 600;
+}
+
+.modal-stock-info.in-stock { background: #e8f5e9; color: #2e7d32; }
+.modal-stock-info.low-stock { background: #fff3e0; color: #ef6c00; }
+.modal-stock-info.out-of-stock { background: #ffebee; color: #c62828; }
+
+.quantity-wrapper {
+    margin-bottom: 25px;
+}
+
+.quantity-label {
+    font-weight: 600;
+    color: var(--dark);
+    margin-bottom: 12px;
+}
+
+.quantity-control {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.quantity-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    border: 2px solid var(--primary);
+    background: #fff;
+    color: var(--primary);
+    font-size: 1.5rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.quantity-btn:hover {
+    background: var(--primary);
+    color: #fff;
+}
+
+.quantity-input {
+    width: 80px;
+    height: 50px;
+    text-align: center;
+    border: 2px solid #e0e0e0;
+    border-radius: 14px;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.btn-add-to-cart {
+    width: 100%;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    border: none;
+    padding: 18px;
+    font-size: 1.15rem;
+    font-weight: 700;
+    border-radius: 14px;
+    color: #fff;
+    transition: all 0.4s ease;
+}
+
+.btn-add-to-cart:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 15px 40px rgba(229, 118, 37, 0.4);
+}
+
+/* ===== TOAST ===== */
+.toast-container {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    z-index: 99999;
+}
+
+.custom-toast {
+    background: #fff;
+    border-radius: 16px;
+    padding: 20px 25px;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    animation: slideInRight 0.4s ease;
+    min-width: 300px;
+}
+
+.custom-toast.success {
+    border-left: 4px solid #10b981;
+}
+
+.custom-toast-icon {
+    width: 45px;
+    height: 45px;
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #10b981;
+}
+
+.custom-toast-content h6 {
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 4px;
+}
+
+.custom-toast-content p {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 992px) {
+    .hero-stats { gap: 25px; }
+    .pricing-prices { gap: 30px; }
+    .products-header { flex-direction: column; align-items: flex-start; gap: 20px; }
+    .products-header .section-header { text-align: center; width: 100%; }
+}
+
+@media (max-width: 768px) {
+    .hero { min-height: auto; padding: 80px 0; }
+    .hero-title { font-size: 2.5rem; }
+    .hero-stats { flex-wrap: wrap; justify-content: center; }
+    .hero-image { max-height: 350px; }
+    .section { padding: 70px 0; }
+    .pricing-prices { flex-direction: column; gap: 25px; }
+    .pricing-value { font-size: 2.5rem; }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <!-- Hero Section -->
-<section class="hero-section position-relative overflow-hidden" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 80vh;">
-    <div class="container py-5">
-        <div class="row align-items-center min-vh-75">
-            <div class="col-lg-6 text-white">
-                <h1 class="display-4 fw-bold mb-4">
-                    {{ t('welcome') }} 🎾
+<section class="hero">
+    <div class="hero-particles">
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+        <div class="particle"></div>
+    </div>
+
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-6 hero-content">
+                <div class="hero-badge fade-in">
+                    <i class="fas fa-star"></i>
+                    {% if current_lang == 'ku' %}باشترین یاریگای پادڵ{% elif current_lang == 'ar' %}أفضل ملعب بادل{% else %}Best Padel Court{% endif %}
+                </div>
+
+                <h1 class="hero-title fade-in delay-1">
+                    {% if current_lang == 'ku' %}بەخێربێیت بۆ<br><span>پادڵ هاوس</span>{% elif current_lang == 'ar' %}مرحباً بك في<br><span>بادل هاوس</span>{% else %}Welcome to<br><span>Padel House</span>{% endif %}
                 </h1>
-                <p class="lead mb-4 opacity-75">
-                    {{ t('best_courts') }}
+
+                <p class="hero-subtitle fade-in delay-2">
+                    {% if current_lang == 'ku' %}باشترین یاریگاکانی پادڵ لە دهۆک بە ستانداردی نێودەوڵەتی{% elif current_lang == 'ar' %}أفضل ملاعب البادل في دهوك بمعايير دولية{% else %}The best padel courts in Duhok with international standards{% endif %}
                 </p>
-                <div class="d-flex gap-3 flex-wrap">
-                    <a href="{{ url_for('booking.booking_page') }}" class="btn btn-warning btn-lg px-4">
+
+                <div class="hero-buttons fade-in delay-3">
+                    <a href="{{ url_for('booking.booking_page') }}" class="btn btn-primary-glow">
                         <i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}
                     </a>
-                    <a href="{{ url_for('store.products') }}" class="btn btn-outline-light btn-lg px-4">
+                    <a href="{{ url_for('store.products') }}" class="btn btn-glass">
                         <i class="fas fa-store me-2"></i>{{ t('store') }}
                     </a>
                 </div>
+
+                <div class="hero-stats fade-in delay-3">
+                    <div class="hero-stat">
+                        <div class="hero-stat-number">2</div>
+                        <div class="hero-stat-label">{% if current_lang == 'ku' %}یاریگا{% elif current_lang == 'ar' %}ملعب{% else %}Courts{% endif %}</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-number">500+</div>
+                        <div class="hero-stat-label">{% if current_lang == 'ku' %}نۆرە{% elif current_lang == 'ar' %}حجز{% else %}Bookings{% endif %}</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-number">100%</div>
+                        <div class="hero-stat-label">{% if current_lang == 'ku' %}رازیبوون{% elif current_lang == 'ar' %}رضا{% else %}Satisfaction{% endif %}</div>
+                    </div>
+                </div>
             </div>
+
             <div class="col-lg-6 text-center mt-5 mt-lg-0">
-                <!-- CHANGED: Using mascott.png instead of hero_padel.png -->
-                <img src="{{ url_for('static', filename='images/mascott.png') }}" alt="Padel House" class="img-fluid" style="max-height: 400px;">
+                <div class="hero-image-wrapper">
+                    <div class="hero-image-glow"></div>
+                    <img src="{{ url_for('static', filename='images/mascott.png') }}" alt="Padel House" class="hero-image img-fluid">
+                </div>
             </div>
         </div>
     </div>
 </section>
 
 <!-- Features Section -->
-<section class="py-5">
+<section class="section section-light">
     <div class="container">
+        <div class="section-header">
+            <span class="section-badge">{% if current_lang == 'ku' %}بۆچی ئێمە{% elif current_lang == 'ar' %}لماذا نحن{% else %}Why Us{% endif %}</span>
+            <h2 class="section-title">{% if current_lang == 'ku' %}تایبەتمەندیەکانمان{% elif current_lang == 'ar' %}مميزاتنا{% else %}Our Features{% endif %}</h2>
+            <p class="section-subtitle">{% if current_lang == 'ku' %}ئێمە باشترین خزمەتگوزاری پادڵ پێشکەش دەکەین{% elif current_lang == 'ar' %}نقدم لكم أفضل خدمات البادل{% else %}We offer the best padel services{% endif %}</p>
+        </div>
+
         <div class="row g-4">
-            <!-- Feature 1 -->
             <div class="col-md-4">
-                <div class="card h-100 text-center p-4 border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <i class="fas fa-trophy fa-3x" style="color: #E57625;"></i>
-                        </div>
-                        <h5 class="card-title">{{ t('professional_courts') if t else 'ملاعب احترافية' }}</h5>
-                        <p class="card-text text-muted">
-                            {% if current_lang == 'ku' %}
-                            یاریگای پڕۆفیشناڵ بە ستانداردی نێودەوڵەتی
-                            {% elif current_lang == 'ar' %}
-                            ملاعب بمواصفات عالمية
-                            {% else %}
-                            Professional courts with international standards
-                            {% endif %}
-                        </p>
-                    </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-trophy"></i></div>
+                    <h5 class="feature-title">{% if current_lang == 'ku' %}یاریگای پڕۆفیشناڵ{% elif current_lang == 'ar' %}ملاعب احترافية{% else %}Professional Courts{% endif %}</h5>
+                    <p class="feature-text">{% if current_lang == 'ku' %}یاریگای پڕۆفیشناڵ بە ستانداردی نێودەوڵەتی{% elif current_lang == 'ar' %}ملاعب بمواصفات عالمية{% else %}Professional courts with international standards{% endif %}</p>
                 </div>
             </div>
-
-            <!-- Feature 2 -->
             <div class="col-md-4">
-                <div class="card h-100 text-center p-4 border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <i class="fas fa-clock fa-3x" style="color: #E57625;"></i>
-                        </div>
-                        <h5 class="card-title">{{ t('easy_booking') if t else 'حجز سهل' }}</h5>
-                        <p class="card-text text-muted">
-                            {% if current_lang == 'ku' %}
-                            نۆرەی ئاسان و خێرا لە هەموو کاتێک
-                            {% elif current_lang == 'ar' %}
-                            احجز بسهولة في أي وقت
-                            {% else %}
-                            Easy and fast booking anytime
-                            {% endif %}
-                        </p>
-                    </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-clock"></i></div>
+                    <h5 class="feature-title">{% if current_lang == 'ku' %}نۆرەی ئاسان{% elif current_lang == 'ar' %}حجز سهل{% else %}Easy Booking{% endif %}</h5>
+                    <p class="feature-text">{% if current_lang == 'ku' %}نۆرەی ئاسان و خێرا لە هەموو کاتێک{% elif current_lang == 'ar' %}احجز بسهولة في أي وقت{% else %}Easy and fast booking anytime{% endif %}</p>
                 </div>
             </div>
-
-            <!-- Feature 3 -->
             <div class="col-md-4">
-                <div class="card h-100 text-center p-4 border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <i class="fas fa-shopping-bag fa-3x" style="color: #E57625;"></i>
-                        </div>
-                        <h5 class="card-title">{{ t('store') }}</h5>
-                        <p class="card-text text-muted">
-                            {% if current_lang == 'ku' %}
-                            ڕاکێت، تۆپ و پێداویستی یاری
-                            {% elif current_lang == 'ar' %}
-                            مضارب وكرات ومستلزمات اللعب
-                            {% else %}
-                            Rackets, balls and accessories
-                            {% endif %}
-                        </p>
-                    </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-shopping-bag"></i></div>
+                    <h5 class="feature-title">{{ t('store') }}</h5>
+                    <p class="feature-text">{% if current_lang == 'ku' %}ڕاکێت، تۆپ و پێداویستی یاری{% elif current_lang == 'ar' %}مضارب وكرات ومستلزمات اللعب{% else %}Rackets, balls and accessories{% endif %}</p>
                 </div>
             </div>
         </div>
@@ -102,58 +1065,46 @@
 </section>
 
 <!-- Stadiums Section -->
-<section class="py-5 bg-light">
+<section class="section section-gray">
     <div class="container">
-        <h2 class="text-center mb-5" style="color: #1a1a2e;">{{ t('stadiums') }}</h2>
+        <div class="section-header">
+            <span class="section-badge">{% if current_lang == 'ku' %}یاریگاکان{% elif current_lang == 'ar' %}الملاعب{% else %}Courts{% endif %}</span>
+            <h2 class="section-title">{{ t('stadiums') }}</h2>
+            <p class="section-subtitle">{% if current_lang == 'ku' %}دوو یاریگای پڕۆفیشناڵ{% elif current_lang == 'ar' %}ملعبان احترافيان{% else %}Two professional courts{% endif %}</p>
+        </div>
+
         <div class="row g-4">
-            <!-- Stadium 1 -->
             <div class="col-md-6">
-                <div class="card h-100 overflow-hidden border-0 shadow">
-                    <!-- CHANGED: Using mascot_1.png instead of stadium1.jpg -->
-                    <img src="{{ url_for('static', filename='images/mascot_1.png') }}" class="card-img-top" alt="Stadium 1" style="height: 250px; object-fit: contain; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ t('stadium_1') }}</h5>
-                        <p class="card-text">
-                            <span class="badge bg-success">{{ t('available') }}</span>
-                        </p>
-                        <p class="text-muted">
-                            {% if current_lang == 'ku' %}
-                            یاریگایەکی پڕۆفیشناڵ بە باشترین ئامێرەکان
-                            {% elif current_lang == 'ar' %}
-                            ملعب احترافي مجهز بأحدث المعدات
-                            {% else %}
-                            Professional court with latest equipment
-                            {% endif %}
-                        </p>
-                        <a href="{{ url_for('booking.booking_page') }}" class="btn btn-outline-warning">
-                            <i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}
-                        </a>
+                <div class="stadium-card">
+                    <div class="stadium-image">
+                        <img src="{{ url_for('static', filename='images/mascot_1.png') }}" alt="Stadium 1">
+                        <span class="stadium-badge"><i class="fas fa-check-circle"></i>{{ t('available') }}</span>
+                        <span class="stadium-number">01</span>
+                    </div>
+                    <div class="stadium-body">
+                        <h5 class="stadium-name">{{ t('stadium_1') }}</h5>
+                        <div class="stadium-features">
+                            <span class="stadium-feature"><i class="fas fa-lightbulb"></i>{% if current_lang == 'ku' %}رووناکی{% elif current_lang == 'ar' %}إضاءة{% else %}Lighting{% endif %}</span>
+                            <span class="stadium-feature"><i class="fas fa-wind"></i>{% if current_lang == 'ku' %}فێنکە{% elif current_lang == 'ar' %}تهوية{% else %}Ventilation{% endif %}</span>
+                        </div>
+                        <a href="{{ url_for('booking.booking_page') }}" class="btn btn-stadium"><i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}</a>
                     </div>
                 </div>
             </div>
-
-            <!-- Stadium 2 -->
             <div class="col-md-6">
-                <div class="card h-100 overflow-hidden border-0 shadow">
-                    <!-- CHANGED: Using mascot_2.png instead of stadium2.jpg -->
-                    <img src="{{ url_for('static', filename='images/mascot_2.png') }}" class="card-img-top" alt="Stadium 2" style="height: 250px; object-fit: contain; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
-                    <div class="card-body">
-                        <h5 class="card-title">{{ t('stadium_2') }}</h5>
-                        <p class="card-text">
-                            <span class="badge bg-success">{{ t('available') }}</span>
-                        </p>
-                        <p class="text-muted">
-                            {% if current_lang == 'ku' %}
-                            یاریگایەکی کوالیتی بەرز لەگەڵ رووناکی باش
-                            {% elif current_lang == 'ar' %}
-                            ملعب عالي الجودة مع إضاءة ممتازة
-                            {% else %}
-                            High quality court with excellent lighting
-                            {% endif %}
-                        </p>
-                        <a href="{{ url_for('booking.booking_page') }}" class="btn btn-outline-warning">
-                            <i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}
-                        </a>
+                <div class="stadium-card">
+                    <div class="stadium-image">
+                        <img src="{{ url_for('static', filename='images/mascot_2.png') }}" alt="Stadium 2">
+                        <span class="stadium-badge"><i class="fas fa-check-circle"></i>{{ t('available') }}</span>
+                        <span class="stadium-number">02</span>
+                    </div>
+                    <div class="stadium-body">
+                        <h5 class="stadium-name">{{ t('stadium_2') }}</h5>
+                        <div class="stadium-features">
+                            <span class="stadium-feature"><i class="fas fa-lightbulb"></i>{% if current_lang == 'ku' %}رووناکی{% elif current_lang == 'ar' %}إضاءة{% else %}Lighting{% endif %}</span>
+                            <span class="stadium-feature"><i class="fas fa-wind"></i>{% if current_lang == 'ku' %}فێنکە{% elif current_lang == 'ar' %}تهوية{% else %}Ventilation{% endif %}</span>
+                        </div>
+                        <a href="{{ url_for('booking.booking_page') }}" class="btn btn-stadium"><i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}</a>
                     </div>
                 </div>
             </div>
@@ -162,45 +1113,47 @@
 </section>
 
 <!-- Products Section -->
-<section class="py-5">
+<section class="section section-light">
     <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-5">
-            <h2 style="color: #1a1a2e;">{{ t('our_products') if t else 'منتجاتنا' }}</h2>
-            <a href="{{ url_for('store.products') }}" class="btn btn-outline-warning">
-                {{ t('view_all') if t else 'عرض الكل' }} <i class="fas fa-arrow-left ms-2"></i>
+        <div class="products-header">
+            <div class="section-header">
+                <span class="section-badge">{% if current_lang == 'ku' %}فرۆشگا{% elif current_lang == 'ar' %}المتجر{% else %}Store{% endif %}</span>
+                <h2 class="section-title">{{ t('our_products') if t else 'منتجاتنا' }}</h2>
+            </div>
+            <a href="{{ url_for('store.products') }}" class="btn btn-view-all">
+                {{ t('view_all') if t else 'عرض الكل' }}
+                <i class="fas fa-arrow-{% if is_rtl %}left{% else %}right{% endif %}"></i>
             </a>
         </div>
+
         <div class="row g-4">
             {% if featured_products %}
                 {% for product in featured_products[:4] %}
-                <div class="col-6 col-md-3">
-                    <div class="card h-100 border-0 shadow-sm product-card">
-                        <div class="position-relative">
-                            {% if product.image %}
-                            <img src="{{ url_for('static', filename='images/products/' + product.image) }}"
-                                 class="card-img-top" alt="{{ product.name }}"
-                                 style="height: 180px; object-fit: cover;"
-                                 onerror="this.onerror=null; this.src='https://via.placeholder.com/300x180?text=Product'">
-                            {% else %}
-                            <img src="https://via.placeholder.com/300x180?text=Product"
-                                 class="card-img-top" alt="{{ product.name }}"
-                                 style="height: 180px; object-fit: cover;">
+                <div class="col-6 col-lg-3">
+                    <div class="product-card" data-bs-toggle="modal" data-bs-target="#productModal" data-id="{{ product.id }}" data-name="{{ product.get_name(current_lang) }}" data-description="{{ product.get_description(current_lang) or '' }}" data-price="{{ product.price }}" data-stock="{{ product.stock }}" data-image="{{ url_for('static', filename='images/products/' + (product.image or 'default.jpg')) }}" data-category="{{ product.category.get_name(current_lang) if product.category else '' }}">
+                        <div class="product-image">
+                            <img src="{{ url_for('static', filename='images/products/' + (product.image or 'default.jpg')) }}" alt="{{ product.get_name(current_lang) }}" onerror="this.src='https://via.placeholder.com/300x220?text=Product'">
+                            {% if product.stock <= 0 %}
+                            <span class="product-badge bg-danger text-white">{% if current_lang == 'ku' %}نەماوە{% elif current_lang == 'ar' %}نفذ{% else %}Out{% endif %}</span>
+                            {% elif product.stock < 5 %}
+                            <span class="product-badge bg-warning text-dark">{{ product.stock }}</span>
                             {% endif %}
+                            <div class="product-overlay">
+                                <span class="btn btn-quick-view"><i class="fas fa-eye"></i>{% if current_lang == 'ku' %}بینین{% elif current_lang == 'ar' %}عرض{% else %}View{% endif %}</span>
+                            </div>
                         </div>
-                        <div class="card-body text-center">
-                            <h6 class="card-title">{{ product.name }}</h6>
-                            <p class="text-warning fw-bold mb-2">{{ "{:,.0f}".format(product.price or 0) }} {{ t('iqd') }}</p>
-                            <button class="btn btn-sm btn-warning add-to-cart" data-product-id="{{ product.id }}">
-                                <i class="fas fa-cart-plus me-1"></i> {{ t('add_to_cart') if t else 'أضف للسلة' }}
-                            </button>
+                        <div class="product-body">
+                            <div class="product-category">{{ product.category.get_name(current_lang) if product.category else '' }}</div>
+                            <h6 class="product-name">{{ product.get_name(current_lang) }}</h6>
+                            <div class="product-price">{{ "{:,.0f}".format(product.price or 0) }} <small>{{ t('iqd') }}</small></div>
                         </div>
                     </div>
                 </div>
                 {% endfor %}
             {% else %}
                 <div class="col-12 text-center py-5">
-                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
-                    <p class="text-muted">{{ t('no_products') if t else 'لا توجد منتجات حالياً' }}</p>
+                    <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+                    <p class="text-muted">{{ t('no_products') if t else 'لا توجد منتجات' }}</p>
                 </div>
             {% endif %}
         </div>
@@ -208,51 +1161,46 @@
 </section>
 
 <!-- Pricing Section -->
-<section class="py-5 bg-light">
+<section class="section section-gray">
     <div class="container">
-        <h2 class="text-center mb-5" style="color: #1a1a2e;">{{ t('pricing') if t else 'الأسعار' }}</h2>
+        <div class="section-header">
+            <span class="section-badge">{% if current_lang == 'ku' %}نرخەکان{% elif current_lang == 'ar' %}الأسعار{% else %}Pricing{% endif %}</span>
+            <h2 class="section-title">{{ t('pricing') if t else 'الأسعار' }}</h2>
+        </div>
+
         <div class="row justify-content-center">
             <div class="col-lg-6">
-                <div class="card border-0 shadow text-center p-4">
-                    <div class="card-body">
-                        <h4 class="mb-4" style="color: #E57625;">
-                            <i class="fas fa-tag me-2"></i>
-                            {% if current_lang == 'ku' %}
-                            داشکاندن 25% لە 12-16
-                            {% elif current_lang == 'ar' %}
-                            خصم 25% من 12-16
-                            {% else %}
-                            25% Discount 12-16
-                            {% endif %}
-                        </h4>
+                <div class="pricing-card text-center">
+                    <span class="pricing-badge">
+                        <i class="fas fa-percentage"></i>
+                        {% if current_lang == 'ku' %}داشکاندن 25%{% elif current_lang == 'ar' %}خصم 25%{% else %}25% OFF{% endif %}
+                    </span>
 
-                        <div class="row text-center mb-4">
-                            <div class="col-6">
-                                <h5 class="text-muted mb-1">{{ t('normal_price') if t else 'السعر العادي' }}</h5>
-                                <h3 style="color: #1a1a2e;">80,000 <small>{{ t('iqd') }}/{{ t('hour') if t else 'ساعة' }}</small></h3>
-                            </div>
-                            <div class="col-6">
-                                <h5 class="text-muted mb-1">{{ t('discount_price') if t else 'سعر الخصم' }}</h5>
-                                <h3 style="color: #E57625;">60,000 <small>{{ t('iqd') }}/{{ t('hour') if t else 'ساعة' }}</small></h3>
-                            </div>
+                    <p class="pricing-time">
+                        <i class="fas fa-clock me-2"></i>
+                        {% if current_lang == 'ku' %}لە کاتژمێر 12:00 بۆ 16:00{% elif current_lang == 'ar' %}من الساعة 12:00 إلى 16:00{% else %}From 12:00 to 16:00{% endif %}
+                    </p>
+
+                    <div class="pricing-prices">
+                        <div class="pricing-item">
+                            <div class="pricing-label">{{ t('normal_price') if t else 'السعر العادي' }}</div>
+                            <div class="pricing-value">80,000 <span class="pricing-unit">{{ t('iqd') }}</span></div>
                         </div>
-
-                        <ul class="list-unstyled text-start mb-4">
-                            <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: #E57625;"></i>
-                                {% if current_lang == 'ku' %}نۆرە بێ پارەدانی پێشوەخت{% elif current_lang == 'ar' %}حجز بدون دفع مسبق{% else %}Book without prepayment{% endif %}
-                            </li>
-                            <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: #E57625;"></i>
-                                {% if current_lang == 'ku' %}هەڵوەشاندنەوەی خۆڕایی پێش 24 کاتژمێر{% elif current_lang == 'ar' %}إلغاء مجاني قبل 24 ساعة{% else %}Free cancellation before 24 hours{% endif %}
-                            </li>
-                            <li class="mb-2"><i class="fas fa-check-circle me-2" style="color: #E57625;"></i>
-                                {% if current_lang == 'ku' %}ئامێرەکان بۆ کرێ بەردەستن{% elif current_lang == 'ar' %}معدات متوفرة للإيجار{% else %}Equipment available for rent{% endif %}
-                            </li>
-                        </ul>
-
-                        <a href="{{ url_for('booking.booking_page') }}" class="btn btn-warning btn-lg w-100">
-                            <i class="fas fa-calendar-alt me-2"></i>{{ t('book_now') }}
-                        </a>
+                        <div class="pricing-item">
+                            <div class="pricing-label">{{ t('discount_price') if t else 'سعر الخصم' }}</div>
+                            <div class="pricing-value highlight">60,000 <span class="pricing-unit">{{ t('iqd') }}</span></div>
+                        </div>
                     </div>
+
+                    <ul class="pricing-features text-start">
+                        <li><i class="fas fa-check"></i>{% if current_lang == 'ku' %}نۆرە بێ پارەدانی پێشوەخت{% elif current_lang == 'ar' %}حجز بدون دفع مسبق{% else %}Book without prepayment{% endif %}</li>
+                        <li><i class="fas fa-check"></i>{% if current_lang == 'ku' %}هەڵوەشاندنەوەی خۆڕایی{% elif current_lang == 'ar' %}إلغاء مجاني{% else %}Free cancellation{% endif %}</li>
+                        <li><i class="fas fa-check"></i>{% if current_lang == 'ku' %}ئامێرەکان بۆ کرێ بەردەستن{% elif current_lang == 'ar' %}معدات متوفرة للإيجار{% else %}Equipment available for rent{% endif %}</li>
+                    </ul>
+
+                    <a href="{{ url_for('booking.booking_page') }}" class="btn btn-pricing">
+                        <i class="fas fa-calendar-alt me-2"></i>{{ t('book_now') }}
+                    </a>
                 </div>
             </div>
         </div>
@@ -260,77 +1208,177 @@
 </section>
 
 <!-- CTA Section -->
-<section class="py-5 text-white" style="background: linear-gradient(135deg, #212121 0%, #333 100%);">
+<section class="cta">
     <div class="container">
-        <div class="row align-items-center">
+        <div class="row align-items-center cta-content">
             <div class="col-lg-8">
-                <h3 class="mb-3">
-                    {% if current_lang == 'ku' %}
-                    ئامادەی بۆ یاری؟
-                    {% elif current_lang == 'ar' %}
-                    جاهز للعب؟
-                    {% else %}
-                    Ready to play?
-                    {% endif %}
-                </h3>
-                <p class="mb-0 opacity-75">
-                    {% if current_lang == 'ku' %}
-                    ئێستا نۆرەی یاریگاکەت بکە و چێژ لە باشترین ئەزموونی پادڵ وەربگرە
-                    {% elif current_lang == 'ar' %}
-                    احجز ملعبك الآن واستمتع بأفضل تجربة بادل في المدينة
-                    {% else %}
-                    Book your court now and enjoy the best padel experience in the city
-                    {% endif %}
-                </p>
+                <h2 class="cta-title">{% if current_lang == 'ku' %}ئامادەی بۆ یاری؟{% elif current_lang == 'ar' %}جاهز للعب؟{% else %}Ready to Play?{% endif %}</h2>
+                <p class="cta-text">{% if current_lang == 'ku' %}ئێستا نۆرەی یاریگاکەت بکە و چێژ لە باشترین ئەزموونی پادڵ وەربگرە{% elif current_lang == 'ar' %}احجز ملعبك الآن واستمتع بأفضل تجربة بادل{% else %}Book your court now and enjoy the best padel experience{% endif %}</p>
             </div>
-            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-                <a href="{{ url_for('booking.booking_page') }}" class="btn btn-warning btn-lg">
-                    <i class="fas fa-arrow-left me-2"></i>{{ t('book_now') }}
+            <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+                <a href="{{ url_for('booking.booking_page') }}" class="btn btn-primary-glow">
+                    <i class="fas fa-arrow-{% if is_rtl %}left{% else %}right{% endif %} me-2"></i>{{ t('book_now') }}
                 </a>
             </div>
         </div>
     </div>
 </section>
+
+<!-- Product Modal -->
+<div class="modal fade product-modal" id="productModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"></button>
+                <div class="row g-0">
+                    <div class="col-md-5">
+                        <img id="modalProductImage" src="" alt="" class="modal-product-image w-100">
+                    </div>
+                    <div class="col-md-7">
+                        <div class="modal-product-details">
+                            <span id="modalProductCategory" class="modal-product-category"></span>
+                            <h2 id="modalProductName" class="modal-product-name"></h2>
+                            <div id="modalProductPrice" class="modal-product-price"></div>
+                            <p id="modalProductDescription" class="modal-product-description"></p>
+                            <div id="modalStockInfo" class="modal-stock-info">
+                                <i class="fas fa-box"></i>
+                                <span id="modalStockText"></span>
+                            </div>
+                            <div id="quantitySection" class="quantity-wrapper">
+                                <div class="quantity-label">{% if current_lang == 'ku' %}بڕ{% elif current_lang == 'ar' %}الكمية{% else %}Quantity{% endif %}</div>
+                                <div class="quantity-control">
+                                    <button type="button" class="quantity-btn" onclick="changeQuantity(-1)">−</button>
+                                    <input type="number" id="modalQuantity" class="quantity-input" value="1" min="1">
+                                    <button type="button" class="quantity-btn" onclick="changeQuantity(1)">+</button>
+                                </div>
+                            </div>
+                            <button id="modalAddToCart" class="btn btn-add-to-cart">
+                                <i class="fas fa-cart-plus me-2"></i>{{ t('add_to_cart') if t else 'أضف للسلة' }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Add to cart functionality
-document.querySelectorAll('.add-to-cart').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const productId = this.dataset.productId;
-        fetch('/store/cart/add', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                product_id: productId,
-                quantity: 1
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.success) {
-                // Update cart count in navbar
-                const cartBadge = document.querySelector('.cart-badge');
-                if(cartBadge) {
-                    cartBadge.textContent = data.cart_count;
-                }
-                // Show success toast
-                showToast('{{ t("added_to_cart") if t else "تمت الإضافة للسلة" }}', 'success');
-            }
-        });
-    });
+let currentProduct = null;
+let cart = JSON.parse(localStorage.getItem('padelCart')) || [];
+
+function updateCartCount() {
+    const badge = document.querySelector('.cart-badge');
+    if (badge) badge.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
+}
+
+function changeQuantity(delta) {
+    const input = document.getElementById('modalQuantity');
+    let value = parseInt(input.value) || 1;
+    value = Math.max(1, Math.min(value + delta, currentProduct?.stock || 99));
+    input.value = value;
+}
+
+function showToast(title, message) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'custom-toast success';
+    toast.innerHTML = `
+        <div class="custom-toast-icon"><i class="fas fa-check"></i></div>
+        <div class="custom-toast-content">
+            <h6>${title}</h6>
+            <p>${message}</p>
+        </div>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 3000);
+}
+
+document.getElementById('productModal').addEventListener('show.bs.modal', function(e) {
+    const card = e.relatedTarget;
+    currentProduct = {
+        id: card.dataset.id,
+        name: card.dataset.name,
+        description: card.dataset.description,
+        price: parseFloat(card.dataset.price),
+        stock: parseInt(card.dataset.stock),
+        image: card.dataset.image,
+        category: card.dataset.category
+    };
+
+    document.getElementById('modalProductImage').src = currentProduct.image;
+    document.getElementById('modalProductName').textContent = currentProduct.name;
+    document.getElementById('modalProductCategory').textContent = currentProduct.category;
+    document.getElementById('modalProductPrice').innerHTML = currentProduct.price.toLocaleString() + ' <small>{{ t("iqd") }}</small>';
+    document.getElementById('modalProductDescription').textContent = currentProduct.description || '{% if current_lang == "ku" %}وەسف نییە{% elif current_lang == "ar" %}لا يوجد وصف{% else %}No description available{% endif %}';
+
+    const stockInfo = document.getElementById('modalStockInfo');
+    const stockText = document.getElementById('modalStockText');
+    const qtySection = document.getElementById('quantitySection');
+    const addBtn = document.getElementById('modalAddToCart');
+
+    stockInfo.className = 'modal-stock-info';
+
+    if (currentProduct.stock <= 0) {
+        stockInfo.classList.add('out-of-stock');
+        stockText.innerHTML = '<i class="fas fa-times-circle me-2"></i>{% if current_lang == "ku" %}نەماوە{% elif current_lang == "ar" %}نفذ المخزون{% else %}Out of Stock{% endif %}';
+        qtySection.style.display = 'none';
+        addBtn.disabled = true;
+        addBtn.textContent = '{% if current_lang == "ku" %}نەماوە{% elif current_lang == "ar" %}نفذ المخزون{% else %}Out of Stock{% endif %}';
+    } else if (currentProduct.stock < 5) {
+        stockInfo.classList.add('low-stock');
+        stockText.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>{% if current_lang == "ku" %}تەنها ' + currentProduct.stock + ' ماوە{% elif current_lang == "ar" %}فقط ' + currentProduct.stock + ' متبقي{% else %}Only ' + currentProduct.stock + ' left{% endif %}';
+        qtySection.style.display = 'block';
+        addBtn.disabled = false;
+        addBtn.innerHTML = '<i class="fas fa-cart-plus me-2"></i>{{ t("add_to_cart") if t else "أضف للسلة" }}';
+    } else {
+        stockInfo.classList.add('in-stock');
+        stockText.innerHTML = '<i class="fas fa-check-circle me-2"></i>{% if current_lang == "ku" %}بەردەستە{% elif current_lang == "ar" %}متوفر{% else %}In Stock{% endif %}';
+        qtySection.style.display = 'block';
+        addBtn.disabled = false;
+        addBtn.innerHTML = '<i class="fas fa-cart-plus me-2"></i>{{ t("add_to_cart") if t else "أضف للسلة" }}';
+    }
+
+    document.getElementById('modalQuantity').value = 1;
 });
 
-function showToast(message, type) {
-    const toast = document.createElement('div');
-    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
-    toast.style.cssText = 'top: 100px; right: 20px; z-index: 9999; min-width: 250px;';
-    toast.innerHTML = `<i class="fas fa-check-circle me-2"></i>${message}`;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-}
+document.getElementById('modalAddToCart').addEventListener('click', function() {
+    if (!currentProduct || currentProduct.stock <= 0) return;
+
+    const qty = parseInt(document.getElementById('modalQuantity').value) || 1;
+    const existing = cart.find(item => item.id === currentProduct.id);
+
+    if (existing) {
+        existing.quantity += qty;
+    } else {
+        cart.push({ id: currentProduct.id, name: currentProduct.name, price: currentProduct.price, quantity: qty });
+    }
+
+    localStorage.setItem('padelCart', JSON.stringify(cart));
+    updateCartCount();
+
+    this.innerHTML = '<i class="fas fa-check me-2"></i>{% if current_lang == "ku" %}زیادکرا{% elif current_lang == "ar" %}تمت الإضافة{% else %}Added!{% endif %}';
+    this.style.background = '#10b981';
+
+    showToast('{% if current_lang == "ku" %}سەرکەوتوو{% elif current_lang == "ar" %}نجاح{% else %}Success{% endif %}', '{% if current_lang == "ku" %}زیادکرا بۆ سەبەتە{% elif current_lang == "ar" %}تمت الإضافة للسلة{% else %}Added to cart{% endif %}');
+
+    setTimeout(() => {
+        this.innerHTML = '<i class="fas fa-cart-plus me-2"></i>{{ t("add_to_cart") if t else "أضف للسلة" }}';
+        this.style.background = '';
+        bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+    }, 1200);
+});
+
+document.getElementById('modalQuantity').addEventListener('change', function() {
+    let value = parseInt(this.value) || 1;
+    this.value = Math.max(1, Math.min(value, currentProduct?.stock || 99));
+});
+
+updateCartCount();
 </script>
 {% endblock %}

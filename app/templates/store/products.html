@@ -2,6 +2,169 @@
 
 {% block title %}{{ t('site_name') }} - {{ t('store') }}{% endblock %}
 
+{% block extra_css %}
+<style>
+    .product-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.08);
+    }
+
+    .product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(229, 118, 37, 0.2);
+    }
+
+    .product-card .card-img-top {
+        transition: transform 0.3s ease;
+    }
+
+    .product-card:hover .card-img-top {
+        transform: scale(1.05);
+    }
+
+    .product-card .position-relative {
+        overflow: hidden;
+        border-radius: 8px 8px 0 0;
+    }
+
+    /* Product Detail Modal */
+    .product-modal .modal-content {
+        border: none;
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .product-modal .modal-header {
+        border-bottom: none;
+        padding: 20px 24px 0;
+    }
+
+    .product-modal .modal-body {
+        padding: 24px;
+    }
+
+    .product-modal .product-image {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        border-radius: 12px;
+    }
+
+    .product-modal .product-title {
+        font-size: 24px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 8px;
+    }
+
+    .product-modal .product-category {
+        display: inline-block;
+        background: #f0f0f0;
+        color: #666;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        margin-bottom: 16px;
+    }
+
+    .product-modal .product-price {
+        font-size: 28px;
+        font-weight: 800;
+        color: #E57625;
+        margin-bottom: 16px;
+    }
+
+    .product-modal .product-description {
+        color: #666;
+        line-height: 1.7;
+        margin-bottom: 20px;
+    }
+
+    .product-modal .stock-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 20px;
+        padding: 12px 16px;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .product-modal .stock-info.in-stock {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .product-modal .stock-info.low-stock {
+        background: #fff3e0;
+        color: #ef6c00;
+    }
+
+    .product-modal .stock-info.out-of-stock {
+        background: #ffebee;
+        color: #c62828;
+    }
+
+    .product-modal .quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .product-modal .quantity-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        border: 2px solid #E57625;
+        background: white;
+        color: #E57625;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .product-modal .quantity-btn:hover {
+        background: #E57625;
+        color: white;
+    }
+
+    .product-modal .quantity-input {
+        width: 60px;
+        height: 40px;
+        text-align: center;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .product-modal .btn-add-cart {
+        background: #E57625;
+        border: none;
+        padding: 14px 32px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 10px;
+        transition: all 0.3s;
+    }
+
+    .product-modal .btn-add-cart:hover {
+        background: #c9621c;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(229, 118, 37, 0.4);
+    }
+
+    .product-modal .btn-add-cart:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
     <h1 class="text-center mb-5" style="color: #1a1a2e;">
@@ -17,7 +180,7 @@
                 </a>
                 {% for category in categories %}
                 <a href="{{ url_for('store.products', category=category.id) }}" class="btn {% if current_category == category.id %}btn-warning{% else %}btn-outline-warning{% endif %}">
-                    {{ category.name }}
+                    {{ category.get_name(current_lang) }}
                 </a>
                 {% endfor %}
             </div>
@@ -29,11 +192,21 @@
         {% if products %}
             {% for product in products %}
             <div class="col-md-6 col-lg-4 col-xl-3">
-                <div class="card h-100 product-card">
+                <div class="card h-100 product-card"
+                     data-bs-toggle="modal"
+                     data-bs-target="#productModal"
+                     data-id="{{ product.id }}"
+                     data-name="{{ product.get_name(current_lang) }}"
+                     data-description="{{ product.get_description(current_lang) or '' }}"
+                     data-price="{{ product.price }}"
+                     data-stock="{{ product.stock }}"
+                     data-image="{{ url_for('static', filename='images/products/' + (product.image or 'default.jpg')) }}"
+                     data-category="{{ product.category.get_name(current_lang) if product.category else '' }}">
+
                     <div class="position-relative">
                         <img src="{{ url_for('static', filename='images/products/' + (product.image or 'default.jpg')) }}"
                              class="card-img-top"
-                             alt="{{ product.name }}"
+                             alt="{{ product.get_name(current_lang) }}"
                              style="height: 200px; object-fit: cover;"
                              onerror="this.src='https://via.placeholder.com/300x200?text=Product'">
 
@@ -47,26 +220,22 @@
                     </div>
 
                     <div class="card-body d-flex flex-column">
-                        <h5 class="card-title">{{ product.name }}</h5>
-                        <p class="card-text text-muted small flex-grow-1">{{ product.description[:80] if product.description else '' }}{% if product.description and product.description|length > 80 %}...{% endif %}</p>
+                        <h5 class="card-title">{{ product.get_name(current_lang) }}</h5>
+
+                        {% set desc = product.get_description(current_lang) %}
+                        <p class="card-text text-muted small flex-grow-1">
+                            {{ desc[:80] if desc else '' }}{% if desc and desc|length > 80 %}...{% endif %}
+                        </p>
 
                         <div class="mt-auto">
                             <p class="fw-bold fs-5 mb-2" style="color: #E57625;">
                                 {{ "{:,.0f}".format(product.price|default(0)) }} {{ t('iqd') }}
                             </p>
 
-                            {% if product.stock and product.stock > 0 %}
-                            <button class="btn btn-warning w-100 add-to-cart"
-                                    data-product-id="{{ product.id }}"
-                                    data-product-name="{{ product.name }}"
-                                    data-product-price="{{ product.price }}">
-                                <i class="fas fa-cart-plus me-2"></i>{{ t('add_to_cart') }}
-                            </button>
-                            {% else %}
-                            <button class="btn btn-secondary w-100" disabled>
-                                {{ t('out_of_stock') }}
-                            </button>
-                            {% endif %}
+                            <span class="btn btn-outline-warning w-100">
+                                <i class="fas fa-eye me-2"></i>
+                                {% if current_lang == 'ku' %}بینین{% elif current_lang == 'ar' %}عرض{% else %}View{% endif %}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -78,6 +247,57 @@
                 <h4 class="text-muted">{{ t('no_products') }}</h4>
             </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Product Detail Modal -->
+<div class="modal fade product-modal" id="productModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-4">
+                    <!-- Product Image -->
+                    <div class="col-md-5">
+                        <img id="modalProductImage" src="" alt="" class="product-image">
+                    </div>
+
+                    <!-- Product Details -->
+                    <div class="col-md-7">
+                        <span id="modalProductCategory" class="product-category"></span>
+                        <h2 id="modalProductName" class="product-title"></h2>
+                        <p id="modalProductPrice" class="product-price"></p>
+                        <p id="modalProductDescription" class="product-description"></p>
+
+                        <!-- Stock Info -->
+                        <div id="modalStockInfo" class="stock-info">
+                            <i class="fas fa-box"></i>
+                            <span id="modalStockText"></span>
+                        </div>
+
+                        <!-- Quantity Control -->
+                        <div id="quantitySection">
+                            <label class="form-label fw-bold mb-2">
+                                {% if current_lang == 'ku' %}بڕ{% elif current_lang == 'ar' %}الكمية{% else %}Quantity{% endif %}
+                            </label>
+                            <div class="quantity-control">
+                                <button type="button" class="quantity-btn" onclick="changeQuantity(-1)">−</button>
+                                <input type="number" id="modalQuantity" class="quantity-input" value="1" min="1">
+                                <button type="button" class="quantity-btn" onclick="changeQuantity(1)">+</button>
+                            </div>
+                        </div>
+
+                        <!-- Add to Cart Button -->
+                        <button id="modalAddToCart" class="btn btn-add-cart btn-warning w-100">
+                            <i class="fas fa-cart-plus me-2"></i>
+                            {{ t('add_to_cart') }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -93,6 +313,9 @@
 
 {% block extra_js %}
 <script>
+// Current product data
+let currentProduct = null;
+
 // Cart functionality
 let cart = JSON.parse(localStorage.getItem('padelCart')) || [];
 
@@ -101,39 +324,116 @@ function updateCartCount() {
     document.getElementById('cart-count').textContent = count;
 }
 
-document.querySelectorAll('.add-to-cart').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const productId = this.dataset.productId;
-        const productName = this.dataset.productName;
-        const productPrice = parseFloat(this.dataset.productPrice);
+// Change quantity
+function changeQuantity(delta) {
+    const input = document.getElementById('modalQuantity');
+    let value = parseInt(input.value) || 1;
+    value += delta;
 
-        const existingItem = cart.find(item => item.id === productId);
+    if (value < 1) value = 1;
+    if (currentProduct && value > currentProduct.stock) value = currentProduct.stock;
 
-        if (existingItem) {
-            existingItem.quantity += 1;
-        } else {
-            cart.push({
-                id: productId,
-                name: productName,
-                price: productPrice,
-                quantity: 1
-            });
-        }
+    input.value = value;
+}
 
-        localStorage.setItem('padelCart', JSON.stringify(cart));
-        updateCartCount();
+// Product Modal - Load data when opened
+document.getElementById('productModal').addEventListener('show.bs.modal', function(event) {
+    const card = event.relatedTarget;
 
-        // Visual feedback
-        this.innerHTML = '<i class="fas fa-check me-2"></i>{{ t("added") }}';
-        this.classList.remove('btn-warning');
-        this.classList.add('btn-success');
+    currentProduct = {
+        id: card.dataset.id,
+        name: card.dataset.name,
+        description: card.dataset.description,
+        price: parseFloat(card.dataset.price),
+        stock: parseInt(card.dataset.stock),
+        image: card.dataset.image,
+        category: card.dataset.category
+    };
 
-        setTimeout(() => {
-            this.innerHTML = '<i class="fas fa-cart-plus me-2"></i>{{ t("add_to_cart") }}';
-            this.classList.remove('btn-success');
-            this.classList.add('btn-warning');
-        }, 1500);
-    });
+    // Populate modal
+    document.getElementById('modalProductImage').src = currentProduct.image;
+    document.getElementById('modalProductImage').alt = currentProduct.name;
+    document.getElementById('modalProductName').textContent = currentProduct.name;
+    document.getElementById('modalProductCategory').textContent = currentProduct.category;
+    document.getElementById('modalProductPrice').textContent = currentProduct.price.toLocaleString() + ' {{ t("iqd") }}';
+    document.getElementById('modalProductDescription').textContent = currentProduct.description || '{% if current_lang == "ku" %}وەسف نییە{% elif current_lang == "ar" %}لا يوجد وصف{% else %}No description{% endif %}';
+
+    // Stock info
+    const stockInfo = document.getElementById('modalStockInfo');
+    const stockText = document.getElementById('modalStockText');
+    const quantitySection = document.getElementById('quantitySection');
+    const addToCartBtn = document.getElementById('modalAddToCart');
+
+    stockInfo.classList.remove('in-stock', 'low-stock', 'out-of-stock');
+
+    if (currentProduct.stock <= 0) {
+        stockInfo.classList.add('out-of-stock');
+        stockText.innerHTML = '<i class="fas fa-times-circle me-2"></i>{% if current_lang == "ku" %}نەماوە{% elif current_lang == "ar" %}نفذ المخزون{% else %}Out of Stock{% endif %}';
+        quantitySection.style.display = 'none';
+        addToCartBtn.disabled = true;
+        addToCartBtn.innerHTML = '{% if current_lang == "ku" %}نەماوە{% elif current_lang == "ar" %}نفذ المخزون{% else %}Out of Stock{% endif %}';
+    } else if (currentProduct.stock < 5) {
+        stockInfo.classList.add('low-stock');
+        stockText.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>{% if current_lang == "ku" %}تەنها ' + currentProduct.stock + ' ماوە{% elif current_lang == "ar" %}فقط ' + currentProduct.stock + ' متبقي{% else %}Only ' + currentProduct.stock + ' left{% endif %}';
+        quantitySection.style.display = 'block';
+        addToCartBtn.disabled = false;
+        addToCartBtn.innerHTML = '<i class="fas fa-cart-plus me-2"></i>{{ t("add_to_cart") }}';
+    } else {
+        stockInfo.classList.add('in-stock');
+        stockText.innerHTML = '<i class="fas fa-check-circle me-2"></i>{% if current_lang == "ku" %}بەردەستە{% elif current_lang == "ar" %}متوفر{% else %}In Stock{% endif %}';
+        quantitySection.style.display = 'block';
+        addToCartBtn.disabled = false;
+        addToCartBtn.innerHTML = '<i class="fas fa-cart-plus me-2"></i>{{ t("add_to_cart") }}';
+    }
+
+    // Reset quantity
+    document.getElementById('modalQuantity').value = 1;
+    document.getElementById('modalQuantity').max = currentProduct.stock;
+});
+
+// Add to cart from modal
+document.getElementById('modalAddToCart').addEventListener('click', function() {
+    if (!currentProduct || currentProduct.stock <= 0) return;
+
+    const quantity = parseInt(document.getElementById('modalQuantity').value) || 1;
+
+    const existingItem = cart.find(item => item.id === currentProduct.id);
+
+    if (existingItem) {
+        existingItem.quantity += quantity;
+    } else {
+        cart.push({
+            id: currentProduct.id,
+            name: currentProduct.name,
+            price: currentProduct.price,
+            quantity: quantity
+        });
+    }
+
+    localStorage.setItem('padelCart', JSON.stringify(cart));
+    updateCartCount();
+
+    // Visual feedback
+    this.innerHTML = '<i class="fas fa-check me-2"></i>{% if current_lang == "ku" %}زیادکرا{% elif current_lang == "ar" %}تمت الإضافة{% else %}Added{% endif %}';
+    this.classList.remove('btn-warning');
+    this.classList.add('btn-success');
+
+    setTimeout(() => {
+        this.innerHTML = '<i class="fas fa-cart-plus me-2"></i>{{ t("add_to_cart") }}';
+        this.classList.remove('btn-success');
+        this.classList.add('btn-warning');
+
+        // Close modal after adding
+        bootstrap.Modal.getInstance(document.getElementById('productModal')).hide();
+    }, 1000);
+});
+
+// Quantity input validation
+document.getElementById('modalQuantity').addEventListener('change', function() {
+    let value = parseInt(this.value) || 1;
+    if (value < 1) value = 1;
+    if (currentProduct && value > currentProduct.stock) value = currentProduct.stock;
+    this.value = value;
 });
 
 // Initialize cart count on page load

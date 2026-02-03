@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}POS{% endblock %} - Padel House</title>
+
+    <!-- Bootstrap RTL -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+
+        body {
+            background-color: #1a1a2e;
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        /* Navbar */
+        .pos-navbar {
+            background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);
+            padding: 15px 0;
+            border-bottom: 2px solid #0f3460;
+        }
+
+        .pos-navbar .brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #00d9ff;
+        }
+
+        .pos-navbar .nav-link {
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .pos-navbar .nav-link:hover,
+        .pos-navbar .nav-link.active {
+            background: #0f3460;
+            color: #00d9ff;
+        }
+
+        /* Cards */
+        .pos-card {
+            background: linear-gradient(145deg, #16213e, #1a1a2e);
+            border: 1px solid #0f3460;
+            border-radius: 15px;
+            transition: all 0.3s;
+        }
+
+        .pos-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 217, 255, 0.2);
+        }
+
+        /* Stadium/Table Cards */
+        .location-card {
+            cursor: pointer;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .location-card.available {
+            border-color: #00d9ff;
+        }
+
+        .location-card.occupied {
+            border-color: #ff6b6b;
+            background: linear-gradient(145deg, #2d1f1f, #1a1a2e);
+        }
+
+        .location-card .icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .location-card.available .icon {
+            color: #00d9ff;
+        }
+
+        .location-card.occupied .icon {
+            color: #ff6b6b;
+        }
+
+        /* Product Grid */
+        .product-card {
+            cursor: pointer;
+            padding: 15px;
+            text-align: center;
+            height: 100%;
+        }
+
+        .product-card:hover {
+            border-color: #00d9ff;
+        }
+
+        .product-card img {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+
+        .product-card .price {
+            color: #00d9ff;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        /* Cart */
+        .cart-container {
+            background: #16213e;
+            border-radius: 15px;
+            padding: 20px;
+            height: calc(100vh - 200px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .cart-items {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .cart-item {
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cart-total {
+            background: #0f3460;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+
+        .cart-total .total-amount {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #00d9ff;
+        }
+
+        /* Buttons */
+        .btn-pos {
+            background: linear-gradient(135deg, #00d9ff 0%, #0f3460 100%);
+            border: none;
+            color: #fff;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-pos:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(0, 217, 255, 0.4);
+            color: #fff;
+        }
+
+        .btn-pos-danger {
+            background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);
+        }
+
+        .btn-pos-success {
+            background: linear-gradient(135deg, #51cf66 0%, #2f9e44 100%);
+        }
+
+        /* Category Tabs */
+        .category-tabs {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding: 10px 0;
+            margin-bottom: 20px;
+        }
+
+        .category-tab {
+            background: #16213e;
+            border: 1px solid #0f3460;
+            color: #fff;
+            padding: 10px 25px;
+            border-radius: 25px;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .category-tab:hover,
+        .category-tab.active {
+            background: #00d9ff;
+            color: #1a1a2e;
+        }
+
+        /* Quantity Controls */
+        .qty-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .qty-btn {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            border: none;
+            background: #0f3460;
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .qty-btn:hover {
+            background: #00d9ff;
+            color: #1a1a2e;
+        }
+
+        /* Barcode Scanner */
+        .barcode-input {
+            background: #16213e;
+            border: 2px solid #0f3460;
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-size: 1.2rem;
+            width: 100%;
+        }
+
+        .barcode-input:focus {
+            border-color: #00d9ff;
+            outline: none;
+            box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+        }
+
+        /* Alerts */
+        .alert-pos {
+            border-radius: 10px;
+            border: none;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #0f3460;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00d9ff;
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="pos-navbar">
+        <div class="container-fluid px-4">
+            <div class="d-flex justify-content-between align-items-center">
+                <a href="{{ url_for('pos.index') }}" class="brand text-decoration-none">
+                    <i class="fas fa-cash-register me-2"></i>Padel House POS
+                </a>
+
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('pos.index') }}" class="nav-link {{ 'active' if request.endpoint == 'pos.index' }}">
+                        <i class="fas fa-home me-1"></i> الرئيسية
+                    </a>
+                    <a href="{{ url_for('pos.quick_sale') }}" class="nav-link {{ 'active' if request.endpoint == 'pos.quick_sale' }}">
+                        <i class="fas fa-bolt me-1"></i> بيع سريع
+                    </a>
+                    <a href="{{ url_for('pos.reports') }}" class="nav-link {{ 'active' if request.endpoint == 'pos.reports' }}">
+                        <i class="fas fa-chart-bar me-1"></i> التقارير
+                    </a>
+                    <a href="{{ url_for('admin.dashboard') }}" class="nav-link">
+                        <i class="fas fa-cog me-1"></i> الإدارة
+                    </a>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                    <span class="text-muted">
+                        <i class="fas fa-user me-1"></i>{{ current_user.username }}
+                    </span>
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container-fluid px-4 mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-pos alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="container-fluid px-4 py-3">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        // Format number with commas
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        // Format price
+        function formatPrice(price) {
+            return formatNumber(price) + ' IQD';
+        }
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

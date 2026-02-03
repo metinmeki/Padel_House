@@ -1,0 +1,449 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}طباعة الباركود - Padel House{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Barcode sticker styles */
+    .barcode-container {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+    }
+    
+    .barcode-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .barcode-sticker {
+        background: #fff;
+        border: 2px dashed #ddd;
+        border-radius: 8px;
+        padding: 15px;
+        text-align: center;
+        transition: all 0.2s;
+    }
+    
+    .barcode-sticker:hover {
+        border-color: #E57625;
+        box-shadow: 0 4px 12px rgba(229, 118, 37, 0.2);
+    }
+    
+    .barcode-sticker.selected {
+        border-color: #E57625;
+        background: #fff8f4;
+    }
+    
+    .barcode-sticker .product-name {
+        font-weight: 600;
+        font-size: 14px;
+        margin-bottom: 8px;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .barcode-sticker .barcode-image {
+        margin: 10px 0;
+    }
+    
+    .barcode-sticker .barcode-image svg {
+        max-width: 100%;
+        height: 50px;
+    }
+    
+    .barcode-sticker .barcode-number {
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: #666;
+        letter-spacing: 2px;
+    }
+    
+    .barcode-sticker .product-price {
+        font-size: 18px;
+        font-weight: 700;
+        color: #E57625;
+        margin-top: 8px;
+    }
+    
+    /* Print styles */
+    @media print {
+        body * {
+            visibility: hidden;
+        }
+        
+        #printArea, #printArea * {
+            visibility: visible;
+        }
+        
+        #printArea {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+        
+        .no-print {
+            display: none !important;
+        }
+        
+        .barcode-sticker {
+            border: 1px solid #000;
+            page-break-inside: avoid;
+            margin: 5mm;
+            padding: 3mm;
+        }
+        
+        /* Sticker size options */
+        .print-size-small .barcode-sticker {
+            width: 38mm;
+            height: 25mm;
+        }
+        
+        .print-size-medium .barcode-sticker {
+            width: 50mm;
+            height: 30mm;
+        }
+        
+        .print-size-large .barcode-sticker {
+            width: 60mm;
+            height: 40mm;
+        }
+    }
+    
+    /* Product selection */
+    .product-select-card {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .product-select-card:hover {
+        border-color: #E57625;
+    }
+    
+    .product-select-card.selected {
+        border-color: #E57625;
+        background: #fff8f4;
+    }
+    
+    .product-select-card input[type="checkbox"] {
+        display: none;
+    }
+    
+    .quantity-input {
+        width: 60px;
+        text-align: center;
+    }
+</style>
+
+<!-- JsBarcode library -->
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 no-print">
+        <div>
+            <h1 class="h3 mb-0">
+                <i class="fas fa-barcode me-2" style="color: #E57625;"></i>
+                طباعة الباركود
+            </h1>
+            <p class="text-muted mb-0">اختر المنتجات وطباعة ملصقات الباركود</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-primary" onclick="selectAll()">
+                <i class="fas fa-check-double me-1"></i> تحديد الكل
+            </button>
+            <button class="btn btn-primary" onclick="printBarcodes()" id="printBtn" disabled>
+                <i class="fas fa-print me-1"></i> طباعة (<span id="selectedCount">0</span>)
+            </button>
+        </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="card border-0 shadow-sm mb-4 no-print">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <label class="form-label">حجم الملصق</label>
+                    <select class="form-select" id="stickerSize">
+                        <option value="small">صغير (38×25 مم)</option>
+                        <option value="medium" selected>متوسط (50×30 مم)</option>
+                        <option value="large">كبير (60×40 مم)</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">عدد النسخ لكل منتج</label>
+                    <input type="number" class="form-control" id="copiesPerProduct" value="1" min="1" max="100">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">إظهار السعر</label>
+                    <select class="form-select" id="showPrice">
+                        <option value="yes" selected>نعم</option>
+                        <option value="no">لا</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">فلترة حسب التصنيف</label>
+                    <select class="form-select" id="categoryFilter" onchange="filterProducts()">
+                        <option value="all">جميع التصنيفات</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.get_name(current_lang) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Products Grid -->
+    <div class="card border-0 shadow-sm mb-4 no-print">
+        <div class="card-header bg-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-box me-2"></i>اختر المنتجات</h5>
+                <input type="text" class="form-control" id="searchProduct" placeholder="بحث..." style="width: 250px;">
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row g-3" id="productsGrid">
+                {% for product in products %}
+                {% if product.barcode %}
+                <div class="col-6 col-md-4 col-lg-3 product-item" data-category="{{ product.category_id }}">
+                    <label class="product-select-card d-block">
+                        <input type="checkbox" class="product-checkbox" 
+                               data-id="{{ product.id }}"
+                               data-name="{{ product.name_ku }}"
+                               data-barcode="{{ product.barcode }}"
+                               data-price="{{ product.price }}"
+                               onchange="updateSelection()">
+                        <div class="d-flex align-items-center gap-2">
+                            {% if product.image %}
+                            <img src="{{ url_for('static', filename='images/products/' + product.image) }}" 
+                                 class="rounded" style="width: 50px; height: 50px; object-fit: cover;">
+                            {% else %}
+                            <div class="rounded d-flex align-items-center justify-content-center" 
+                                 style="width: 50px; height: 50px; background: #E57625;">
+                                <i class="fas fa-box text-white"></i>
+                            </div>
+                            {% endif %}
+                            <div class="flex-grow-1">
+                                <h6 class="mb-0" style="font-size: 14px;">{{ product.name_ku }}</h6>
+                                <small class="text-muted">{{ product.barcode }}</small>
+                                <div class="text-primary fw-bold">{{ '{:,.0f}'.format(product.price) }} IQD</div>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            
+            {% if not products|selectattr('barcode')|list %}
+            <div class="text-center py-5">
+                <i class="fas fa-barcode fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">لا توجد منتجات بباركود</h5>
+                <p class="text-muted">أضف منتجات وسيتم توليد الباركود تلقائياً</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Print Preview -->
+    <div class="card border-0 shadow-sm no-print">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0"><i class="fas fa-eye me-2"></i>معاينة الطباعة</h5>
+        </div>
+        <div class="card-body">
+            <div id="previewArea" class="barcode-grid">
+                <div class="text-center py-5 text-muted w-100">
+                    <i class="fas fa-hand-pointer fa-3x mb-3"></i>
+                    <p>اختر منتجات لمعاينة الباركود</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Print Area -->
+    <div id="printArea" class="d-none">
+        <div class="barcode-grid" id="printGrid"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedProducts = [];
+
+    function updateSelection() {
+        selectedProducts = [];
+        document.querySelectorAll('.product-checkbox:checked').forEach(cb => {
+            selectedProducts.push({
+                id: cb.dataset.id,
+                name: cb.dataset.name,
+                barcode: cb.dataset.barcode,
+                price: parseInt(cb.dataset.price)
+            });
+            cb.closest('.product-select-card').classList.add('selected');
+        });
+        
+        document.querySelectorAll('.product-checkbox:not(:checked)').forEach(cb => {
+            cb.closest('.product-select-card').classList.remove('selected');
+        });
+
+        document.getElementById('selectedCount').textContent = selectedProducts.length;
+        document.getElementById('printBtn').disabled = selectedProducts.length === 0;
+
+        updatePreview();
+    }
+
+    function selectAll() {
+        const checkboxes = document.querySelectorAll('.product-checkbox');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        checkboxes.forEach(cb => {
+            if (cb.closest('.product-item').style.display !== 'none') {
+                cb.checked = !allChecked;
+            }
+        });
+        
+        updateSelection();
+    }
+
+    function updatePreview() {
+        const previewArea = document.getElementById('previewArea');
+        const showPrice = document.getElementById('showPrice').value === 'yes';
+        
+        if (selectedProducts.length === 0) {
+            previewArea.innerHTML = `
+                <div class="text-center py-5 text-muted w-100">
+                    <i class="fas fa-hand-pointer fa-3x mb-3"></i>
+                    <p>اختر منتجات لمعاينة الباركود</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+        selectedProducts.forEach(product => {
+            html += `
+                <div class="barcode-sticker">
+                    <div class="product-name">${product.name}</div>
+                    <div class="barcode-image">
+                        <svg id="barcode-${product.id}"></svg>
+                    </div>
+                    <div class="barcode-number">${product.barcode}</div>
+                    ${showPrice ? `<div class="product-price">${formatNumber(product.price)} IQD</div>` : ''}
+                </div>
+            `;
+        });
+
+        previewArea.innerHTML = html;
+
+        // Generate barcodes
+        selectedProducts.forEach(product => {
+            try {
+                JsBarcode(`#barcode-${product.id}`, product.barcode, {
+                    format: "CODE128",
+                    width: 2,
+                    height: 50,
+                    displayValue: false,
+                    margin: 0
+                });
+            } catch (e) {
+                console.error('Barcode error:', e);
+            }
+        });
+    }
+
+    function printBarcodes() {
+        const copies = parseInt(document.getElementById('copiesPerProduct').value) || 1;
+        const showPrice = document.getElementById('showPrice').value === 'yes';
+        const size = document.getElementById('stickerSize').value;
+        
+        const printGrid = document.getElementById('printGrid');
+        let html = '';
+
+        selectedProducts.forEach(product => {
+            for (let i = 0; i < copies; i++) {
+                html += `
+                    <div class="barcode-sticker">
+                        <div class="product-name">${product.name}</div>
+                        <div class="barcode-image">
+                            <svg class="print-barcode" data-barcode="${product.barcode}"></svg>
+                        </div>
+                        <div class="barcode-number">${product.barcode}</div>
+                        ${showPrice ? `<div class="product-price">${formatNumber(product.price)} IQD</div>` : ''}
+                    </div>
+                `;
+            }
+        });
+
+        printGrid.innerHTML = html;
+        
+        // Set print size class
+        const printArea = document.getElementById('printArea');
+        printArea.className = `print-size-${size}`;
+        printArea.classList.remove('d-none');
+
+        // Generate barcodes for print
+        setTimeout(() => {
+            document.querySelectorAll('.print-barcode').forEach(svg => {
+                try {
+                    JsBarcode(svg, svg.dataset.barcode, {
+                        format: "CODE128",
+                        width: 2,
+                        height: 50,
+                        displayValue: false,
+                        margin: 0
+                    });
+                } catch (e) {
+                    console.error('Print barcode error:', e);
+                }
+            });
+
+            // Print
+            setTimeout(() => {
+                window.print();
+                printArea.classList.add('d-none');
+            }, 100);
+        }, 100);
+    }
+
+    function filterProducts() {
+        const category = document.getElementById('categoryFilter').value;
+        document.querySelectorAll('.product-item').forEach(item => {
+            if (category === 'all' || item.dataset.category === category) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    // Search
+    document.getElementById('searchProduct').addEventListener('input', function() {
+        const search = this.value.toLowerCase();
+        document.querySelectorAll('.product-item').forEach(item => {
+            const name = item.querySelector('h6').textContent.toLowerCase();
+            const barcode = item.querySelector('small').textContent.toLowerCase();
+            item.style.display = (name.includes(search) || barcode.includes(search)) ? 'block' : 'none';
+        });
+    });
+
+    // Update preview when settings change
+    document.getElementById('showPrice').addEventListener('change', updatePreview);
+    document.getElementById('stickerSize').addEventListener('change', updatePreview);
+</script>
+{% endblock %}

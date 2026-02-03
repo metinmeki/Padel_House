@@ -1,0 +1,275 @@
+{% extends 'pos/base_pos.html' %}
+
+{% block title %}بيع سريع{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- المنتجات -->
+    <div class="col-lg-8 mb-4">
+        <!-- البحث والباركود -->
+        <div class="pos-card p-3 mb-3">
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <input type="text" id="barcodeInput" class="barcode-input" 
+                           placeholder="🔍 سكان باركود..." autofocus>
+                </div>
+                <div class="col-md-6">
+                    <input type="text" id="searchInput" class="form-control bg-dark text-white border-secondary py-3" 
+                           placeholder="بحث بالاسم...">
+                </div>
+            </div>
+        </div>
+        
+        <!-- التصنيفات -->
+        <div class="category-tabs">
+            <button class="category-tab active" data-category="all">الكل</button>
+            {% for category in categories %}
+                <button class="category-tab" data-category="{{ category.id }}">{{ category.name_ku }}</button>
+            {% endfor %}
+        </div>
+        
+        <!-- شبكة المنتجات -->
+        <div class="row g-3" id="productsGrid">
+            {% for product in products %}
+            <div class="col-6 col-md-4 col-lg-3 product-item" data-category="{{ product.category_id }}">
+                <div class="pos-card product-card" 
+                     onclick="addToCart({{ product.id }}, '{{ product.name_ku }}', {{ product.price }}, '{{ product.image or '' }}')">
+                    {% if product.image %}
+                        <img src="{{ url_for('static', filename='images/products/' + product.image) }}" alt="{{ product.name_ku }}">
+                    {% else %}
+                        <div class="bg-secondary rounded d-flex align-items-center justify-content-center mx-auto" style="width: 80px; height: 80px;">
+                            <i class="fas fa-box fa-2x"></i>
+                        </div>
+                    {% endif %}
+                    <h6 class="mt-2 mb-1">{{ product.name_ku }}</h6>
+                    <p class="price mb-0">{{ '{:,.0f}'.format(product.price) }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- السلة -->
+    <div class="col-lg-4">
+        <div class="cart-container">
+            <h5 class="mb-3">
+                <i class="fas fa-bolt text-warning me-2"></i>بيع سريع
+            </h5>
+            
+            <!-- عناصر السلة -->
+            <div class="cart-items" id="cartItems">
+                <div id="emptyCart" class="text-center text-muted py-5">
+                    <i class="fas fa-shopping-basket fa-3x mb-3"></i>
+                    <p>السلة فارغة</p>
+                    <small>سكان باركود أو اختر منتج</small>
+                </div>
+            </div>
+            
+            <!-- المجموع -->
+            <div class="cart-total">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>المجموع:</span>
+                    <span class="total-amount" id="totalAmount">0 IQD</span>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <div class="btn-group" role="group">
+                        <button class="btn btn-pos-success btn-lg flex-fill" onclick="checkout('cash')" id="cashBtn" disabled>
+                            <i class="fas fa-money-bill-wave me-1"></i>نقدي
+                        </button>
+                        <button class="btn btn-pos btn-lg flex-fill" onclick="checkout('card')" id="cardBtn" disabled>
+                            <i class="fas fa-credit-card me-1"></i>بطاقة
+                        </button>
+                    </div>
+                    <button class="btn btn-outline-danger" onclick="clearCart()" id="clearBtn" disabled>
+                        <i class="fas fa-trash me-2"></i>إفراغ السلة
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let cart = [];
+    
+    function updateCartUI() {
+        const cartItems = document.getElementById('cartItems');
+        const totalAmount = document.getElementById('totalAmount');
+        const emptyCart = document.getElementById('emptyCart');
+        const cashBtn = document.getElementById('cashBtn');
+        const cardBtn = document.getElementById('cardBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        
+        if (cart.length === 0) {
+            cartItems.innerHTML = `
+                <div id="emptyCart" class="text-center text-muted py-5">
+                    <i class="fas fa-shopping-basket fa-3x mb-3"></i>
+                    <p>السلة فارغة</p>
+                    <small>سكان باركود أو اختر منتج</small>
+                </div>
+            `;
+            totalAmount.textContent = '0 IQD';
+            cashBtn.disabled = true;
+            cardBtn.disabled = true;
+            clearBtn.disabled = true;
+            return;
+        }
+        
+        let html = '';
+        let total = 0;
+        
+        cart.forEach((item, index) => {
+            const subtotal = item.price * item.quantity;
+            total += subtotal;
+            
+            html += `
+                <div class="cart-item">
+                    <div>
+                        <h6 class="mb-0">${item.name}</h6>
+                        <small class="text-muted">${formatNumber(item.price)} × ${item.quantity}</small>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="qty-control">
+                            <button class="qty-btn" onclick="updateQty(${index}, ${item.quantity - 1})">-</button>
+                            <span>${item.quantity}</span>
+                            <button class="qty-btn" onclick="updateQty(${index}, ${item.quantity + 1})">+</button>
+                        </div>
+                        <strong class="text-info">${formatNumber(subtotal)}</strong>
+                        <button class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        cartItems.innerHTML = html;
+        totalAmount.textContent = formatNumber(total) + ' IQD';
+        cashBtn.disabled = false;
+        cardBtn.disabled = false;
+        clearBtn.disabled = false;
+    }
+    
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    
+    function addToCart(productId, name, price, image) {
+        const existing = cart.find(item => item.product_id === productId);
+        
+        if (existing) {
+            existing.quantity++;
+        } else {
+            cart.push({
+                product_id: productId,
+                name: name,
+                price: price,
+                quantity: 1,
+                image: image
+            });
+        }
+        
+        updateCartUI();
+    }
+    
+    function updateQty(index, newQty) {
+        if (newQty <= 0) {
+            cart.splice(index, 1);
+        } else {
+            cart[index].quantity = newQty;
+        }
+        updateCartUI();
+    }
+    
+    function removeItem(index) {
+        cart.splice(index, 1);
+        updateCartUI();
+    }
+    
+    function clearCart() {
+        if (confirm('إفراغ السلة؟')) {
+            cart = [];
+            updateCartUI();
+        }
+    }
+    
+    function checkout(paymentMethod) {
+        if (cart.length === 0) return;
+        
+        const items = cart.map(item => ({
+            product_id: item.product_id,
+            quantity: item.quantity
+        }));
+        
+        fetch('/pos/quick-sale/checkout', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                items: items,
+                payment_method: paymentMethod
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = `/pos/receipt/${data.session_id}`;
+            } else {
+                alert(data.message);
+            }
+        });
+    }
+    
+    // فلترة التصنيفات
+    document.querySelectorAll('.category-tab').forEach(tab => {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            const category = this.dataset.category;
+            document.querySelectorAll('.product-item').forEach(item => {
+                if (category === 'all' || item.dataset.category === category) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    });
+    
+    // البحث
+    document.getElementById('searchInput').addEventListener('input', function() {
+        const search = this.value.toLowerCase();
+        document.querySelectorAll('.product-item').forEach(item => {
+            const name = item.querySelector('h6').textContent.toLowerCase();
+            item.style.display = name.includes(search) ? 'block' : 'none';
+        });
+    });
+    
+    // سكان الباركود
+    document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const barcode = this.value.trim();
+            if (barcode) {
+                fetch('/pos/scan-barcode', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: `barcode=${barcode}`
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        addToCart(data.product.id, data.product.name_ku, data.product.price, data.product.image);
+                    } else {
+                        alert('المنتج غير موجود!');
+                    }
+                    this.value = '';
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

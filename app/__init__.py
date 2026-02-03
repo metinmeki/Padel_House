@@ -45,12 +45,14 @@ def create_app(config_name='development'):
     from app.routes.store import store_bp
     from app.routes.admin import admin_bp
     from app.routes.auth import auth_bp
+    from app.routes.pos import pos_bp
 
     app.register_blueprint(main_bp)
     app.register_blueprint(booking_bp, url_prefix='/booking')
     app.register_blueprint(store_bp, url_prefix='/store')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(pos_bp, url_prefix='/pos')
 
     # User loader
     from app.models.user import User
@@ -67,10 +69,10 @@ def create_app(config_name='development'):
     def inject_globals():
         settings = Settings.query.first()
         current_lang = session.get('lang', 'ku')
-        
+
         def t(key):
             return get_translation(key, current_lang)
-        
+
         language_flags = {'ku': '🇮🇶', 'ar': '🇸🇦', 'en': '🇬🇧'}
         language_names = {'ku': 'کوردی', 'ar': 'العربية', 'en': 'English'}
         languages = ['ku', 'ar', 'en']
@@ -90,6 +92,7 @@ def create_app(config_name='development'):
     with app.app_context():
         db.create_all()
 
+        # Settings
         if not Settings.query.first():
             default_settings = Settings(
                 opening_hour=12,
@@ -106,6 +109,7 @@ def create_app(config_name='development'):
             db.session.add(default_settings)
             db.session.commit()
 
+        # Stadiums
         from app.models.stadium import Stadium
         if not Stadium.query.first():
             stadium1 = Stadium(
@@ -125,7 +129,22 @@ def create_app(config_name='development'):
             db.session.add(stadium1)
             db.session.add(stadium2)
             db.session.commit()
+            print('✅ تم إنشاء الملاعب')
 
+        # Tables (10 طاولات)
+        from app.models.table import Table
+        if not Table.query.first():
+            for i in range(1, 11):
+                table = Table(
+                    name=f'طاولة {i}',
+                    capacity=4,
+                    is_active=True
+                )
+                db.session.add(table)
+            db.session.commit()
+            print('✅ تم إنشاء 10 طاولات')
+
+        # Super Admin
         if not User.query.filter_by(username='admin').first():
             admin = User(
                 username='admin',
@@ -135,5 +154,8 @@ def create_app(config_name='development'):
             admin.set_password('admin123')
             db.session.add(admin)
             db.session.commit()
+            print('✅ تم إنشاء Super Admin')
+        else:
+            print('ℹ️ Super Admin already exists')
 
     return app

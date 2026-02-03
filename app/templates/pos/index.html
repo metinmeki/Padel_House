@@ -1,0 +1,134 @@
+{% extends 'pos/base_pos.html' %}
+
+{% block title %}الرئيسية{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- الملاعب -->
+    <div class="col-12 mb-4">
+        <h4 class="mb-3"><i class="fas fa-futbol me-2"></i>الملاعب</h4>
+        <div class="row g-3">
+            {% for stadium in stadiums %}
+            <div class="col-md-6 col-lg-3">
+                {% set session = stadium_sessions.get(stadium.id) %}
+                <div class="pos-card location-card {{ 'occupied' if session else 'available' }}"
+                     onclick="{% if session %}window.location='{{ url_for('pos.session_detail', session_id=session.id) }}'{% else %}openStartModal('stadium', {{ stadium.id }}, '{{ stadium.name }}'){% endif %}">
+                    <div class="icon">
+                        <i class="fas fa-futbol"></i>
+                    </div>
+                    <h5>{{ stadium.name }}</h5>
+                    {% if session %}
+                        <span class="badge bg-danger mb-2">مشغول</span>
+                        <p class="mb-1"><i class="fas fa-user me-1"></i>{{ session.customer_name or 'زائر' }}</p>
+                        <p class="mb-0 text-info"><i class="fas fa-clock me-1"></i>{{ session.start_time.strftime('%H:%M') }}</p>
+                        <p class="mt-2 mb-0"><strong>{{ '{:,.0f}'.format(session.total_amount) }} IQD</strong></p>
+                    {% else %}
+                        <span class="badge bg-success">متاح</span>
+                        <p class="mt-2 mb-0 text-muted">اضغط للبدء</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- الطاولات -->
+    <div class="col-12 mb-4">
+        <h4 class="mb-3"><i class="fas fa-chair me-2"></i>الطاولات</h4>
+        <div class="row g-3">
+            {% for table in tables %}
+            <div class="col-6 col-md-4 col-lg-2">
+                {% set session = table_sessions.get(table.id) %}
+                <div class="pos-card location-card {{ 'occupied' if session else 'available' }}"
+                     onclick="{% if session %}window.location='{{ url_for('pos.session_detail', session_id=session.id) }}'{% else %}openStartModal('table', {{ table.id }}, '{{ table.name }}'){% endif %}">
+                    <div class="icon">
+                        <i class="fas fa-chair"></i>
+                    </div>
+                    <h6>{{ table.name }}</h6>
+                    {% if session %}
+                        <span class="badge bg-danger" style="font-size: 0.7rem;">مشغول</span>
+                        <p class="mb-0 mt-2" style="font-size: 0.85rem;"><strong>{{ '{:,.0f}'.format(session.total_amount) }}</strong></p>
+                    {% else %}
+                        <span class="badge bg-success" style="font-size: 0.7rem;">متاح</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- أزرار سريعة -->
+    <div class="col-12">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <a href="{{ url_for('pos.quick_sale') }}" class="pos-card d-block text-decoration-none p-4 text-center">
+                    <i class="fas fa-bolt fa-3x text-warning mb-3"></i>
+                    <h5>بيع سريع</h5>
+                    <p class="text-muted mb-0">بيع مباشر بدون ملعب أو طاولة</p>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="{{ url_for('pos.reports') }}" class="pos-card d-block text-decoration-none p-4 text-center">
+                    <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
+                    <h5>التقارير</h5>
+                    <p class="text-muted mb-0">مبيعات اليوم والإحصائيات</p>
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="{{ url_for('admin.dashboard') }}" class="pos-card d-block text-decoration-none p-4 text-center">
+                    <i class="fas fa-cogs fa-3x text-info mb-3"></i>
+                    <h5>الإدارة</h5>
+                    <p class="text-muted mb-0">إدارة المنتجات والإعدادات</p>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal بدء جلسة -->
+<div class="modal fade" id="startSessionModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background: #16213e; border: 1px solid #0f3460;">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="modalTitle">بدء جلسة</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('pos.start_session') }}" method="POST">
+                <div class="modal-body">
+                    <input type="hidden" name="session_type" id="sessionType">
+                    <input type="hidden" name="location_id" id="locationId">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">اسم الزبون (اختياري)</label>
+                        <input type="text" name="customer_name" class="form-control bg-dark text-white border-secondary">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">رقم الهاتف (اختياري)</label>
+                        <input type="text" name="customer_phone" class="form-control bg-dark text-white border-secondary">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-pos">
+                        <i class="fas fa-play me-1"></i> بدء الجلسة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const startModal = new bootstrap.Modal(document.getElementById('startSessionModal'));
+    
+    function openStartModal(type, id, name) {
+        document.getElementById('sessionType').value = type;
+        document.getElementById('locationId').value = id;
+        document.getElementById('modalTitle').textContent = 'بدء جلسة - ' + name;
+        startModal.show();
+    }
+</script>
+{% endblock %}

@@ -13,6 +13,34 @@ from app.models.order import Order, OrderItem
 from app.models.user import User
 from datetime import datetime, date
 import os
+import random
+
+
+def generate_product_barcode():
+    """Generate a unique 13-digit barcode for EAN-13 format"""
+    # Prefix: 743 (custom for Padel House)
+    prefix = "743"
+
+    # Timestamp: YYMMDD (6 digits)
+    timestamp = datetime.now().strftime("%y%m%d")
+
+    # Random: 3 digits
+    random_part = ''.join([str(random.randint(0, 9)) for _ in range(3)])
+
+    # Combine first 12 digits
+    barcode_12 = f"{prefix}{timestamp}{random_part}"
+
+    # Calculate check digit (EAN-13 algorithm)
+    total = 0
+    for i, digit in enumerate(barcode_12):
+        if i % 2 == 0:
+            total += int(digit)
+        else:
+            total += int(digit) * 3
+    check_digit = (10 - (total % 10)) % 10
+
+    return f"{barcode_12}{check_digit}"
+
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -306,6 +334,19 @@ def add_product():
         stock = request.form.get('stock', 0)
         is_active = request.form.get('is_active', 'true') == 'true'
 
+        # ✅ جديد: أين يظهر المنتج
+        show_in_website = request.form.get('show_in_website', 'true') == 'true'
+        show_in_pos = request.form.get('show_in_pos', 'true') == 'true'
+
+        # ✅ باركود - توليد تلقائي فقط لمنتجات المتجر (الموقع)
+        barcode = request.form.get('barcode', '').strip()
+        if not barcode and show_in_website:
+            # Auto-generate barcode ONLY for store/website products
+            barcode = generate_product_barcode()
+        elif not barcode:
+            # No barcode for POS-only items (coffee, food, etc.)
+            barcode = None
+
         # Validation
         if not name_ku or not price or not category_id:
             return jsonify({
@@ -335,7 +376,10 @@ def add_product():
             price=int(price),
             stock=int(stock),
             image=image_filename,
-            is_active=is_active
+            is_active=is_active,
+            show_in_website=show_in_website,
+            show_in_pos=show_in_pos,
+            barcode=barcode
         )
 
         db.session.add(product)
@@ -355,7 +399,7 @@ def add_product():
 @admin_bp.route('/api/product/<int:product_id>', methods=['PUT', 'POST'])
 @login_required
 def update_product(product_id):
-    """Update product"""
+    """Update product - FIXED to handle all fields including visibility"""
     product = Product.query.get(product_id)
     if not product:
         return jsonify({'success': False, 'message': 'المنتج غير موجود'}), 404
@@ -363,20 +407,38 @@ def update_product(product_id):
     try:
         # Handle form data
         if request.form:
-            if 'name' in request.form:
-                product.name = request.form['name']
+            # Multilingual names
+            if 'name_ku' in request.form:
+                product.name_ku = request.form['name_ku']
+            if 'name_ar' in request.form:
+                product.name_ar = request.form['name_ar']
             if 'name_en' in request.form:
                 product.name_en = request.form['name_en']
+
+            # Multilingual descriptions
+            if 'description_ku' in request.form:
+                product.description_ku = request.form['description_ku']
+            if 'description_ar' in request.form:
+                product.description_ar = request.form['description_ar']
+            if 'description_en' in request.form:
+                product.description_en = request.form['description_en']
+
+            # Basic fields
             if 'category_id' in request.form:
                 product.category_id = int(request.form['category_id']) if request.form['category_id'] else None
             if 'price' in request.form:
                 product.price = int(request.form['price'])
             if 'stock' in request.form:
                 product.stock = int(request.form['stock'])
-            if 'description' in request.form:
-                product.description = request.form['description']
-            if 'is_active' in request.form:
-                product.is_active = request.form['is_active'] == 'true'
+
+            # ✅ FIXED: Handle checkboxes properly (unchecked = not in form = false)
+            product.is_active = request.form.get('is_active') == 'true'
+            product.show_in_website = request.form.get('show_in_website') == 'true'
+            product.show_in_pos = request.form.get('show_in_pos') == 'true'
+
+            # Barcode
+            if 'barcode' in request.form:
+                product.barcode = request.form['barcode'].strip() or None
 
             # Handle image upload
             if 'image' in request.files:
@@ -399,20 +461,32 @@ def update_product(product_id):
         # Handle JSON data
         elif request.is_json:
             data = request.json
-            if 'name' in data:
-                product.name = data['name']
+            if 'name_ku' in data:
+                product.name_ku = data['name_ku']
+            if 'name_ar' in data:
+                product.name_ar = data['name_ar']
             if 'name_en' in data:
                 product.name_en = data['name_en']
+            if 'description_ku' in data:
+                product.description_ku = data['description_ku']
+            if 'description_ar' in data:
+                product.description_ar = data['description_ar']
+            if 'description_en' in data:
+                product.description_en = data['description_en']
             if 'category_id' in data:
                 product.category_id = data['category_id']
             if 'price' in data:
                 product.price = int(data['price'])
             if 'stock' in data:
                 product.stock = int(data['stock'])
-            if 'description' in data:
-                product.description = data['description']
             if 'is_active' in data:
                 product.is_active = data['is_active']
+            if 'show_in_website' in data:
+                product.show_in_website = data['show_in_website']
+            if 'show_in_pos' in data:
+                product.show_in_pos = data['show_in_pos']
+            if 'barcode' in data:
+                product.barcode = data['barcode']
 
         db.session.commit()
 
@@ -464,6 +538,44 @@ def toggle_product(product_id):
 
     status = 'مفعل' if product.is_active else 'معطل'
     return jsonify({'success': True, 'message': f'تم تحديث المنتج: {status}', 'is_active': product.is_active})
+
+
+# ========================================
+# ===== BARCODE PRINTING =====
+# ========================================
+
+@admin_bp.route('/print-barcodes')
+@login_required
+def print_barcodes():
+    """Barcode printing page"""
+    products = Product.query.filter_by(is_active=True).order_by(Product.name_ku).all()
+    categories = Category.query.filter_by(is_active=True).all()
+    return render_template('admin/print_barcodes.html', products=products, categories=categories)
+
+
+@admin_bp.route('/api/product/<int:product_id>/regenerate-barcode', methods=['POST'])
+@login_required
+def regenerate_barcode(product_id):
+    """Regenerate barcode for a product"""
+    product = Product.query.get(product_id)
+    if not product:
+        return jsonify({'success': False, 'message': 'المنتج غير موجود'}), 404
+
+    # Generate new barcode
+    new_barcode = generate_product_barcode()
+
+    # Make sure it's unique
+    while Product.query.filter_by(barcode=new_barcode).first():
+        new_barcode = generate_product_barcode()
+
+    product.barcode = new_barcode
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'message': 'تم توليد باركود جديد',
+        'barcode': new_barcode
+    })
 
 
 # ========================================

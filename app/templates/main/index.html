@@ -779,9 +779,12 @@
 }
 
 .modal-product-image {
+    width: 100%;
     height: 100%;
     min-height: 400px;
-    object-fit: cover;
+    object-fit: contain;
+    background: #f8f9fa;
+    padding: 20px;
 }
 
 .modal-product-details {
@@ -1118,10 +1121,10 @@
         <div class="products-header">
             <div class="section-header">
                 <span class="section-badge">{% if current_lang == 'ku' %}فرۆشگا{% elif current_lang == 'ar' %}المتجر{% else %}Store{% endif %}</span>
-                <h2 class="section-title">{{ t('our_products') if t else 'منتجاتنا' }}</h2>
+                <h2 class="section-title">{% if current_lang == 'ku' %}بەرهەمەکانمان{% elif current_lang == 'ar' %}منتجاتنا{% else %}Our Products{% endif %}</h2>
             </div>
             <a href="{{ url_for('store.products') }}" class="btn btn-view-all">
-                {{ t('view_all') if t else 'عرض الكل' }}
+                {% if current_lang == 'ku' %}هەموو ببینە{% elif current_lang == 'ar' %}عرض الكل{% else %}View All{% endif %}
                 <i class="fas fa-arrow-{% if is_rtl %}left{% else %}right{% endif %}"></i>
             </a>
         </div>
@@ -1165,7 +1168,7 @@
     <div class="container">
         <div class="section-header">
             <span class="section-badge">{% if current_lang == 'ku' %}نرخەکان{% elif current_lang == 'ar' %}الأسعار{% else %}Pricing{% endif %}</span>
-            <h2 class="section-title">{{ t('pricing') if t else 'الأسعار' }}</h2>
+            <h2 class="section-title">{% if current_lang == 'ku' %}نرخەکان{% elif current_lang == 'ar' %}الأسعار{% else %}Pricing{% endif %}</h2>
         </div>
 
         <div class="row justify-content-center">
@@ -1183,11 +1186,11 @@
 
                     <div class="pricing-prices">
                         <div class="pricing-item">
-                            <div class="pricing-label">{{ t('normal_price') if t else 'السعر العادي' }}</div>
+                            <div class="pricing-label">{% if current_lang == 'ku' %}نرخی ئاسایی{% elif current_lang == 'ar' %}السعر العادي{% else %}Normal Price{% endif %}</div>
                             <div class="pricing-value">80,000 <span class="pricing-unit">{{ t('iqd') }}</span></div>
                         </div>
                         <div class="pricing-item">
-                            <div class="pricing-label">{{ t('discount_price') if t else 'سعر الخصم' }}</div>
+                            <div class="pricing-label">{% if current_lang == 'ku' %}نرخی داشکاندن{% elif current_lang == 'ar' %}سعر الخصم{% else %}Discount Price{% endif %}</div>
                             <div class="pricing-value highlight">60,000 <span class="pricing-unit">{{ t('iqd') }}</span></div>
                         </div>
                     </div>
@@ -1361,6 +1364,9 @@ document.getElementById('modalAddToCart').addEventListener('click', function() {
 
     localStorage.setItem('padelCart', JSON.stringify(cart));
     updateCartCount();
+
+    // Trigger navbar cart update
+    window.dispatchEvent(new Event('cartUpdated'));
 
     this.innerHTML = '<i class="fas fa-check me-2"></i>{% if current_lang == "ku" %}زیادکرا{% elif current_lang == "ar" %}تمت الإضافة{% else %}Added!{% endif %}';
     this.style.background = '#10b981';

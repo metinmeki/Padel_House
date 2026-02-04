@@ -180,8 +180,8 @@
                             <input type="tel" id="customer-phone" class="form-control" placeholder="07xxxxxxxxx" required>
                         </div>
                         <div class="col-12">
-                            <label class="form-label">{{ t('customer_email') }}</label>
-                            <input type="email" id="customer-email" class="form-control" placeholder="{{ t('your_email') }}">
+                            <label class="form-label">{{ t('notes') }}</label>
+                            <textarea id="customer-notes" class="form-control" rows="3" placeholder="{% if current_lang == 'ku' %}تێبینی یان داواکاری تایبەت...{% elif current_lang == 'ar' %}ملاحظات أو طلبات خاصة...{% else %}Notes or special requests...{% endif %}"></textarea>
                         </div>
                     </div>
                 </div>
@@ -405,7 +405,7 @@ class BookingSystem {
     async confirmBooking() {
         const customerName = document.getElementById('customer-name').value.trim();
         const customerPhone = document.getElementById('customer-phone').value.trim();
-        const customerEmail = document.getElementById('customer-email').value.trim();
+        const customerNotes = document.getElementById('customer-notes').value.trim();
 
         if (!customerName || !customerPhone) {
             alert(TRANSLATIONS.fill_required);
@@ -427,7 +427,7 @@ class BookingSystem {
                     duration_hours: this.duration,
                     customer_name: customerName,
                     customer_phone: customerPhone,
-                    customer_email: customerEmail
+                    notes: customerNotes
                 })
             });
 

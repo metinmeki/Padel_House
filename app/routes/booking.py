@@ -1,17 +1,123 @@
-# booking.py (routes) - Updated: New bookings are PENDING until admin approves
+# app/routes/booking.py
 from flask import Blueprint, render_template, request, jsonify
 from app import db
 from app.models.stadium import Stadium
 from app.models.booking import Booking
 from app.models.settings import Settings
-from app.services.google_sheets import send_booking_to_sheet
 from datetime import datetime, date, time, timedelta
-import json
 
 booking_bp = Blueprint('booking', __name__)
 
+# ✅ ثابت: ساعة واحدة = 40000
+BASE_PRICE_PER_HOUR = 40000
 
-# ===== GET BOOKING PAGE =====
+
+# -----------------------------
+# ✅ Notifications Hook (SAFE)
+# -----------------------------
+def safe_notify_admins(
+        title: str,
+        message: str = "",
+        url: str = "",
+        ntype: str = "booking_created"
+):
+    """
+    Safe notification hook.
+    - Uses Notification system if available
+    - Never breaks booking flow
+    - Logs error for debugging
+    """
+    try:
+        # import inside try so booking never breaks
+        from app.services.notify import notify_admins
+
+        notify_admins(
+            title=title,
+            message=message,
+            url=url,
+            ntype=ntype
+        )
+        return True
+
+    except ImportError:
+        # notify.py not created yet
+        print("ℹ️ Notification service not installed yet.")
+        return False
+
+    except Exception as e:
+        # Real error (DB, User model, etc.)
+        print("❌ Notification error:", e)
+        return False
+
+
+# -----------------------------
+# Helpers
+# -----------------------------
+def build_hours_list(opening: int, closing: int):
+    """
+    Build business hours list. Example: opening=12, closing=4 => [12..23] + [0..3]
+    """
+    opening = int(opening or 12)
+    closing = int(closing or 4)
+    hours = list(range(opening, 24)) + list(range(0, closing))
+    return [h % 24 for h in hours]
+
+
+def hours_covered(start_hour: int, duration: int):
+    """
+    Return list of hours covered by booking: length=duration, with wrap-around.
+    Example start=23, duration=2 => [23, 0]
+    """
+    start_hour = int(start_hour) % 24
+    duration = int(duration)
+    return [(start_hour + i) % 24 for i in range(duration)]
+
+
+def is_discount_hour(hour: int, discount_start: int, discount_end: int):
+    """
+    Discount window can cross midnight.
+    If start < end: hour in [start, end] (INCLUSIVE)
+    If start > end: hour in [start..23] or [0..end]
+
+    ✅ FIXED: Changed to <= de to include the end hour (16:00)
+    Example: discount_start=12, discount_end=16 will include hours 12,13,14,15,16
+    """
+    hour = int(hour) % 24
+    ds = int(discount_start) % 24
+    de = int(discount_end) % 24
+
+    if ds == de:
+        return False  # no discount window
+    if ds < de:
+        return ds <= hour <= de  # ✅ Changed < to <=
+    return hour >= ds or hour <= de  # ✅ Changed < to <= (crosses midnight)
+
+
+def booking_record_hours(booking: Booking):
+    """
+    Convert existing booking record to list of hours covered.
+    We rely on your model fields: start_time + duration_hours.
+    ✅ Safety: if duration_hours is 0/None -> treat as 1
+    """
+    start_h = booking.start_time.hour
+    duration = booking.duration_hours or 1
+    if duration < 1:
+        duration = 1
+    return hours_covered(start_h, duration)
+
+
+def safe_duration(duration: int) -> int:
+    """✅ Never allow 0 hours."""
+    try:
+        d = int(duration)
+    except Exception:
+        d = 1
+    return 1 if d < 1 else d
+
+
+# -----------------------------
+# Pages
+# -----------------------------
 @booking_bp.route('/')
 def booking_page():
     stadiums = Stadium.query.filter_by(is_active=True).all()
@@ -19,23 +125,21 @@ def booking_page():
     return render_template('booking/booking.html', stadiums=stadiums, settings=settings)
 
 
-# ===== API: GET TIME SLOTS (Original Route) =====
-@booking_bp.route('/api/get-slots/<int:stadium_id>/<booking_date>', methods=['GET'])
-def get_slots(stadium_id, booking_date):
-    """
-    Get available time slots for a specific stadium and date
-    Returns: JSON array of time slots with availability status
-    """
-    return get_availability_slots(stadium_id, booking_date)
+# -----------------------------
+# ✅ API: Pending count (fix your console 404)
+# called: GET /booking/api/pending-count
+# -----------------------------
+@booking_bp.route('/api/pending-count', methods=['GET'])
+def pending_count():
+    count = Booking.query.filter_by(status='pending').count()
+    return jsonify({'pending': count}), 200
 
 
-# ===== API: GET AVAILABILITY (New Route for Frontend) =====
+# -----------------------------
+# API: Availability
+# -----------------------------
 @booking_bp.route('/api/availability', methods=['GET'])
 def get_availability():
-    """
-    Get available time slots using query parameters
-    Expected: ?stadium_id=1&date=2026-01-30
-    """
     stadium_id = request.args.get('stadium_id', type=int)
     booking_date = request.args.get('date')
 
@@ -45,12 +149,13 @@ def get_availability():
     return get_availability_slots(stadium_id, booking_date)
 
 
-def get_availability_slots(stadium_id, booking_date):
-    """
-    Shared function to get available time slots
-    """
-    settings = Settings.query.first()
+@booking_bp.route('/api/get-slots/<int:stadium_id>/<booking_date>', methods=['GET'])
+def get_slots(stadium_id, booking_date):
+    return get_availability_slots(stadium_id, booking_date)
 
+
+def get_availability_slots(stadium_id, booking_date):
+    settings = Settings.query.first()
     if not settings:
         return jsonify({'error': 'Settings not configured'}), 500
 
@@ -59,271 +164,191 @@ def get_availability_slots(stadium_id, booking_date):
     except ValueError:
         return jsonify({'error': 'Invalid date format'}), 400
 
-    # Check if stadium exists
     stadium = Stadium.query.get(stadium_id)
     if not stadium:
         return jsonify({'error': 'Stadium not found'}), 404
 
-    # Get existing bookings for this date and stadium
-    # Include PENDING bookings to block the slot until admin decides
-    existing_bookings = Booking.query.filter_by(
-        stadium_id=stadium_id
-    ).filter(
-        Booking.date == booking_date_obj,
-        Booking.status.in_(['pending', 'confirmed'])  # Both block the slot
+    existing_bookings = Booking.query.filter_by(stadium_id=stadium_id, date=booking_date_obj).filter(
+        Booking.status.in_(['pending', 'confirmed'])
     ).all()
 
-    # Mark booked hours
     booked_hours = set()
-    pending_hours = set()  # Track pending separately for UI
+    pending_hours = set()
 
-    for booking in existing_bookings:
-        # Handle both start_time as time object or start_hour as integer
-        if hasattr(booking, 'start_time') and booking.start_time:
-            start_h = booking.start_time.hour
-        elif hasattr(booking, 'start_hour') and booking.start_hour is not None:
-            start_h = booking.start_hour
-        else:
-            continue
+    for b in existing_bookings:
+        hrs = booking_record_hours(b)
+        for h in hrs:
+            booked_hours.add(h)
+            if b.status == 'pending':
+                pending_hours.add(h)
 
-        if hasattr(booking, 'end_time') and booking.end_time:
-            end_h = booking.end_time.hour
-        elif hasattr(booking, 'end_hour') and booking.end_hour is not None:
-            end_h = booking.end_hour
-        else:
-            end_h = start_h + (booking.duration_hours or 1)
-
-        # Handle overnight bookings
-        if end_h == 0:
-            end_h = 24
-
-        for h in range(start_h, end_h):
-            hour = h % 24
-            booked_hours.add(hour)
-            if booking.status == 'pending':
-                pending_hours.add(hour)
-
-    # Generate time slots
-    slots = []
-    opening = settings.opening_hour or 12  # Default 12
-    closing = settings.closing_hour or 4  # Default 4
+    opening = settings.opening_hour or 12
+    closing = settings.closing_hour or 4
     discount_start = settings.discount_start_hour or 12
     discount_end = settings.discount_end_hour or 16
-    price_per_hour = stadium.price_per_hour or settings.price_per_hour or 50000
     discount_percentage = settings.discount_percentage or 25
 
-    # Build hours list (12 PM to 4 AM next day)
-    hours = []
-    for h in range(opening, 24):
-        hours.append(h)
-    for h in range(0, closing):
-        hours.append(h)
+    price_per_hour = int(BASE_PRICE_PER_HOUR)
+    hours = build_hours_list(opening, closing)
 
-    # Create slots
+    slots = []
     for hour in hours:
         is_booked = hour in booked_hours
         is_pending = hour in pending_hours
-        is_discount = discount_start <= hour < discount_end
+        is_disc = is_discount_hour(hour, discount_start, discount_end)
 
-        # Format time display
         display_time = f"{hour:02d}:00"
 
-        # Calculate price
-        if is_discount:
+        slot_price = price_per_hour
+        if is_disc:
             slot_price = price_per_hour * (1 - discount_percentage / 100)
-        else:
-            slot_price = price_per_hour
 
-        slot = {
+        slot_price = int(round(slot_price))
+
+        slots.append({
             'hour': hour,
             'time': display_time,
             'is_booked': is_booked,
-            'is_pending': is_pending,  # NEW: For UI to show different color
-            'is_discount': is_discount,
-            'discount_percentage': discount_percentage if is_discount else 0,
+            'is_pending': is_pending,
+            'is_discount': is_disc,
+            'discount_percentage': discount_percentage if is_disc else 0,
             'price': slot_price
-        }
-        slots.append(slot)
+        })
 
     return jsonify(slots)
 
 
-# ===== API: CHECK AVAILABILITY =====
+# -----------------------------
+# API: Check availability (range)
+# -----------------------------
 @booking_bp.route('/api/check-availability', methods=['POST'])
 def check_availability():
-    """
-    Check if specific time slot is available
-    Expected JSON: {stadium_id, date, start_hour, duration_hours}
-    """
-    data = request.json
-
+    data = request.json or {}
     stadium_id = data.get('stadium_id')
     booking_date = data.get('date')
-    start_hour = int(data.get('start_hour'))
-    duration = int(data.get('duration_hours', 1))
+    start_hour = data.get('start_hour')
+    duration = safe_duration(data.get('duration_hours', 1))
+
+    if not stadium_id or not booking_date or start_hour is None:
+        return jsonify({'available': False, 'message': 'Missing fields'}), 400
 
     try:
         booking_date_obj = datetime.strptime(booking_date, '%Y-%m-%d').date()
     except ValueError:
         return jsonify({'available': False, 'message': 'Invalid date'}), 400
 
-    # Check for conflicts (including PENDING bookings)
-    conflicts = Booking.query.filter_by(
-        stadium_id=stadium_id,
-        date=booking_date_obj
-    ).filter(
+    start_hour = int(start_hour) % 24
+    requested_hours = set(hours_covered(start_hour, duration))
+
+    conflicts = Booking.query.filter_by(stadium_id=stadium_id, date=booking_date_obj).filter(
         Booking.status.in_(['pending', 'confirmed'])
     ).all()
 
-    for booking in conflicts:
-        if hasattr(booking, 'start_time') and booking.start_time:
-            booked_start = booking.start_time.hour
-        elif hasattr(booking, 'start_hour'):
-            booked_start = booking.start_hour
-        else:
-            continue
-
-        if hasattr(booking, 'end_time') and booking.end_time:
-            booked_end = booking.end_time.hour if booking.end_time.hour != 0 else 24
-        elif hasattr(booking, 'end_hour'):
-            booked_end = booking.end_hour if booking.end_hour != 0 else 24
-        else:
-            booked_end = booked_start + (booking.duration_hours or 1)
-
-        for h in range(start_hour, start_hour + duration):
-            if booked_start <= h < booked_end:
-                return jsonify({'available': False, 'message': 'Time slot already booked'}), 409
+    for b in conflicts:
+        if requested_hours.intersection(set(booking_record_hours(b))):
+            return jsonify({'available': False, 'message': 'Time slot already booked'}), 409
 
     return jsonify({'available': True, 'message': 'Slot is available'})
 
 
-# ===== API: CREATE BOOKING =====
+# -----------------------------
+# API: Create booking (range)
+# -----------------------------
 @booking_bp.route('/api/create-booking', methods=['POST'])
 def create_booking():
-    """
-    Create new booking - STATUS IS NOW 'pending' UNTIL ADMIN APPROVES
-    Expected JSON: {
-        stadium_id, date, start_hour, duration_hours,
-        customer_name, customer_phone, customer_email
-    }
-    """
-    data = request.json
+    data = request.json or {}
     settings = Settings.query.first()
+    if not settings:
+        return jsonify({'success': False, 'message': 'Settings not configured'}), 500
 
-    # Validation
-    required_fields = ['stadium_id', 'date', 'start_hour', 'duration_hours',
-                       'customer_name', 'customer_phone']
-
+    required_fields = ['stadium_id', 'date', 'start_hour', 'duration_hours', 'customer_name', 'customer_phone']
     for field in required_fields:
-        if field not in data or not data[field]:
+        if field not in data or data[field] in (None, ''):
             return jsonify({'success': False, 'message': f'Missing {field}'}), 400
 
     try:
-        # Parse data
         stadium_id = int(data['stadium_id'])
         booking_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
-        start_hour = int(data['start_hour'])
-        duration = int(data['duration_hours'])
+        start_hour = int(data['start_hour']) % 24
+        duration = safe_duration(data.get('duration_hours', 1))
 
-        # Check if date is valid (not in past)
         if booking_date < date.today():
             return jsonify({'success': False, 'message': 'Cannot book past dates'}), 400
 
-        # Check stadium exists
         stadium = Stadium.query.get(stadium_id)
         if not stadium:
             return jsonify({'success': False, 'message': 'Stadium not found'}), 404
 
-        # Calculate times
-        start_time_obj = time(hour=start_hour, minute=0)
-        end_hour = (start_hour + duration) % 24
-        end_time_obj = time(hour=end_hour, minute=0)
-
-        # Check availability (including pending bookings)
-        conflicts = Booking.query.filter_by(
-            stadium_id=stadium_id,
-            date=booking_date
-        ).filter(
+        requested_hours = set(hours_covered(start_hour, duration))
+        conflicts = Booking.query.filter_by(stadium_id=stadium_id, date=booking_date).filter(
             Booking.status.in_(['pending', 'confirmed'])
         ).all()
 
-        for booking in conflicts:
-            if hasattr(booking, 'start_time') and booking.start_time:
-                booked_start = booking.start_time.hour
-            elif hasattr(booking, 'start_hour'):
-                booked_start = booking.start_hour
-            else:
-                continue
+        for b in conflicts:
+            if requested_hours.intersection(set(booking_record_hours(b))):
+                return jsonify({'success': False, 'message': 'Time slot already booked'}), 409
 
-            if hasattr(booking, 'end_time') and booking.end_time:
-                booked_end = booking.end_time.hour if booking.end_time.hour != 0 else 24
-            elif hasattr(booking, 'end_hour'):
-                booked_end = booking.end_hour if booking.end_hour != 0 else 24
-            else:
-                booked_end = booked_start + (booking.duration_hours or 1)
+        start_dt = datetime.combine(booking_date, time(hour=start_hour, minute=0))
+        end_dt = start_dt + timedelta(hours=duration)
 
-            for h in range(start_hour, start_hour + duration):
-                if booked_start <= h < booked_end:
-                    return jsonify({'success': False, 'message': 'Time slot already booked'}), 409
+        start_time_obj = start_dt.time()
+        end_time_obj = end_dt.time()
 
-        # Calculate pricing
-        price_per_hour = stadium.price_per_hour or settings.price_per_hour or 50000
+        price_per_hour = int(BASE_PRICE_PER_HOUR)
+
         discount_percentage = settings.discount_percentage or 25
-        is_discount = settings.discount_start_hour <= start_hour < settings.discount_end_hour
+        discount_start = settings.discount_start_hour or 12
+        discount_end = settings.discount_end_hour or 16
 
-        original_price = price_per_hour * duration
-        discount_amount = (original_price * discount_percentage / 100) if is_discount else 0
-        final_price = original_price - discount_amount
+        original_price = int(price_per_hour * duration)
 
-        # ============================================
-        # IMPORTANT: Status is now 'pending' by default
-        # Admin must approve the booking
-        # ============================================
+        final_price = 0.0
+        discounted_hours = 0
+        for h in hours_covered(start_hour, duration):
+            if is_discount_hour(h, discount_start, discount_end):
+                discounted_hours += 1
+                final_price += price_per_hour * (1 - discount_percentage / 100)
+            else:
+                final_price += price_per_hour
+
+        final_price = int(round(final_price))
+
+        discount_amount = int(round(original_price - final_price))
+        applied_discount_percentage = discount_percentage if discounted_hours > 0 else 0
+
         new_booking = Booking(
             stadium_id=stadium_id,
             customer_name=data['customer_name'],
             customer_phone=data['customer_phone'],
             customer_email=data.get('customer_email', ''),
             date=booking_date,
+            start_time=start_time_obj,
+            end_time=end_time_obj,
             duration_hours=duration,
-            status='pending',  # <-- CHANGED FROM 'confirmed' TO 'pending'
+            original_price=original_price,
+            discount_percentage=applied_discount_percentage,
+            discount_amount=discount_amount,
+            final_price=final_price,
+            status='pending',
             notes=data.get('notes', '')
         )
-
-        # Set time fields based on model structure
-        if hasattr(Booking, 'start_time'):
-            new_booking.start_time = start_time_obj
-            new_booking.end_time = end_time_obj
-        if hasattr(Booking, 'start_hour'):
-            new_booking.start_hour = start_hour
-            new_booking.end_hour = end_hour
-
-        # Set price fields based on model structure
-        if hasattr(Booking, 'original_price'):
-            new_booking.original_price = original_price
-        if hasattr(Booking, 'base_price'):
-            new_booking.base_price = original_price
-        if hasattr(Booking, 'discount_percentage'):
-            new_booking.discount_percentage = discount_percentage if is_discount else 0
-        if hasattr(Booking, 'discount_amount'):
-            new_booking.discount_amount = discount_amount
-        if hasattr(Booking, 'final_price'):
-            new_booking.final_price = final_price
-        if hasattr(Booking, 'total_price'):
-            new_booking.total_price = final_price
 
         db.session.add(new_booking)
         db.session.commit()
 
-        # 🔔 Send to Google Sheets
-        try:
-            send_booking_to_sheet(new_booking)
-        except Exception as e:
-            print(f"Google Sheets error: {e}")
+        # ✅ Notify admins about new booking
+        safe_notify_admins(
+            title="New booking request",
+            message=f"Booking #{new_booking.id} is pending approval",
+            url=f"/admin/booking/{new_booking.id}",
+            ntype="booking_created"
+        )
+
+        # ✅ IMPORTANT: do NOT send to Google Sheets here anymore.
+        # It will be sent ONLY after admin approves in admin.py.
 
         return jsonify({
             'success': True,
-            # Updated message to inform customer about pending status
             'message': 'تم استلام حجزك بنجاح! سيتواصل معك فريقنا قريباً للتأكيد',
             'message_en': 'Your booking has been received! Our team will contact you shortly to confirm.',
             'message_ku': 'حجزەکەت وەرگیرا! تیمەکەمان بەزووی پەیوەندیت پێوە دەکات بۆ پشتڕاستکردنەوە.',
@@ -337,69 +362,12 @@ def create_booking():
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-# ===== API: GET BOOKING DETAILS =====
-@booking_bp.route('/api/booking/<int:booking_id>', methods=['GET'])
-def get_booking(booking_id):
-    """Get specific booking details"""
-    booking = Booking.query.get(booking_id)
-    if not booking:
-        return jsonify({'error': 'Booking not found'}), 404
-
-    return jsonify(booking.to_dict())
-
-
-# ===== API: GET ALL BOOKINGS (Admin) =====
-@booking_bp.route('/api/bookings', methods=['GET'])
-def get_all_bookings():
-    """Get all bookings (for admin dashboard)"""
-    stadium_id = request.args.get('stadium_id', type=int)
-    status = request.args.get('status')
-
-    query = Booking.query
-
-    if stadium_id:
-        query = query.filter_by(stadium_id=stadium_id)
-
-    if status:
-        query = query.filter_by(status=status)
-
-    bookings = query.order_by(Booking.date.desc()).all()
-
-    return jsonify([booking.to_dict() for booking in bookings])
-
-
-# ===== API: GET PENDING BOOKINGS COUNT =====
-@booking_bp.route('/api/pending-count', methods=['GET'])
-def get_pending_count():
-    """Get count of pending bookings for notification badge"""
-    count = Booking.query.filter_by(status='pending').count()
-    return jsonify({'count': count})
-
-
-# ===== API: CANCEL BOOKING =====
-@booking_bp.route('/api/booking/<int:booking_id>/cancel', methods=['POST'])
-def cancel_booking(booking_id):
-    """Cancel a booking"""
-    booking = Booking.query.get(booking_id)
-
-    if not booking:
-        return jsonify({'success': False, 'message': 'Booking not found'}), 404
-
-    if booking.status == 'cancelled':
-        return jsonify({'success': False, 'message': 'Booking already cancelled'}), 400
-
-    booking.status = 'cancelled'
-    db.session.commit()
-
-    return jsonify({'success': True, 'message': 'Booking cancelled successfully'})
-
-
-# ===== CONFIRMATION PAGE =====
+# -----------------------------
+# Confirmation page
+# -----------------------------
 @booking_bp.route('/confirmation/<int:booking_id>')
 def confirmation(booking_id):
-    """Show booking confirmation - Now shows PENDING status"""
     booking = Booking.query.get(booking_id)
     if not booking:
         return render_template('404.html'), 404
-
     return render_template('booking/confirmation.html', booking=booking)

@@ -144,38 +144,48 @@ document.getElementById('settingsForm').addEventListener('submit', async functio
     const data = {
         opening_hour: parseInt(document.getElementById('opening_hour').value),
         closing_hour: parseInt(document.getElementById('closing_hour').value),
-        price_per_hour: parseInt(document.getElementById('price_per_hour').value),
+        price_per_hour: parseFloat(document.getElementById('price_per_hour').value),
+
         discount_percentage: parseInt(document.getElementById('discount_percentage').value),
         discount_start_hour: parseInt(document.getElementById('discount_start_hour').value),
         discount_end_hour: parseInt(document.getElementById('discount_end_hour').value),
+
         site_name: document.getElementById('site_name').value,
         phone: document.getElementById('phone').value,
         email: document.getElementById('email').value,
         address: document.getElementById('address').value,
+
         facebook: document.getElementById('facebook').value,
         instagram: document.getElementById('instagram').value,
         whatsapp: document.getElementById('whatsapp').value
     };
 
     const btn = this.querySelector('button[type="submit"]');
+    const oldHtml = btn.innerHTML;
+
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>...';
 
     try {
-        const response = await fetch('/admin/api/settings', {
+        const response = await fetch('{{ url_for("admin.manage_settings") }}', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
 
-        if (response.ok) {
+        const result = await response.json().catch(() => ({}));
+
+        if (response.ok && result.success) {
             alert('{% if current_lang == "ku" %}پاشەکەوتکرا!{% elif current_lang == "ar" %}تم الحفظ!{% else %}Saved!{% endif %}');
+        } else {
+            alert(result.message || 'Error saving settings');
         }
+
     } catch (error) {
         alert('Error saving settings');
     } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-save me-2"></i>{{ t("save") }}';
+        btn.innerHTML = oldHtml;
     }
 });
 </script>

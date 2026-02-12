@@ -1025,7 +1025,10 @@
             <div class="col-lg-6 text-center mt-5 mt-lg-0">
                 <div class="hero-image-wrapper">
                     <div class="hero-image-glow"></div>
-                    <img src="{{ url_for('static', filename='images/mascott.png') }}" alt="Padel House" class="hero-image img-fluid">
+                    {# <img src="{{ url_for('static', filename='images/mascott.png') }}" alt="Padel House" class="hero-image img-fluid"> #}
+                    <div style="width: 100%; max-width: 500px; height: 500px; margin: 0 auto; background: linear-gradient(135deg, rgba(229, 118, 37, 0.2), rgba(229, 118, 37, 0.1)); border-radius: 30px; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 5rem; font-weight: 900; animation: float 5s ease-in-out infinite; border: 3px solid rgba(229, 118, 37, 0.3); box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);">
+                        <i class="fas fa-table-tennis"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1067,100 +1070,153 @@
     </div>
 </section>
 
-<!-- Stadiums Section -->
 <section class="section section-gray">
-    <div class="container">
-        <div class="section-header">
-            <span class="section-badge">{% if current_lang == 'ku' %}یاریگاکان{% elif current_lang == 'ar' %}الملاعب{% else %}Courts{% endif %}</span>
-            <h2 class="section-title">{{ t('stadiums') }}</h2>
-            <p class="section-subtitle">{% if current_lang == 'ku' %}دوو یاریگای پڕۆفیشناڵ{% elif current_lang == 'ar' %}ملعبان احترافيان{% else %}Two professional courts{% endif %}</p>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-md-6">
-                <div class="stadium-card">
-                    <div class="stadium-image">
-                        <img src="{{ url_for('static', filename='images/mascot_1.png') }}" alt="Stadium 1">
-                        <span class="stadium-badge"><i class="fas fa-check-circle"></i>{{ t('available') }}</span>
-                        <span class="stadium-number">01</span>
-                    </div>
-                    <div class="stadium-body">
-                        <h5 class="stadium-name">{{ t('stadium_1') }}</h5>
-                        <div class="stadium-features">
-                            <span class="stadium-feature"><i class="fas fa-lightbulb"></i>{% if current_lang == 'ku' %}رووناکی{% elif current_lang == 'ar' %}إضاءة{% else %}Lighting{% endif %}</span>
-                            <span class="stadium-feature"><i class="fas fa-wind"></i>{% if current_lang == 'ku' %}فێنکە{% elif current_lang == 'ar' %}تهوية{% else %}Ventilation{% endif %}</span>
-                        </div>
-                        <a href="{{ url_for('booking.booking_page') }}" class="btn btn-stadium"><i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}</a>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="stadium-card">
-                    <div class="stadium-image">
-                        <img src="{{ url_for('static', filename='images/mascot_2.png') }}" alt="Stadium 2">
-                        <span class="stadium-badge"><i class="fas fa-check-circle"></i>{{ t('available') }}</span>
-                        <span class="stadium-number">02</span>
-                    </div>
-                    <div class="stadium-body">
-                        <h5 class="stadium-name">{{ t('stadium_2') }}</h5>
-                        <div class="stadium-features">
-                            <span class="stadium-feature"><i class="fas fa-lightbulb"></i>{% if current_lang == 'ku' %}رووناکی{% elif current_lang == 'ar' %}إضاءة{% else %}Lighting{% endif %}</span>
-                            <span class="stadium-feature"><i class="fas fa-wind"></i>{% if current_lang == 'ku' %}فێنکە{% elif current_lang == 'ar' %}تهوية{% else %}Ventilation{% endif %}</span>
-                        </div>
-                        <a href="{{ url_for('booking.booking_page') }}" class="btn btn-stadium"><i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}</a>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div class="container">
+    <div class="section-header">
+      <span class="section-badge">{% if current_lang == 'ku' %}یاریگاکان{% elif current_lang == 'ar' %}الملاعب{% else %}Courts{% endif %}</span>
+      <h2 class="section-title">{{ t('stadiums') }}</h2>
+      <p class="section-subtitle">{% if current_lang == 'ku' %}دوو یاریگای پڕۆفیشناڵ{% elif current_lang == 'ar' %}ملعبان احترافيان{% else %}Two professional courts{% endif %}</p>
     </div>
+
+    <div class="row g-4">
+
+      <!-- Stadium 1 -->
+      <div class="col-md-6">
+        <div class="stadium-card">
+
+          <div class="stadium-image">
+            <img class="stadium-bg"
+                 src="{{ url_for('static', filename='images/OrangeCourt.jpeg') }}"
+                 alt="Orange Court">
+
+            <span class="stadium-badge">
+              <i class="fas fa-check-circle"></i> {{ t('available') }}
+            </span>
+
+            <span class="stadium-number">01</span>
+          </div>
+
+          <div class="stadium-body">
+            <h5 class="stadium-name">
+              {% if current_lang == 'ku' %}یاریگای پرتەقاڵی{% elif current_lang == 'ar' %}الملعب البرتقالي{% else %}Orange Court{% endif %}
+            </h5>
+
+            <div class="stadium-features">
+              <span class="stadium-feature">
+                <i class="fas fa-lightbulb"></i>
+                {% if current_lang == 'ku' %}رووناکی{% elif current_lang == 'ar' %}إضاءة{% else %}Lighting{% endif %}
+              </span>
+
+              <span class="stadium-feature">
+                <i class="fas fa-wind"></i>
+                {% if current_lang == 'ku' %}فێنکە{% elif current_lang == 'ar' %}تهوية{% else %}Ventilation{% endif %}
+              </span>
+            </div>
+
+            <a href="{{ url_for('booking.booking_page') }}" class="btn btn-stadium">
+              <i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Stadium 2 -->
+      <div class="col-md-6">
+        <div class="stadium-card">
+
+          <div class="stadium-image">
+            <img class="stadium-bg"
+                 src="{{ url_for('static', filename='images/blackcourt.jpg') }}"
+                 alt="Black Court">
+
+            <span class="stadium-badge">
+              <i class="fas fa-check-circle"></i> {{ t('available') }}
+            </span>
+
+            <span class="stadium-number">02</span>
+          </div>
+
+          <div class="stadium-body">
+            <h5 class="stadium-name">
+              {% if current_lang == 'ku' %}یاریگای ڕەش{% elif current_lang == 'ar' %}الملعب الأسود{% else %}Black Court{% endif %}
+            </h5>
+
+            <div class="stadium-features">
+              <span class="stadium-feature">
+                <i class="fas fa-lightbulb"></i>
+                {% if current_lang == 'ku' %}رووناکی{% elif current_lang == 'ar' %}إضاءة{% else %}Lighting{% endif %}
+              </span>
+
+              <span class="stadium-feature">
+                <i class="fas fa-wind"></i>
+                {% if current_lang == 'ku' %}فێنکە{% elif current_lang == 'ar' %}تهوية{% else %}Ventilation{% endif %}
+              </span>
+            </div>
+
+            <a href="{{ url_for('booking.booking_page') }}" class="btn btn-stadium">
+              <i class="fas fa-calendar-check me-2"></i>{{ t('book_now') }}
+            </a>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
 </section>
 
-<!-- Products Section -->
 <section class="section section-light">
-    <div class="container">
-        <div class="products-header">
-            <div class="section-header">
-                <span class="section-badge">{% if current_lang == 'ku' %}فرۆشگا{% elif current_lang == 'ar' %}المتجر{% else %}Store{% endif %}</span>
-                <h2 class="section-title">{% if current_lang == 'ku' %}بەرهەمەکانمان{% elif current_lang == 'ar' %}منتجاتنا{% else %}Our Products{% endif %}</h2>
-            </div>
-            <a href="{{ url_for('store.products') }}" class="btn btn-view-all">
-                {% if current_lang == 'ku' %}هەموو ببینە{% elif current_lang == 'ar' %}عرض الكل{% else %}View All{% endif %}
-                <i class="fas fa-arrow-{% if is_rtl %}left{% else %}right{% endif %}"></i>
-            </a>
-        </div>
-
-        <div class="row g-4">
-            {% if featured_products %}
-                {% for product in featured_products[:4] %}
-                <div class="col-6 col-lg-3">
-                    <div class="product-card" data-bs-toggle="modal" data-bs-target="#productModal" data-id="{{ product.id }}" data-name="{{ product.get_name(current_lang) }}" data-description="{{ product.get_description(current_lang) or '' }}" data-price="{{ product.price }}" data-stock="{{ product.stock }}" data-image="{{ url_for('static', filename='images/products/' + (product.image or 'default.jpg')) }}" data-category="{{ product.category.get_name(current_lang) if product.category else '' }}">
-                        <div class="product-image">
-                            <img src="{{ url_for('static', filename='images/products/' + (product.image or 'default.jpg')) }}" alt="{{ product.get_name(current_lang) }}" onerror="this.src='https://via.placeholder.com/300x220?text=Product'">
-                            {% if product.stock <= 0 %}
-                            <span class="product-badge bg-danger text-white">{% if current_lang == 'ku' %}نەماوە{% elif current_lang == 'ar' %}نفذ{% else %}Out{% endif %}</span>
-                            {% elif product.stock < 5 %}
-                            <span class="product-badge bg-warning text-dark">{{ product.stock }}</span>
-                            {% endif %}
-                            <div class="product-overlay">
-                                <span class="btn btn-quick-view"><i class="fas fa-eye"></i>{% if current_lang == 'ku' %}بینین{% elif current_lang == 'ar' %}عرض{% else %}View{% endif %}</span>
-                            </div>
-                        </div>
-                        <div class="product-body">
-                            <div class="product-category">{{ product.category.get_name(current_lang) if product.category else '' }}</div>
-                            <h6 class="product-name">{{ product.get_name(current_lang) }}</h6>
-                            <div class="product-price">{{ "{:,.0f}".format(product.price or 0) }} <small>{{ t('iqd') }}</small></div>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            {% else %}
-                <div class="col-12 text-center py-5">
-                    <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
-                    <p class="text-muted">{{ t('no_products') if t else 'لا توجد منتجات' }}</p>
-                </div>
-            {% endif %}
-        </div>
+  <div class="container">
+    <div class="products-header">
+      <div class="section-header">
+        <span class="section-badge">{% if current_lang == 'ku' %}فرۆشگا{% elif current_lang == 'ar' %}المتجر{% else %}Store{% endif %}</span>
+        <h2 class="section-title">{% if current_lang == 'ku' %}بەرهەمەکانمان{% elif current_lang == 'ar' %}منتجاتنا{% else %}Our Products{% endif %}</h2>
+      </div>
+      <a href="{{ url_for('store.products') }}" class="btn btn-view-all">
+        {% if current_lang == 'ku' %}هەموو ببینە{% elif current_lang == 'ar' %}عرض الكل{% else %}View All{% endif %}
+        <i class="fas fa-arrow-{% if is_rtl %}left{% else %}right{% endif %}"></i>
+      </a>
     </div>
+
+    <div class="row g-4">
+      {% if featured_products %}
+        {% for product in featured_products[:4] %}
+          <div class="col-6 col-lg-3">
+            <div class="product-card" data-bs-toggle="modal" data-bs-target="#productModal"
+                 data-id="{{ product.id }}"
+                 data-name="{{ product.get_name(current_lang) }}"
+                 data-description="{{ product.get_description(current_lang) or '' }}"
+                 data-price="{{ product.price }}"
+                 data-stock="{{ product.stock }}"
+                 data-image="{{ url_for('static', filename='images/products/' + (product.image or 'default.jpg')) }}"
+                 data-category="{{ product.category.get_name(current_lang) if product.category else '' }}">
+              <div class="product-image">
+                <img src="{{ url_for('static', filename='images/products/' + (product.image or 'default.jpg')) }}"
+                     alt="{{ product.get_name(current_lang) }}"
+                     onerror="this.src='https://{{ url_for('static', filename='images/placeholder.png') }}'">
+                <div class="product-overlay">
+                  <span class="btn btn-quick-view"><i class="fas fa-eye"></i>
+                    {% if current_lang == 'ku' %}بینین{% elif current_lang == 'ar' %}عرض{% else %}View{% endif %}
+                  </span>
+                </div>
+              </div>
+              <div class="product-body">
+                <div class="product-category">{{ product.category.get_name(current_lang) if product.category else '' }}</div>
+                <h6 class="product-name">{{ product.get_name(current_lang) }}</h6>
+                <div class="product-price">{{ "{:,.0f}".format(product.price or 0) }} <small>{{ t('iqd') }}</small></div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="col-12 text-center py-5">
+          <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+          <p class="text-muted">{{ t('no_products') }}</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
 </section>
 
 <!-- Pricing Section -->
@@ -1187,11 +1243,11 @@
                     <div class="pricing-prices">
                         <div class="pricing-item">
                             <div class="pricing-label">{% if current_lang == 'ku' %}نرخی ئاسایی{% elif current_lang == 'ar' %}السعر العادي{% else %}Normal Price{% endif %}</div>
-                            <div class="pricing-value">80,000 <span class="pricing-unit">{{ t('iqd') }}</span></div>
+                            <div class="pricing-value">40,000 <span class="pricing-unit">{{ t('iqd') }}</span></div>
                         </div>
                         <div class="pricing-item">
                             <div class="pricing-label">{% if current_lang == 'ku' %}نرخی داشکاندن{% elif current_lang == 'ar' %}سعر الخصم{% else %}Discount Price{% endif %}</div>
-                            <div class="pricing-value highlight">60,000 <span class="pricing-unit">{{ t('iqd') }}</span></div>
+                            <div class="pricing-value highlight">30,000 <span class="pricing-unit">{{ t('iqd') }}</span></div>
                         </div>
                     </div>
 

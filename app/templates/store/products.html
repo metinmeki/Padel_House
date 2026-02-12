@@ -208,7 +208,7 @@
                              class="card-img-top"
                              alt="{{ product.get_name(current_lang) }}"
                              style="height: 200px; object-fit: cover;"
-                             onerror="this.src='https://via.placeholder.com/300x200?text=Product'">
+                             onerror="this.src='https://{{ url_for('static', filename='images/placeholder.png') }}'">
 
                         {% if product.stock <= 0 %}
                         <span class="badge bg-danger position-absolute top-0 end-0 m-2">{{ t('out_of_stock') }}</span>

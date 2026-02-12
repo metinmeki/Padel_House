@@ -1,117 +1,211 @@
 {% extends 'pos/base_pos.html' %}
 
-{% block title %}الرئيسية{% endblock %}
+{% block title %}POS Dashboard - Padel House{% endblock %}
 
 {% block content %}
-<div class="row">
-    <!-- الملاعب -->
-    <div class="col-12 mb-4">
-        <h4 class="mb-3"><i class="fas fa-futbol me-2"></i>الملاعب</h4>
-        <div class="row g-3">
-            {% for stadium in stadiums %}
-            <div class="col-md-6 col-lg-3">
-                {% set session = stadium_sessions.get(stadium.id) %}
-                <div class="pos-card location-card {{ 'occupied' if session else 'available' }}"
-                     onclick="{% if session %}window.location='{{ url_for('pos.session_detail', session_id=session.id) }}'{% else %}openStartModal('stadium', {{ stadium.id }}, '{{ stadium.name }}'){% endif %}">
-                    <div class="icon">
-                        <i class="fas fa-futbol"></i>
-                    </div>
-                    <h5>{{ stadium.name }}</h5>
-                    {% if session %}
-                        <span class="badge bg-danger mb-2">مشغول</span>
-                        <p class="mb-1"><i class="fas fa-user me-1"></i>{{ session.customer_name or 'زائر' }}</p>
-                        <p class="mb-0 text-info"><i class="fas fa-clock me-1"></i>{{ session.start_time.strftime('%H:%M') }}</p>
-                        <p class="mt-2 mb-0"><strong>{{ '{:,.0f}'.format(session.total_amount) }} IQD</strong></p>
-                    {% else %}
-                        <span class="badge bg-success">متاح</span>
-                        <p class="mt-2 mb-0 text-muted">اضغط للبدء</p>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    
-    <!-- الطاولات -->
-    <div class="col-12 mb-4">
-        <h4 class="mb-3"><i class="fas fa-chair me-2"></i>الطاولات</h4>
-        <div class="row g-3">
-            {% for table in tables %}
-            <div class="col-6 col-md-4 col-lg-2">
-                {% set session = table_sessions.get(table.id) %}
-                <div class="pos-card location-card {{ 'occupied' if session else 'available' }}"
-                     onclick="{% if session %}window.location='{{ url_for('pos.session_detail', session_id=session.id) }}'{% else %}openStartModal('table', {{ table.id }}, '{{ table.name }}'){% endif %}">
-                    <div class="icon">
-                        <i class="fas fa-chair"></i>
-                    </div>
-                    <h6>{{ table.name }}</h6>
-                    {% if session %}
-                        <span class="badge bg-danger" style="font-size: 0.7rem;">مشغول</span>
-                        <p class="mb-0 mt-2" style="font-size: 0.85rem;"><strong>{{ '{:,.0f}'.format(session.total_amount) }}</strong></p>
-                    {% else %}
-                        <span class="badge bg-success" style="font-size: 0.7rem;">متاح</span>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-    
-    <!-- أزرار سريعة -->
-    <div class="col-12">
-        <div class="row g-3">
-            <div class="col-md-4">
-                <a href="{{ url_for('pos.quick_sale') }}" class="pos-card d-block text-decoration-none p-4 text-center">
-                    <i class="fas fa-bolt fa-3x text-warning mb-3"></i>
-                    <h5>بيع سريع</h5>
-                    <p class="text-muted mb-0">بيع مباشر بدون ملعب أو طاولة</p>
-                </a>
-            </div>
-            <div class="col-md-4">
-                <a href="{{ url_for('pos.reports') }}" class="pos-card d-block text-decoration-none p-4 text-center">
-                    <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
-                    <h5>التقارير</h5>
-                    <p class="text-muted mb-0">مبيعات اليوم والإحصائيات</p>
-                </a>
-            </div>
-            <div class="col-md-4">
-                <a href="{{ url_for('admin.dashboard') }}" class="pos-card d-block text-decoration-none p-4 text-center">
-                    <i class="fas fa-cogs fa-3x text-info mb-3"></i>
-                    <h5>الإدارة</h5>
-                    <p class="text-muted mb-0">إدارة المنتجات والإعدادات</p>
-                </a>
-            </div>
-        </div>
+<div class="page-header">
+    <div class="d-flex justify-content-between align-items-center">
+        <h2>
+            <i class="fas fa-home me-2"></i>
+            POS Dashboard
+        </h2>
+        <span class="badge bg-primary" style="font-size: 1.1rem; padding: 0.6rem 1.2rem;">
+            <i class="fas fa-futbol me-2"></i>الملاعب: 2 |
+            <i class="fas fa-chair me-2 ms-3"></i>الطاولات: 10
+        </span>
     </div>
 </div>
 
-<!-- Modal بدء جلسة -->
-<div class="modal fade" id="startSessionModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: #16213e; border: 1px solid #0f3460;">
-            <div class="modal-header border-0">
-                <h5 class="modal-title" id="modalTitle">بدء جلسة</h5>
+<!-- Barcode Scanner -->
+<div class="barcode-scanner">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <label class="form-label">
+                <i class="fas fa-barcode me-2"></i>
+                ماسح الباركود E70
+            </label>
+            <input type="text"
+                   id="barcode-input"
+                   class="form-control barcode-input"
+                   placeholder="امسح الباركود هنا أو اكتب الرقم ..."
+                   autofocus>
+        </div>
+        <div class="col-md-4">
+            <button class="btn btn-primary w-100 mt-4" onclick="manualScan()">
+                <i class="fas fa-search me-2"></i>
+                بحث يدوي
+            </button>
+        </div>
+    </div>
+    <small class="text-muted mt-2 d-block">
+        <i class="fas fa-info-circle me-2"></i>
+        ضع المؤشر في الحقل ثم امسح باركود المنتج — سيظهر اسم المنتج والسعر تلقائياً.
+    </small>
+</div>
+
+<!-- Stadiums Section -->
+<div class="page-header">
+    <h4>
+        <i class="fas fa-futbol me-2" style="color: var(--primary-color);"></i>
+        الملاعب
+        <span class="badge bg-success ms-2">عرض 2 فقط</span>
+    </h4>
+</div>
+
+<div class="row g-4 mb-4">
+    {% for stadium in stadiums %}
+    <div class="col-md-6">
+        {% set session = stadium_sessions.get(stadium.id) %}
+        {% set is_occupied = session is not none %}
+
+        <div class="stadium-card {{ 'occupied' if is_occupied else 'available' }}">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div class="d-flex align-items-center">
+                    <div class="stadium-number">{{ loop.index }}</div>
+                    <div class="ms-3">
+                        <h5 class="mb-1" style="color: var(--primary-color);">
+                            <i class="fas fa-futbol me-2"></i>
+                            باديكاڤ {{ loop.index }}
+                        </h5>
+                        <p class="text-muted mb-0">
+                            <i class="fas fa-money-bill-wave me-2"></i>
+                            سعر الساعة: {{ "{:,.0f}".format(stadium.price_per_hour or settings.price_per_hour or 40000) }} IQD
+                        </p>
+                    </div>
+                </div>
+
+                <span class="status-badge {{ 'status-occupied' if is_occupied else 'status-available' }}">
+                    {% if is_occupied %}
+                        <i class="fas fa-user-clock me-1"></i>مشغول
+                    {% else %}
+                        <i class="fas fa-check-circle me-1"></i>متاح
+                    {% endif %}
+                </span>
+            </div>
+
+            {% if is_occupied and stadium_live.get(stadium.id) %}
+                <div class="alert alert-warning mb-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>
+                                <i class="fas fa-clock me-2"></i>
+                                وقت اللعب: {{ stadium_live[stadium.id].minutes }} دقيقة
+                            </strong>
+                        </div>
+                        <div>
+                            <strong style="color: var(--primary-color);">
+                                {{ "{:,.0f}".format(stadium_live[stadium.id].price) }} IQD
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="d-flex gap-2">
+                {% if is_occupied %}
+                    <a href="{{ url_for('pos.session_detail', session_id=session.id) }}"
+                       class="btn btn-primary flex-grow-1">
+                        <i class="fas fa-eye me-2"></i>
+                        عرض الجلسة
+                    </a>
+                {% else %}
+                    <button class="btn btn-success flex-grow-1"
+                            onclick="openStartModal('stadium', {{ stadium.id }})">
+                        <i class="fas fa-play me-2"></i>
+                        بدء جلسة
+                    </button>
+                {% endif %}
+
+                {% if not is_occupied %}
+                    <span class="btn btn-secondary disabled">
+                        <i class="fas fa-ban"></i>
+                        لا توجد جلسة
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Tables Section -->
+<div class="page-header">
+    <h4>
+        <i class="fas fa-chair me-2" style="color: var(--warning-color);"></i>
+        الطاولات
+        <span class="badge bg-info ms-2">عرض الطاولات: {{ tables|length }}</span>
+    </h4>
+</div>
+
+<div class="row g-3">
+    {% for table in tables %}
+    <div class="col-md-6 col-lg-4 col-xl-3">
+        {% set session = table_sessions.get(table.id) %}
+        {% set is_occupied = session is not none %}
+
+        <div class="stadium-card {{ 'occupied' if is_occupied else 'available' }}" style="padding: 1rem;">
+            <div class="text-center mb-2">
+                <div class="stadium-number" style="width: 40px; height: 40px; font-size: 1.2rem; margin: 0 auto; background: var(--warning-color);">
+                    #{{ loop.index }}
+                </div>
+            </div>
+
+            <h6 class="text-center mb-2" style="color: var(--secondary-color);">
+                طاولة {{ loop.index }}
+            </h6>
+
+            <span class="status-badge {{ 'status-occupied' if is_occupied else 'status-available' }} d-block text-center mb-2">
+                {% if is_occupied %}
+                    <i class="fas fa-user-clock me-1"></i>مشغول
+                {% else %}
+                    <i class="fas fa-check-circle me-1"></i>متاح
+                {% endif %}
+            </span>
+
+            {% if is_occupied %}
+                <a href="{{ url_for('pos.session_detail', session_id=session.id) }}"
+                   class="btn btn-primary btn-sm w-100">
+                    <i class="fas fa-eye me-2"></i>عرض
+                </a>
+            {% else %}
+                <form action="{{ url_for('pos.start_session') }}" method="POST" style="display: inline;">
+                    <input type="hidden" name="session_type" value="table">
+                    <input type="hidden" name="location_id" value="{{ table.id }}">
+                    <button type="submit" class="btn btn-success btn-sm w-100">
+                        <i class="fas fa-play me-2"></i>بدء
+                    </button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Start Session Modal (for stadiums only) -->
+<div class="modal fade" id="startModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border-radius: 15px; border: none;">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); color: white; border-radius: 15px 15px 0 0;">
+                <h5 class="modal-title">
+                    <i class="fas fa-play-circle me-2"></i>
+                    بدء جلسة جديدة
+                </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('pos.start_session') }}" method="POST">
-                <div class="modal-body">
-                    <input type="hidden" name="session_type" id="sessionType">
-                    <input type="hidden" name="location_id" id="locationId">
-                    
-                    <div class="mb-3">
-                        <label class="form-label">اسم الزبون (اختياري)</label>
-                        <input type="text" name="customer_name" class="form-control bg-dark text-white border-secondary">
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">رقم الهاتف (اختياري)</label>
-                        <input type="text" name="customer_phone" class="form-control bg-dark text-white border-secondary">
-                    </div>
+                <div class="modal-body text-center py-4">
+                    <input type="hidden" name="session_type" id="session_type">
+                    <input type="hidden" name="location_id" id="location_id">
+
+                    <i class="fas fa-question-circle fa-3x mb-3" style="color: var(--primary-color);"></i>
+                    <h5>هل تريد بدء الجلسة؟</h5>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-pos">
-                        <i class="fas fa-play me-1"></i> بدء الجلسة
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>بدء الجلسة
                     </button>
                 </div>
             </form>
@@ -122,13 +216,51 @@
 
 {% block extra_js %}
 <script>
-    const startModal = new bootstrap.Modal(document.getElementById('startSessionModal'));
-    
-    function openStartModal(type, id, name) {
-        document.getElementById('sessionType').value = type;
-        document.getElementById('locationId').value = id;
-        document.getElementById('modalTitle').textContent = 'بدء جلسة - ' + name;
-        startModal.show();
+function openStartModal(type, id) {
+    document.getElementById('session_type').value = type;
+    document.getElementById('location_id').value = id;
+    new bootstrap.Modal(document.getElementById('startModal')).show();
+}
+
+// Barcode Scanner
+document.getElementById('barcode-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const barcode = this.value.trim();
+        if (barcode) {
+            scanBarcode(barcode);
+        }
     }
+});
+
+function manualScan() {
+    const barcode = document.getElementById('barcode-input').value.trim();
+    if (barcode) {
+        scanBarcode(barcode);
+    } else {
+        alert('الرجاء إدخال رقم الباركود');
+    }
+}
+
+function scanBarcode(barcode) {
+    fetch('/pos/scan-barcode', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({barcode: barcode})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`المنتج: ${data.product.name_ku}\nالسعر: ${data.product.price} IQD`);
+            document.getElementById('barcode-input').value = '';
+        } else {
+            alert(data.message || 'المنتج غير موجود');
+        }
+    })
+    .catch(err => {
+        alert('حدث خطأ في المسح');
+        console.error(err);
+    });
+}
 </script>
 {% endblock %}

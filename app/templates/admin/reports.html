@@ -23,7 +23,42 @@
     </div>
 </div>
 
-<!-- Stats Cards -->
+<!-- ✅ NET PROFIT SUMMARY - NEW! -->
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card text-center" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 18px;">
+            <h6 class="mb-2 opacity-75">
+                {% if current_lang == 'ar' %}💰 إجمالي الإيرادات{% elif current_lang == 'ku' %}💰 کۆی داهات{% else %}💰 Total Revenue{% endif %}
+            </h6>
+            <h2 class="mb-0">{{ "{:,.0f}".format(total_revenue) }} {{ t('iqd') }}</h2>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="stat-card text-center" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 18px;">
+            <h6 class="mb-2 opacity-75">
+                {% if current_lang == 'ar' %}📉 إجمالي المصاريف{% elif current_lang == 'ku' %}📉 کۆی خەرجی{% else %}📉 Total Expenses{% endif %}
+            </h6>
+            <h2 class="mb-0">{{ "{:,.0f}".format(total_expenses|default(0)) }} {{ t('iqd') }}</h2>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="stat-card text-center" style="background: linear-gradient(135deg, {% if net_profit|default(0) >= 0 %}#007bff{% else %}#ffc107{% endif %} 0%, {% if net_profit|default(0) >= 0 %}#0056b3{% else %}#e0a800{% endif %} 100%); color: white; border-radius: 18px;">
+            <h6 class="mb-2 opacity-75">
+                {% if current_lang == 'ar' %}✅ صافي الربح{% elif current_lang == 'ku' %}✅ قازانجی پاک{% else %}✅ Net Profit{% endif %}
+            </h6>
+            <h2 class="mb-0">{{ "{:,.0f}".format(net_profit|default(0)) }} {{ t('iqd') }}</h2>
+            {% if net_profit|default(0) < 0 %}
+            <small><i class="fas fa-exclamation-triangle me-1"></i>
+                {% if current_lang == 'ar' %}خسارة{% elif current_lang == 'ku' %}زیان{% else %}Loss{% endif %}
+            </small>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards Row 1 - Revenue -->
 <div class="row g-4 mb-4">
     <div class="col-md-6 col-xl-3">
         <div class="stat-card">
@@ -44,7 +79,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <p class="text-muted mb-1">{% if current_lang == 'ku' %}داهاتی حجز{% elif current_lang == 'ar' %}إيرادات الحجز{% else %}Booking Revenue{% endif %}</p>
-                    <h3 class="mb-0">{{ "{:,.0f}".format(booking_revenue) }}</h3>
+                    <h3 class="mb-0">{{ "{:,.0f}".format(booking_revenue) }} {{ t('iqd') }}</h3>
                 </div>
                 <div class="icon bg-success bg-opacity-10 text-success">
                     <i class="fas fa-money-bill-wave"></i>
@@ -72,7 +107,7 @@
             <div class="d-flex justify-content-between align-items-center">
                 <div>
                     <p class="text-muted mb-1">{% if current_lang == 'ku' %}داهاتی فرۆشتن{% elif current_lang == 'ar' %}إيرادات المبيعات{% else %}Sales Revenue{% endif %}</p>
-                    <h3 class="mb-0">{{ "{:,.0f}".format(order_revenue) }}</h3>
+                    <h3 class="mb-0">{{ "{:,.0f}".format(order_revenue) }} {{ t('iqd') }}</h3>
                 </div>
                 <div class="icon bg-warning bg-opacity-10 text-warning">
                     <i class="fas fa-coins"></i>
@@ -82,148 +117,585 @@
     </div>
 </div>
 
-<!-- Total Revenue Card -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="stat-card text-center" style="background: linear-gradient(135deg, #E57625 0%, #d4691f 100%);">
-            <p class="text-white mb-1 opacity-75">{% if current_lang == 'ku' %}کۆی گشتی داهات{% elif current_lang == 'ar' %}إجمالي الإيرادات{% else %}Total Revenue{% endif %}</p>
-            <h1 class="text-white mb-0">{{ "{:,.0f}".format(booking_revenue + order_revenue) }} {{ t('iqd') }}</h1>
+<!-- POS Stats Cards Row 2 -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">POS Sessions</p>
+                    <h3 class="mb-0">{{ total_pos_sessions }}</h3>
+                    <small class="text-muted">
+                        {% if current_lang == 'ar' %}نشط:{% elif current_lang == 'ku' %}چالاک:{% else %}Active:{% endif %}
+                        {{ active_pos_sessions }}
+                    </small>
+                </div>
+                <div class="icon bg-dark bg-opacity-10 text-dark">
+                    <i class="fas fa-cash-register"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">POS Revenue</p>
+                    <h3 class="mb-0">{{ "{:,.0f}".format(pos_revenue) }} {{ t('iqd') }}</h3>
+                    <small class="text-muted">
+                        {% if current_lang == 'ar' %}نقد:{% else %}Cash:{% endif %}
+                        {{ "{:,.0f}".format(pos_cash) }}
+                        |
+                        {% if current_lang == 'ar' %}بطاقة:{% else %}Card:{% endif %}
+                        {{ "{:,.0f}".format(pos_card) }}
+                    </small>
+                </div>
+                <div class="icon bg-secondary bg-opacity-10 text-secondary">
+                    <i class="fas fa-receipt"></i>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<div class="row g-4">
-    <!-- Bookings by Status -->
-    <div class="col-lg-6">
-        <div class="table-card">
-            <h5 class="mb-4">
-                <i class="fas fa-chart-pie me-2" style="color: #E57625;"></i>
-                {% if current_lang == 'ku' %}حجز بە دۆخ{% elif current_lang == 'ar' %}الحجوزات حسب الحالة{% else %}Bookings by Status{% endif %}
-            </h5>
-            <div class="table-responsive">
-                <table class="table">
-                    <tbody>
-                        <tr>
-                            <td><span class="badge badge-pending">{{ t('pending') }}</span></td>
-                            <td class="text-end">{{ pending_bookings }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge badge-confirmed">{{ t('confirmed') }}</span></td>
-                            <td class="text-end">{{ confirmed_bookings }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge badge-completed">{{ t('completed') }}</span></td>
-                            <td class="text-end">{{ completed_bookings }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge badge-cancelled">{{ t('cancelled') }}</span></td>
-                            <td class="text-end">{{ cancelled_bookings }}</td>
-                        </tr>
-                    </tbody>
-                </table>
+<!-- Manual Debts Stats -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left: 6px solid #dc3545;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">
+                        {% if current_lang == 'ar' %}عدد الديون (يدوي){% elif current_lang == 'ku' %}ژمارەی قەرزەکان (دەستی){% else %}Manual Debts Count{% endif %}
+                    </p>
+                    <h3 class="mb-0">{{ manual_debt_count or 0 }}</h3>
+                </div>
+                <div class="icon bg-danger bg-opacity-10 text-danger">
+                    <i class="fas fa-user-clock"></i>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Orders by Status -->
-    <div class="col-lg-6">
-        <div class="table-card">
-            <h5 class="mb-4">
-                <i class="fas fa-chart-pie me-2" style="color: #E57625;"></i>
-                {% if current_lang == 'ku' %}داواکاری بە دۆخ{% elif current_lang == 'ar' %}الطلبات حسب الحالة{% else %}Orders by Status{% endif %}
-            </h5>
-            <div class="table-responsive">
-                <table class="table">
-                    <tbody>
-                        <tr>
-                            <td><span class="badge badge-pending">{{ t('pending') }}</span></td>
-                            <td class="text-end">{{ pending_orders }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge badge-confirmed">{{ t('confirmed') }}</span></td>
-                            <td class="text-end">{{ confirmed_orders }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge badge-completed">{{ t('delivered') }}</span></td>
-                            <td class="text-end">{{ delivered_orders }}</td>
-                        </tr>
-                        <tr>
-                            <td><span class="badge badge-cancelled">{{ t('cancelled') }}</span></td>
-                            <td class="text-end">{{ cancelled_orders }}</td>
-                        </tr>
-                    </tbody>
-                </table>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left: 6px solid #fd7e14;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">
+                        {% if current_lang == 'ar' %}إجمالي الديون (يدوي){% elif current_lang == 'ku' %}کۆی قەرزەکان (دەستی){% else %}Manual Debts Total{% endif %}
+                    </p>
+                    <h3 class="mb-0">{{ "{:,.0f}".format(manual_debt_total or 0) }} {{ t('iqd') }}</h3>
+                </div>
+                <div class="icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fas fa-hand-holding-usd"></i>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Top Products -->
-    <div class="col-lg-6">
-        <div class="table-card">
-            <h5 class="mb-4">
-                <i class="fas fa-trophy me-2" style="color: #E57625;"></i>
-                {% if current_lang == 'ku' %}باشترین بەرهەمەکان{% elif current_lang == 'ar' %}أفضل المنتجات{% else %}Top Products{% endif %}
-            </h5>
-            {% if top_products %}
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>{% if current_lang == 'ku' %}بەرهەم{% elif current_lang == 'ar' %}المنتج{% else %}Product{% endif %}</th>
-                            <th class="text-end">{% if current_lang == 'ku' %}فرۆشراو{% elif current_lang == 'ar' %}المبيعات{% else %}Sold{% endif %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for product in top_products %}
-                        <tr>
-                            <td>{{ product.name }}</td>
-                            <td class="text-end">{{ product.sold }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left: 6px solid #198754;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">
+                        {% if current_lang == 'ar' %}المسدّد من الديون{% elif current_lang == 'ku' %}پارەدانەوەی قەرز{% else %}Debts Collected{% endif %}
+                    </p>
+                    <h3 class="mb-0">{{ "{:,.0f}".format(manual_debt_paid_total or 0) }} {{ t('iqd') }}</h3>
+                </div>
+                <div class="icon bg-success bg-opacity-10 text-success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
             </div>
-            {% else %}
-            <p class="text-muted text-center py-4">{{ t('no_products') }}</p>
-            {% endif %}
         </div>
     </div>
 
-    <!-- Bookings by Stadium -->
-    <div class="col-lg-6">
-        <div class="table-card">
-            <h5 class="mb-4">
-                <i class="fas fa-futbol me-2" style="color: #E57625;"></i>
-                {% if current_lang == 'ku' %}حجز بە یاریگا{% elif current_lang == 'ar' %}الحجوزات حسب الملعب{% else %}Bookings by Stadium{% endif %}
-            </h5>
-            {% if stadium_stats %}
-            <div class="table-responsive">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>{{ t('select_stadium') }}</th>
-                            <th class="text-end">{{ t('bookings') }}</th>
-                            <th class="text-end">{% if current_lang == 'ku' %}داهات{% elif current_lang == 'ar' %}الإيرادات{% else %}Revenue{% endif %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for stat in stadium_stats %}
-                        <tr>
-                            <td>{{ stat.name }}</td>
-                            <td class="text-end">{{ stat.bookings }}</td>
-                            <td class="text-end">{{ "{:,.0f}".format(stat.revenue or 0) }} {{ t('iqd') }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left: 6px solid #0d6efd;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted mb-1">
+                        {% if current_lang == 'ar' %}المتبقي من الديون{% elif current_lang == 'ku' %}ماوەی قەرز{% else %}Remaining Debts{% endif %}
+                    </p>
+                    <h3 class="mb-0">{{ "{:,.0f}".format(manual_debt_remaining_total or 0) }} {{ t('iqd') }}</h3>
+                </div>
+                <div class="icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
             </div>
-            {% else %}
-            <p class="text-muted text-center py-4">{{ t('no_bookings') }}</p>
-            {% endif %}
         </div>
     </div>
+</div>
+
+<!-- ✅ EXPENSES SECTION - NEW! -->
+<div class="table-card mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">
+            <i class="fas fa-wallet me-2" style="color: #dc3545;"></i>
+            {% if current_lang == 'ar' %}المصاريف{% elif current_lang == 'ku' %}خەرجییەکان{% else %}Expenses{% endif %}
+        </h5>
+        <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#addExpenseModal">
+            <i class="fas fa-plus me-1"></i>
+            {% if current_lang == 'ar' %}إضافة مصروف{% elif current_lang == 'ku' %}زیادکردنی خەرجی{% else %}Add Expense{% endif %}
+        </button>
+    </div>
+
+    <!-- Expense Stats -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="alert alert-danger mb-0">
+                <small class="text-muted d-block">
+                    {% if current_lang == 'ar' %}إجمالي المصاريف{% elif current_lang == 'ku' %}کۆی خەرجی{% else %}Total Expenses{% endif %}
+                </small>
+                <h4 class="mb-0">{{ '{:,.0f}'.format(total_expenses|default(0)) }} {{ t('iqd') }}</h4>
+                <small>{{ expense_count|default(0) }}
+                    {% if current_lang == 'ar' %}مصروف{% elif current_lang == 'ku' %}خەرجی{% else %}expenses{% endif %}
+                </small>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="alert alert-success mb-0">
+                <small class="text-muted d-block">
+                    {% if current_lang == 'ar' %}نقدي{% elif current_lang == 'ku' %}کاش{% else %}Cash{% endif %}
+                </small>
+                <h5 class="mb-0">{{ '{:,.0f}'.format(expense_cash|default(0)) }} {{ t('iqd') }}</h5>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="alert alert-info mb-0">
+                <small class="text-muted d-block">
+                    {% if current_lang == 'ar' %}بطاقة{% elif current_lang == 'ku' %}کارت{% else %}Card{% endif %}
+                </small>
+                <h5 class="mb-0">{{ '{:,.0f}'.format(expense_card|default(0)) }} {{ t('iqd') }}</h5>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="alert alert-warning mb-0">
+                <small class="text-muted d-block">
+                    {% if current_lang == 'ar' %}عدد الفئات{% elif current_lang == 'ku' %}ژمارەی جۆر{% else %}Categories{% endif %}
+                </small>
+                <h5 class="mb-0">{{ expense_by_category|default({})|length }}</h5>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Breakdown -->
+    {% if expense_by_category %}
+    <div class="mb-3">
+        <h6 class="text-muted mb-2">
+            {% if current_lang == 'ar' %}التوزيع حسب الفئة:{% elif current_lang == 'ku' %}دابەشبوون بەپێی جۆر:{% else %}By Category:{% endif %}
+        </h6>
+        <div class="row g-2">
+            {% for category, amount in expense_by_category.items() %}
+            <div class="col-md-3">
+                <div class="alert alert-secondary mb-0">
+                    <strong>{{ category }}</strong>
+                    <div class="text-danger">{{ '{:,.0f}'.format(amount) }} {{ t('iqd') }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Expenses Table -->
+    {% if expenses %}
+    <div class="table-responsive">
+        <table class="table table-sm table-hover">
+            <thead>
+                <tr>
+                    <th>{% if current_lang == 'ar' %}التاريخ{% elif current_lang == 'ku' %}بەروار{% else %}Date{% endif %}</th>
+                    <th>{% if current_lang == 'ar' %}الفئة{% elif current_lang == 'ku' %}جۆر{% else %}Category{% endif %}</th>
+                    <th>{% if current_lang == 'ar' %}الوصف{% elif current_lang == 'ku' %}وەسف{% else %}Description{% endif %}</th>
+                    <th>{% if current_lang == 'ar' %}المبلغ{% elif current_lang == 'ku' %}بڕ{% else %}Amount{% endif %}</th>
+                    <th>{% if current_lang == 'ar' %}الدفع{% elif current_lang == 'ku' %}پارەدان{% else %}Payment{% endif %}</th>
+                    <th>{% if current_lang == 'ar' %}إجراء{% elif current_lang == 'ku' %}کردار{% else %}Action{% endif %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses[:10] %}
+                <tr>
+                    <td>{{ expense.date.strftime('%Y-%m-%d') if expense.date else '-' }}</td>
+                    <td><span class="badge bg-info">{{ expense.get_category_name() }}</span></td>
+                    <td>{{ expense.description or '-' }}</td>
+                    <td><strong class="text-danger">{{ '{:,.0f}'.format(expense.amount) }} {{ t('iqd') }}</strong></td>
+                    <td>
+                        {% if expense.payment_method == 'cash' %}
+                            <i class="fas fa-money-bill-wave text-success"></i>
+                        {% else %}
+                            <i class="fas fa-credit-card text-info"></i>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-warning" onclick="editExpense({{ expense.id }}, '{{ expense.date.strftime('%Y-%m-%d') }}', '{{ expense.category }}', {{ expense.amount }}, '{{ expense.description or '' }}', '{{ expense.payment_method }}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <a href="{{ url_for('admin.delete_expense', expense_id=expense.id, from=from_date, to=to_date) }}"
+                           class="btn btn-sm btn-danger"
+                           onclick="return confirm('{% if current_lang == 'ar' %}هل أنت متأكد؟{% else %}Are you sure?{% endif %}')">
+                            <i class="fas fa-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if expenses|length > 10 %}
+        <div class="text-center">
+            <small class="text-muted">
+                {% if current_lang == 'ar' %}عرض 10 من {{ expenses|length }} مصروف{% else %}Showing 10 of {{ expenses|length }} expenses{% endif %}
+            </small>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="text-center text-muted py-3">
+        <i class="fas fa-inbox fa-2x mb-2"></i>
+        <p class="mb-0">
+            {% if current_lang == 'ar' %}لا توجد مصاريف في هذه الفترة{% elif current_lang == 'ku' %}هیچ خەرجییەک نییە لەم ماوەیەدا{% else %}No expenses in this period{% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Add Expense Modal -->
+<div class="modal fade" id="addExpenseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content" method="POST" action="{{ url_for('admin.add_expense') }}">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    {% if current_lang == 'ar' %}إضافة مصروف{% elif current_lang == 'ku' %}زیادکردنی خەرجی{% else %}Add Expense{% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">{% if current_lang == 'ar' %}التاريخ{% else %}Date{% endif %} *</label>
+                    <input type="date" name="date" class="form-control" value="{{ from_date }}" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{% if current_lang == 'ar' %}الفئة{% else %}Category{% endif %} *</label>
+                    <select name="category" class="form-select" required>
+                        <option value="">{% if current_lang == 'ar' %}اختر...{% else %}Select...{% endif %}</option>
+                        <option value="salaries">{% if current_lang == 'ar' %}رواتب{% else %}Salaries{% endif %}</option>
+                        <option value="bills">{% if current_lang == 'ar' %}فواتير{% else %}Bills{% endif %}</option>
+                        <option value="maintenance">{% if current_lang == 'ar' %}صيانة{% else %}Maintenance{% endif %}</option>
+                        <option value="cleaning">{% if current_lang == 'ar' %}تنظيف{% else %}Cleaning{% endif %}</option>
+                        <option value="purchases">{% if current_lang == 'ar' %}مشتريات{% else %}Purchases{% endif %}</option>
+                        <option value="transportation">{% if current_lang == 'ar' %}نقل{% else %}Transportation{% endif %}</option>
+                        <option value="hospitality">{% if current_lang == 'ar' %}ضيافة{% else %}Hospitality{% endif %}</option>
+                        <option value="rent">{% if current_lang == 'ar' %}إيجار{% else %}Rent{% endif %}</option>
+                        <option value="marketing">{% if current_lang == 'ar' %}تسويق{% else %}Marketing{% endif %}</option>
+                        <option value="other">{% if current_lang == 'ar' %}أخرى{% else %}Other{% endif %}</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{% if current_lang == 'ar' %}المبلغ (IQD){% else %}Amount (IQD){% endif %} *</label>
+                    <input type="number" name="amount" class="form-control" min="1" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{% if current_lang == 'ar' %}الوصف{% else %}Description{% endif %}</label>
+                    <input type="text" name="description" class="form-control">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{% if current_lang == 'ar' %}طريقة الدفع{% else %}Payment Method{% endif %}</label>
+                    <select name="payment_method" class="form-select">
+                        <option value="cash">{% if current_lang == 'ar' %}نقدي{% else %}Cash{% endif %}</option>
+                        <option value="card">{% if current_lang == 'ar' %}بطاقة{% else %}Card{% endif %}</option>
+                    </select>
+                </div>
+
+                <input type="hidden" name="from" value="{{ from_date }}">
+                <input type="hidden" name="to" value="{{ to_date }}">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {% if current_lang == 'ar' %}إلغاء{% else %}Cancel{% endif %}
+                </button>
+                <button type="submit" class="btn btn-danger">
+                    <i class="fas fa-save me-2"></i>
+                    {% if current_lang == 'ar' %}حفظ{% else %}Save{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Expense Modal -->
+<div class="modal fade" id="editExpenseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content" id="editExpenseForm" method="POST">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    {% if current_lang == 'ar' %}تعديل المصروف{% elif current_lang == 'ku' %}گۆڕینی خەرجی{% else %}Edit Expense{% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">{% if current_lang == 'ar' %}التاريخ{% else %}Date{% endif %} *</label>
+                    <input type="date" name="date" id="editDate" class="form-control" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{% if current_lang == 'ar' %}الفئة{% else %}Category{% endif %} *</label>
+                    <select name="category" id="editCategory" class="form-select" required>
+                        <option value="salaries">{% if current_lang == 'ar' %}رواتب{% else %}Salaries{% endif %}</option>
+                        <option value="bills">{% if current_lang == 'ar' %}فواتير{% else %}Bills{% endif %}</option>
+                        <option value="maintenance">{% if current_lang == 'ar' %}صيانة{% else %}Maintenance{% endif %}</option>
+                        <option value="cleaning">{% if current_lang == 'ar' %}تنظيف{% else %}Cleaning{% endif %}</option>
+                        <option value="purchases">{% if current_lang == 'ar' %}مشتريات{% else %}Purchases{% endif %}</option>
+                        <option value="transportation">{% if current_lang == 'ar' %}نقل{% else %}Transportation{% endif %}</option>
+                        <option value="hospitality">{% if current_lang == 'ar' %}ضيافة{% else %}Hospitality{% endif %}</option>
+                        <option value="rent">{% if current_lang == 'ar' %}إيجار{% else %}Rent{% endif %}</option>
+                        <option value="marketing">{% if current_lang == 'ar' %}تسويق{% else %}Marketing{% endif %}</option>
+                        <option value="other">{% if current_lang == 'ar' %}أخرى{% else %}Other{% endif %}</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{% if current_lang == 'ar' %}المبلغ (IQD){% else %}Amount (IQD){% endif %} *</label>
+                    <input type="number" name="amount" id="editAmount" class="form-control" min="1" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{% if current_lang == 'ar' %}الوصف{% else %}Description{% endif %}</label>
+                    <input type="text" name="description" id="editDescription" class="form-control">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">{% if current_lang == 'ar' %}طريقة الدفع{% else %}Payment Method{% endif %}</label>
+                    <select name="payment_method" id="editPaymentMethod" class="form-select">
+                        <option value="cash">{% if current_lang == 'ar' %}نقدي{% else %}Cash{% endif %}</option>
+                        <option value="card">{% if current_lang == 'ar' %}بطاقة{% else %}Card{% endif %}</option>
+                    </select>
+                </div>
+
+                <input type="hidden" name="from" value="{{ from_date }}">
+                <input type="hidden" name="to" value="{{ to_date }}">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {% if current_lang == 'ar' %}إلغاء{% else %}Cancel{% endif %}
+                </button>
+                <button type="submit" class="btn btn-warning">
+                    <i class="fas fa-save me-2"></i>
+                    {% if current_lang == 'ar' %}حفظ التعديلات{% else %}Save Changes{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Manual Debts Table -->
+<div class="table-card mt-2">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">
+            <i class="fas fa-file-invoice-dollar me-2" style="color:#E57625;"></i>
+            {% if current_lang == 'ar' %}ديون غير مدفوعة (تسجيل يدوي){% elif current_lang == 'ku' %}قەرزی نەدراو (دەستی){% else %}Manual Unpaid Debts{% endif %}
+        </h5>
+
+        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addDebtModal">
+            <i class="fas fa-plus me-1"></i>
+            {% if current_lang == 'ar' %}إضافة دين{% elif current_lang == 'ku' %}زیادکردنی قەرز{% else %}Add Debt{% endif %}
+        </button>
+    </div>
+
+    {% if manual_debts %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>{% if current_lang == 'ar' %}التاريخ{% else %}Date{% endif %}</th>
+                    <th>{% if current_lang == 'ar' %}الاسم{% else %}Name{% endif %}</th>
+                    <th>{% if current_lang == 'ar' %}المبلغ{% else %}Amount{% endif %}</th>
+                    <th>{% if current_lang == 'ar' %}المتبقي{% else %}Remaining{% endif %}</th>
+                    <th>{% if current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
+                    <th>{% if current_lang == 'ar' %}ملاحظة{% else %}Note{% endif %}</th>
+                    <th class="text-end">{% if current_lang == 'ar' %}إجراء{% else %}Action{% endif %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for d in manual_debts %}
+                <tr>
+                    <td>{{ d.date.strftime('%Y-%m-%d') if d.date else '-' }}</td>
+                    <td>
+                        <strong>{{ d.name or '-' }}</strong>
+                        {% if d.phone %}
+                            <div class="text-muted small">{{ d.phone }}</div>
+                        {% endif %}
+                    </td>
+                    <td><strong>{{ "{:,.0f}".format(d.amount or 0) }} {{ t('iqd') }}</strong></td>
+                    <td>{{ "{:,.0f}".format(d.remaining or 0) }} {{ t('iqd') }}</td>
+                    <td>
+                        {% if d.status == 'paid' %}
+                            <span class="badge bg-success">{% if current_lang == 'ar' %}مسدد{% else %}Paid{% endif %}</span>
+                        {% else %}
+                            <span class="badge bg-danger">{% if current_lang == 'ar' %}مفتوح{% else %}Open{% endif %}</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-muted">{{ d.note or '-' }}</td>
+                    <td class="text-end">
+                        {% if d.status != 'paid' %}
+                        <a href="{{ url_for('admin.mark_manual_debt_paid', debt_id=d.id, from=from_date, to=to_date) }}"
+                           class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-check me-1"></i>
+                            {% if current_lang == 'ar' %}تسديد{% else %}Mark Paid{% endif %}
+                        </a>
+                        {% else %}
+                        <span class="text-muted small">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="text-muted text-center py-3 mb-0">
+            {% if current_lang == 'ar' %}لا توجد ديون ضمن هذا التاريخ{% elif current_lang == 'ku' %}هیچ قەرزێک نییە لەم بەروارەدا{% else %}No debts in this range{% endif %}
+        </p>
+    {% endif %}
+</div>
+
+<!-- Add Debt Modal -->
+<div class="modal fade" id="addDebtModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 16px;">
+            <div class="modal-header" style="background: #0d6efd; color:#fff;">
+                <h5 class="modal-title">
+                    {% if current_lang == 'ar' %}إضافة دين يدوي{% elif current_lang == 'ku' %}زیادکردنی قەرزی دەستی{% else %}Add Manual Debt{% endif %}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <form method="POST" action="{{ url_for('admin.add_manual_debt') }}">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label">{% if current_lang == 'ar' %}الاسم{% else %}Name{% endif %}</label>
+                            <input type="text" name="name" class="form-control" placeholder="{% if current_lang == 'ar' %}مثال: أحمد{% else %}e.g. Ahmed{% endif %}">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">{% if current_lang == 'ar' %}الهاتف (اختياري){% else %}Phone (optional){% endif %}</label>
+                            <input type="text" name="phone" class="form-control" placeholder="07xx xxx xxxx">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">{% if current_lang == 'ar' %}المبلغ{% else %}Amount{% endif %}</label>
+                            <input type="number" name="amount" class="form-control" required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">{% if current_lang == 'ar' %}التاريخ{% else %}Date{% endif %}</label>
+                            <input type="date" name="date" class="form-control" value="{{ to_date or from_date }}" required>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label">{% if current_lang == 'ar' %}ملاحظة{% else %}Note{% endif %}</label>
+                            <textarea name="note" class="form-control" rows="2"></textarea>
+                        </div>
+
+                        <input type="hidden" name="from" value="{{ from_date }}">
+                        <input type="hidden" name="to" value="{{ to_date }}">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                        {% if current_lang == 'ar' %}إلغاء{% else %}Cancel{% endif %}
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>
+                        {% if current_lang == 'ar' %}حفظ{% else %}Save{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Activity History -->
+<div class="table-card mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">
+            <i class="fas fa-history me-2" style="color:#E57625;"></i>
+            {% if current_lang == 'ku' %}مێژووی چالاکی{% elif current_lang == 'ar' %}سجل النشاط{% else %}Activity History{% endif %}
+        </h5>
+    </div>
+
+    {% if activities %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>{% if current_lang == 'ku' %}کات{% elif current_lang == 'ar' %}الوقت{% else %}Time{% endif %}</th>
+                    <th>{% if current_lang == 'ku' %}بەکارهێنەر{% elif current_lang == 'ar' %}المستخدم{% else %}User{% endif %}</th>
+                    <th>{% if current_lang == 'ku' %}کردار{% elif current_lang == 'ar' %}الإجراء{% else %}Action{% endif %}</th>
+                    <th>{% if current_lang == 'ku' %}ناونیشان{% elif current_lang == 'ar' %}العنوان{% else %}Title{% endif %}</th>
+                    <th>{% if current_lang == 'ku' %}تێبینی{% elif current_lang == 'ar' %}ملاحظة{% else %}Note{% endif %}</th>
+                    <th>{% if current_lang == 'ku' %}بڕ{% elif current_lang == 'ar' %}المبلغ{% else %}Amount{% endif %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in activities %}
+                <tr>
+                    <td>{{ a.created_at.strftime('%Y-%m-%d %H:%M') if a.created_at else '-' }}</td>
+                    <td>{{ a.user.username if a.user else '-' }}</td>
+                    <td>
+                        {% if a.action == 'add_expense' %}
+                            <span class="badge bg-danger">{% if current_lang == 'ar' %}إضافة مصروف{% else %}Add Expense{% endif %}</span>
+                        {% elif a.action == 'edit_expense' %}
+                            <span class="badge bg-warning">{% if current_lang == 'ar' %}تعديل مصروف{% else %}Edit Expense{% endif %}</span>
+                        {% elif a.action == 'delete_expense' %}
+                            <span class="badge bg-dark">{% if current_lang == 'ar' %}حذف مصروف{% else %}Delete Expense{% endif %}</span>
+                        {% elif a.action == 'approve_booking' %}
+                            <span class="badge bg-success">{% if current_lang == 'ar' %}موافقة حجز{% else %}Approve Booking{% endif %}</span>
+                        {% elif a.action == 'reject_booking' %}
+                            <span class="badge bg-danger">{% if current_lang == 'ar' %}رفض حجز{% else %}Reject Booking{% endif %}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">{{ a.action }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ a.title or '-' }}</td>
+                    <td>{{ a.note or '-' }}</td>
+                    <td>
+                        {% if a.amount %}
+                            <strong>{{ "{:,.0f}".format(a.amount) }} {{ t('iqd') }}</strong>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p class="text-muted text-center py-3 mb-0">
+            {% if current_lang == 'ku' %}هیچ چالاکییەک نییە ئەمڕۆ{% elif current_lang == 'ar' %}لا يوجد نشاط اليوم{% else %}No activity today{% endif %}
+        </p>
+    {% endif %}
 </div>
 {% endblock %}
+
+<style>
+.stat-card{
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.06);
+}
+.table-card{
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.06);
+}
+</style>
 
 {% block extra_js %}
 <script>
@@ -232,5 +704,16 @@ document.getElementById('filter-btn').addEventListener('click', function() {
     const toDate = document.getElementById('to-date').value;
     window.location.href = `{{ url_for('admin.reports') }}?from=${fromDate}&to=${toDate}`;
 });
+
+function editExpense(id, date, category, amount, description, paymentMethod) {
+    document.getElementById('editExpenseForm').action = `/admin/expenses/${id}/edit`;
+    document.getElementById('editDate').value = date;
+    document.getElementById('editCategory').value = category;
+    document.getElementById('editAmount').value = amount;
+    document.getElementById('editDescription').value = description;
+    document.getElementById('editPaymentMethod').value = paymentMethod;
+
+    new bootstrap.Modal(document.getElementById('editExpenseModal')).show();
+}
 </script>
 {% endblock %}

@@ -4,176 +4,445 @@
 
 {% block extra_css %}
 <style>
-    @media print {
-        body * { visibility: hidden; }
-        .receipt-container, .receipt-container * { visibility: visible; }
-        .receipt-container {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 80mm;
-            background: #fff !important;
-            color: #000 !important;
-        }
-        .no-print { display: none !important; }
+  *{
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-sizing: border-box;
+  }
+
+  body{ background:#f5f5f5; }
+
+  .receipt-wrapper{
+    background:#fff;
+    border-radius:15px;
+    padding:2rem;
+    box-shadow:0 4px 6px rgba(0,0,0,.1);
+  }
+
+  .receipt-container{
+    background:#fff;
+    color:#000;
+    max-width:350px;
+    margin:0 auto;
+    padding:20px;
+    border:2px dashed #e9ecef;
+    border-radius:10px;
+    font-family: Arial, sans-serif;
+
+    /* ✅ RTL for Arabic layout */
+    direction: rtl;
+    text-align: right;
+  }
+
+  /* ✅ Reduce overall height/spacing (fix empty long receipt) */
+  .receipt-container *{ line-height:1.3; }
+  .receipt-header p,
+  .receipt-footer p{ margin:3px 0; }
+  .receipt-info,
+  .receipt-items{ margin-bottom:8px; }
+  .receipt-item{ padding:4px 0; }
+
+  .receipt-header{
+    text-align:center;
+    border-bottom:1px dashed #000; /* ✅ thin like real receipt */
+    padding-bottom:10px;
+    margin-bottom:10px;
+
+    /* ✅ keep English header centered & LTR */
+    direction:ltr;
+  }
+
+  .receipt-header h3{
+    color:#8b5cf6;
+    font-weight:700;
+    margin-bottom:6px;
+    font-size:1.35rem;
+    letter-spacing:.5px;
+  }
+
+  .receipt-header p{
+    color:#333;
+    font-size:.95rem;
+  }
+
+  .receipt-info{
+    background:#f8f9fa;
+    padding:12px;
+    border-radius:8px;
+  }
+
+  .info-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    margin-bottom:6px;
+  }
+  .info-row:last-child{ margin-bottom:0; }
+
+  .info-label{
+    color:#6c757d;
+    white-space:nowrap;
+  }
+  .info-value{
+    font-weight:700;
+    color:#000;
+    white-space:nowrap;
+  }
+
+  /* ✅ items box */
+  .receipt-items{
+    border-top:1px dashed #000;
+    border-bottom:1px dashed #000;
+    padding:10px 0;
+    margin:10px 0;
+  }
+
+  .receipt-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    font-size:.95rem;
+  }
+
+  .item-name{
+    flex:1;
+    text-align:right;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .item-price{
+    font-weight:700;
+    white-space:nowrap;
+    text-align:left;
+  }
+
+  .receipt-item.play-time{
+    background:#fff3cd;
+    padding:8px 10px;
+    border-radius:8px;
+    margin:6px 0;
+    font-weight:700;
+  }
+
+  .receipt-item.subtotal{
+    border-top:1px dashed #999;
+    margin-top:8px;
+    padding-top:8px;
+    font-weight:700;
+  }
+
+  .discount-row{
+    color:#28a745;
+    font-weight:700;
+  }
+
+  /* ✅ TOTAL (fix RTL order IQD 0 issue) */
+  .receipt-total{
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    color:#fff;
+    font-size:1.25rem;
+    font-weight:900;
+    text-align:center;
+    padding:10px 12px;
+    border-radius:10px;
+    margin:10px 0;
+
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    direction: rtl;
+  }
+  .receipt-total span:last-child{
+    direction:ltr; /* ✅ keep number + IQD in correct order */
+    unicode-bidi: bidi-override;
+    font-weight:900;
+  }
+
+  .payment-method{
+    text-align:center;
+    padding:8px 10px;
+    background:#f8f9fa;
+    border-radius:8px;
+    margin:8px 0;
+    font-weight:700;
+  }
+
+  .receipt-footer{
+    text-align:center;
+    padding-top:10px;
+    font-size:.82rem;
+    border-top:1px dashed #000;
+    color:#111;
+    direction:ltr;
+  }
+  .receipt-footer strong{ color:#000; font-weight:900; }
+  .receipt-footer hr{
+    border:0;
+    border-top:1px dashed #000;
+    margin:10px 0;
+  }
+
+  .success-badge{
+    background:#d4edda;
+    color:#155724;
+    padding:10px 20px;
+    border-radius:25px;
+    display:inline-block;
+    font-weight:700;
+    margin-bottom:1rem;
+  }
+
+  /* ===================== */
+  /* ✅ PERFECT PRINT 80mm  */
+  /* ===================== */
+ @media print{
+  @page{ size:80mm auto; margin:0; }
+
+  body{ margin:0; background:#fff !important; }
+
+  /* Hide non receipt */
+  .no-print, .no-print *{ display:none !important; }
+
+  /* Print only receipt container */
+  .receipt-wrapper{ box-shadow:none !important; padding:0 !important; }
+  #receipt{
+    width:80mm !important;
+    max-width:80mm !important;
+    margin:0 !important;
+    padding:4mm !important;
+    border:none !important;
+  }
+
+  /* Avoid gradients (thermal printers hate them) */
+  .receipt-total{
+    background:#000 !important;
+    color:#fff !important;
+  }
+
+  /* Force black text */
+  *{ color:#000 !important; }
+}
+
+    body *{ visibility:hidden !important; }
+
+    #receipt, #receipt *{ visibility:visible !important; }
+
+    #receipt{
+      position:absolute !important;
+      left:0 !important;
+      top:0 !important;
+      width:80mm !important;
+      max-width:80mm !important;
+      margin:0 !important;
+      padding:5mm !important;
+      border:none !important;
+      border-radius:0 !important;
+      box-shadow:none !important;
+      background:#fff !important;
     }
 
-    .receipt-container {
-        background: #fff;
-        color: #000;
-        max-width: 350px;
-        margin: 0 auto;
-        padding: 20px;
-        border-radius: 10px;
+    .receipt-wrapper{
+      background:transparent !important;
+      box-shadow:none !important;
+      border:none !important;
+      padding:0 !important;
+      margin:0 !important;
+      border-radius:0 !important;
     }
 
-    .receipt-header {
-        text-align: center;
-        border-bottom: 2px dashed #000;
-        padding-bottom: 15px;
-        margin-bottom: 15px;
+    /* Make sure flex stays flex in print */
+    #receipt .info-row,
+    #receipt .receipt-item,
+    #receipt .receipt-total{
+      display:flex !important;
+      justify-content:space-between !important;
+      align-items:center !important;
     }
 
-    .receipt-items {
-        border-top: 1px dashed #000;
-        border-bottom: 1px dashed #000;
-        padding: 10px 0;
+    /* Thermal-friendly colors */
+    #receipt .receipt-header h3,
+    #receipt .receipt-header p,
+    #receipt .info-label,
+    #receipt .info-value,
+    #receipt .item-name,
+    #receipt .item-price,
+    #receipt .receipt-footer,
+    #receipt .receipt-footer p,
+    #receipt .receipt-footer strong{
+      color:#000 !important;
     }
 
-    .receipt-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 5px 0;
+    /* Avoid gradient on some printers (optional but good) */
+    #receipt .receipt-total{
+      background:#000 !important;
+      color:#fff !important;
     }
 
-    .receipt-total {
-        font-size: 1.3rem;
-        font-weight: bold;
-        text-align: center;
-        padding: 15px 0;
+    /* Never print buttons/controls */
+    .no-print, .no-print *{
+      display:none !important;
+      visibility:hidden !important;
     }
-
-    .receipt-footer {
-        text-align: center;
-        padding-top: 15px;
-        font-size: 0.85rem;
-        border-top: 2px dashed #000;
-    }
-
-    .discount-row {
-        color: green;
-    }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-6">
-        <!-- أزرار التحكم -->
-        <div class="d-flex justify-content-between mb-4 no-print">
-            <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-right me-2"></i>رجوع
-            </a>
-            <div>
-                <button onclick="window.print()" class="btn btn-pos">
-                    <i class="fas fa-print me-2"></i>طباعة
-                </button>
-                <a href="{{ url_for('pos.index') }}" class="btn btn-pos-success">
-                    <i class="fas fa-plus me-2"></i>جلسة جديدة
-                </a>
-            </div>
-        </div>
+  <div class="col-lg-6">
 
-        <!-- الفاتورة -->
-        <div class="receipt-container">
-            <div class="receipt-header">
-                <h3>🏠 PADEL HOUSE</h3>
-                <p class="mb-0">دهوك، العراق</p>
-                <p class="mb-0">📞 +964 750 123 4567</p>
-            </div>
-
-            <div class="receipt-info mb-3">
-                <div class="d-flex justify-content-between">
-                    <span>رقم الفاتورة:</span>
-                    <strong>#{{ '%05d' % session.id }}</strong>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>التاريخ:</span>
-                    <span>{{ session.created_at.strftime('%Y-%m-%d') }}</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>الوقت:</span>
-                    <span>{{ session.start_time.strftime('%H:%M') }} - {{ session.end_time.strftime('%H:%M') if session.end_time else '' }}</span>
-                </div>
-                <div class="d-flex justify-content-between">
-                    <span>الموقع:</span>
-                    <span>{{ session.get_location_name() }}</span>
-                </div>
-                {% if session.customer_name %}
-                <div class="d-flex justify-content-between">
-                    <span>الزبون:</span>
-                    <span>{{ session.customer_name }}</span>
-                </div>
-                {% endif %}
-            </div>
-
-            <div class="receipt-items">
-                <!-- وقت اللعب -->
-                {% if session.session_type == 'stadium' and session.play_time_price > 0 %}
-                <div class="receipt-item" style="background: #fff3cd; padding: 5px; margin: 0 -5px;">
-                    <span>⏱️ وقت اللعب ({{ (session.play_time_minutes / 60)|int }} ساعة)</span>
-                    <span>{{ '{:,.0f}'.format(session.play_time_price) }}</span>
-                </div>
-                {% endif %}
-
-                <!-- المنتجات -->
-                {% for item in items %}
-                <div class="receipt-item">
-                    <span>{{ item.product.name_ku }} × {{ item.quantity }}</span>
-                    <span>{{ '{:,.0f}'.format(item.price * item.quantity) }}</span>
-                </div>
-                {% endfor %}
-
-                <!-- المجموع الفرعي -->
-                <div class="receipt-item" style="border-top: 1px solid #ccc; margin-top: 10px; padding-top: 10px;">
-                    <span>المجموع الفرعي:</span>
-                    <span>{{ '{:,.0f}'.format(session.play_time_price + session.get_orders_total()) }}</span>
-                </div>
-
-                <!-- الخصومات -->
-                {% if session.auto_discount > 0 %}
-                <div class="receipt-item discount-row">
-                    <span>🏷️ خصم (12-16):</span>
-                    <span>-{{ '{:,.0f}'.format(session.auto_discount) }}</span>
-                </div>
-                {% endif %}
-
-                {% if session.manual_discount > 0 %}
-                <div class="receipt-item discount-row">
-                    <span>✂️ خصم يدوي:</span>
-                    <span>-{{ '{:,.0f}'.format(session.manual_discount) }}</span>
-                </div>
-                {% if session.discount_note %}
-                <div class="receipt-item" style="font-size: 0.8rem; color: #666;">
-                    <span>({{ session.discount_note }})</span>
-                </div>
-                {% endif %}
-                {% endif %}
-            </div>
-
-            <div class="receipt-total">
-                الصافي: {{ '{:,.0f}'.format(session.total_amount) }} IQD
-            </div>
-
-            <div style="text-align: center; padding: 10px 0;">
-                <span>طريقة الدفع: {{ 'نقدي 💵' if session.payment_method == 'cash' else 'بطاقة 💳' }}</span>
-            </div>
-
-            <div class="receipt-footer">
-                <p>✨ شكراً لزيارتكم! ✨</p>
-                <p class="mb-0">🎾 PADEL HOUSE 🎾</p>
-            </div>
-        </div>
+    <!-- Success Message -->
+    <div class="text-center mb-4 no-print">
+      <span class="success-badge">
+        <i class="fas fa-check-circle me-2"></i>
+        تم الدفع بنجاح
+      </span>
     </div>
+
+    <!-- Controls -->
+    <div class="d-flex justify-content-between mb-4 no-print gap-2">
+      <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-right me-2"></i>رجوع
+      </a>
+      <div class="d-flex gap-2">
+        <button onclick="printReceipt()" class="btn btn-primary">
+          <i class="fas fa-print me-2"></i>طباعة
+        </button>
+        <a href="{{ url_for('pos.index') }}" class="btn btn-success">
+          <i class="fas fa-plus me-2"></i>جلسة جديدة
+        </a>
+      </div>
+    </div>
+
+    <!-- Receipt -->
+    <div class="receipt-wrapper">
+      <div class="receipt-container" id="receipt">
+        <div class="receipt-header">
+          <h3>PADEL HOUSE</h3>
+          <p>دهوك، العراق</p>
+          <p>+964 750 066 7676</p>
+        </div>
+
+        <div class="receipt-info">
+          <div class="info-row">
+            <span class="info-label">رقم الفاتورة:</span>
+            <strong class="info-value">#{{ '%05d' % session.id }}</strong>
+          </div>
+          <div class="info-row">
+            <span class="info-label">التاريخ:</span>
+            <strong class="info-value">{{ session.created_at.strftime('%Y-%m-%d') }}</strong>
+          </div>
+          <div class="info-row">
+            <span class="info-label">الوقت:</span>
+            <strong class="info-value">
+              {{ session.start_time.strftime('%H:%M') }}
+              {% if session.end_time %} - {{ session.end_time.strftime('%H:%M') }}{% endif %}
+            </strong>
+          </div>
+          <div class="info-row">
+            <span class="info-label">الموقع:</span>
+            <strong class="info-value">{{ session.get_location_name() }}</strong>
+          </div>
+          {% if session.customer_name %}
+          <div class="info-row">
+            <span class="info-label">الزبون:</span>
+            <strong class="info-value">{{ session.customer_name }}</strong>
+          </div>
+          {% endif %}
+        </div>
+
+        {# ✅ Show items section only if there is something to show #}
+        {% if (session.session_type == 'stadium' and session.play_time_price > 0) or (items|length > 0) or (session.auto_discount > 0) or (session.manual_discount > 0) %}
+        <div class="receipt-items">
+
+          <!-- Play time -->
+          {% if session.session_type == 'stadium' and session.play_time_price > 0 %}
+          <div class="receipt-item play-time">
+            <span class="item-name">
+              <i class="fas fa-stopwatch"></i>
+              وقت اللعب ({{ (session.play_time_minutes / 60)|int }} ساعة)
+            </span>
+            <span class="item-price">{{ '{:,.0f}'.format(session.play_time_price) }} IQD</span>
+          </div>
+          {% endif %}
+
+          <!-- Products -->
+          {% for item in items %}
+          <div class="receipt-item">
+            <span class="item-name">{{ item.product.name_ku }} × {{ item.quantity }}</span>
+            <span class="item-price">{{ '{:,.0f}'.format(item.price * item.quantity) }} IQD</span>
+          </div>
+          {% endfor %}
+
+          <!-- Subtotal -->
+          <div class="receipt-item subtotal">
+            <span class="item-name">المجموع الفرعي:</span>
+            <span class="item-price">{{ '{:,.0f}'.format(session.play_time_price + session.get_orders_total()) }} IQD</span>
+          </div>
+
+          <!-- Discounts -->
+          {% if session.auto_discount > 0 %}
+          <div class="receipt-item discount-row">
+            <span class="item-name"><i class="fas fa-tag"></i> خصم تلقائي:</span>
+            <span class="item-price">-{{ '{:,.0f}'.format(session.auto_discount) }} IQD</span>
+          </div>
+          {% endif %}
+
+          {% if session.manual_discount > 0 %}
+          <div class="receipt-item discount-row">
+            <span class="item-name"><i class="fas fa-percentage"></i> خصم يدوي:</span>
+            <span class="item-price">-{{ '{:,.0f}'.format(session.manual_discount) }} IQD</span>
+          </div>
+          {% endif %}
+
+        </div>
+        {% endif %}
+
+        <!-- ✅ Total (RTL fixed) -->
+        <div class="receipt-total">
+          <span>الصافي:</span>
+          <span>{{ '{:,.0f}'.format(session.total_amount) }} IQD</span>
+        </div>
+
+        <div class="payment-method">
+          <i class="fas fa-{{ 'money-bill-wave' if session.payment_method == 'cash' else 'credit-card' }}"></i>
+          طريقة الدفع: {{ 'نقدي' if session.payment_method == 'cash' else 'بطاقة' }}
+        </div>
+
+        <div class="receipt-footer">
+          <hr>
+          <p>Developed by <strong>Nova Agency</strong></p>
+          <p>Web Systems • POS • Software • AI</p>
+          <p><i class="fas fa-phone"></i> +964 750 730 8005</p>
+          <p><i class="fas fa-phone"></i> +964 750 236 5028</p>
+          <hr>
+          <p><i class="fas fa-heart"></i> Thank you for your visit</p>
+          <p><strong>PADEL HOUSE</strong></p>
+        </div>
+      </div>
+    </div>
+
+  </div>
 </div>
+
+<script>
+function printReceipt(){
+  const receipt = document.getElementById('receipt');
+  if(receipt){
+    receipt.style.display = 'block';
+    receipt.style.visibility = 'visible';
+  }
+  setTimeout(() => window.print(), 100);
+}
+
+{% if request.args.get('autoprint') == '1' %}
+window.addEventListener('load', function(){
+  setTimeout(function(){ printReceipt(); }, 500);
+});
+{% endif %}
+</script>
 {% endblock %}

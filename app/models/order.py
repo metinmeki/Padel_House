@@ -7,25 +7,80 @@ class Order(db.Model):
     __tablename__ = 'order'
 
     id = db.Column(db.Integer, primary_key=True)
-    
+
     # Customer Info
     customer_name = db.Column(db.String(100), nullable=False)
     customer_phone = db.Column(db.String(20), nullable=False)
     customer_email = db.Column(db.String(100))
-    customer_address = db.Column(db.Text)
-    
+
+    # Delivery / Pickup
+    delivery_method = db.Column(db.String(20), default='delivery', nullable=False)  # delivery | pickup
+
+    # Address (only used if delivery_method == 'delivery')
+    area = db.Column(db.String(100))  # e.g. Duhok / Malta / ...
+    address = db.Column(db.Text)      # detailed address
+
     # Order Details
     total_price = db.Column(db.Float, nullable=False)
     status = db.Column(db.String(20), default='pending')  # pending, confirmed, processing, delivered, cancelled
     notes = db.Column(db.Text)
-    
+
+    # ✅ Google Sheets sync tracking (send only after admin confirmation)
+    sheet_sent = db.Column(db.Boolean, default=False)
+    sheet_sent_at = db.Column(db.DateTime, nullable=True)
+    sheet_last_error = db.Column(db.Text, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
-    items = db.relationship('OrderItem', backref='order', lazy=True, cascade='all, delete-orphan')
+    items = db.relationship(
+        'OrderItem',
+        backref='order',
+        lazy=True,
+        cascade='all, delete-orphan'
+    )
 
     def __repr__(self):
         return f'<Order {self.id} - {self.customer_name}>'
+
+    # ----------------- Helpers -----------------
+    @property
+    def is_delivery(self) -> bool:
+        return (self.delivery_method or '').lower() == 'delivery'
+
+    @property
+    def is_pickup(self) -> bool:
+        return (self.delivery_method or '').lower() == 'pickup'
+
+    def normalize_address_for_pickup(self):
+        """
+        If pickup: make sure address fields are empty in DB.
+        Call this before saving (optional but recommended).
+        """
+        if self.is_pickup:
+            self.area = None
+            self.address = None
+
+    def validate(self):
+        """
+        Simple validation rules:
+        - delivery: address should exist (optionally also area)
+        - pickup: no address required
+        """
+        method = (self.delivery_method or '').lower().strip()
+        if method not in ('delivery', 'pickup'):
+            raise ValueError("delivery_method must be 'delivery' or 'pickup'")
+
+        if method == 'delivery':
+            if not self.address or not str(self.address).strip():
+                raise ValueError("Address is required for delivery")
+            # If you want to force area too, uncomment:
+            # if not self.area or not str(self.area).strip():
+            #     raise ValueError("Area is required for delivery")
+
+        if method == 'pickup':
+            self.area = None
+            self.address = None
 
     def to_dict(self):
         return {
@@ -33,12 +88,25 @@ class Order(db.Model):
             'customer_name': self.customer_name,
             'customer_phone': self.customer_phone,
             'customer_email': self.customer_email,
-            'customer_address': self.customer_address,
+
+            'delivery_method': self.delivery_method,
+            'is_delivery': self.is_delivery,
+            'is_pickup': self.is_pickup,
+
+            'area': self.area if self.is_delivery else None,
+            'address': self.address if self.is_delivery else None,
+
             'total_price': self.total_price,
             'status': self.status,
             'notes': self.notes,
-            'created_at': str(self.created_at),
-            'items': [item.to_dict() for item in self.items]
+
+            # ✅ Sheet tracking
+            'sheet_sent': bool(self.sheet_sent),
+            'sheet_sent_at': self.sheet_sent_at.isoformat() if self.sheet_sent_at else None,
+            'sheet_last_error': self.sheet_last_error,
+
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'items': [item.to_dict() for item in (self.items or [])]
         }
 
 
@@ -46,10 +114,12 @@ class OrderItem(db.Model):
     __tablename__ = 'order_item'
 
     id = db.Column(db.Integer, primary_key=True)
+
     order_id = db.Column(db.Integer, db.ForeignKey('order.id'), nullable=False)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+
     quantity = db.Column(db.Integer, nullable=False)
-    price = db.Column(db.Float, nullable=False)  # Price at time of order
+    price = db.Column(db.Float, nullable=False)
 
     # Relationships
     product = db.relationship('Product', backref='order_items')
@@ -58,10 +128,14 @@ class OrderItem(db.Model):
         return f'<OrderItem {self.id} - Order {self.order_id}>'
 
     def to_dict(self):
+        product_name = 'N/A'
+        if self.product:
+            product_name = self.product.name_ku or self.product.name_ar or self.product.name_en or 'N/A'
+
         return {
             'id': self.id,
             'product_id': self.product_id,
-            'product_name': self.product.name_ku if self.product else 'N/A',
-            'quantity': self.quantity,
-            'price': self.price
+            'product_name': product_name,
+            'quantity': int(self.quantity or 0),
+            'price': float(self.price or 0)
         }

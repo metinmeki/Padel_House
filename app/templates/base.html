@@ -1,193 +1,221 @@
+<!-- app/templates/base.html -->
 <!DOCTYPE html>
 <html lang="{{ current_lang }}" dir="{{ 'rtl' if is_rtl else 'ltr' }}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ t('site_name') }}{% endblock %}</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}{{ t('site_name') }}{% endblock %}</title>
 
-    <!-- Bootstrap 5 RTL/LTR -->
-    {% if is_rtl %}
+  <!-- Bootstrap 5 RTL/LTR -->
+  {% if is_rtl %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
-    {% else %}
+  {% else %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  {% endif %}
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"/>
+
+  <style>
+    :root{
+      --primary-color:#E57625;
+      --secondary-color:#1a1a2e;
+      --accent-color:#16213e;
+
+      --text-dark:#111827;
+      --text-muted:#6b7280;
+      --border-soft: rgba(17,24,39,.08);
+
+      --shadow-sm: 0 6px 16px rgba(0,0,0,.08);
+      --shadow-md: 0 14px 35px rgba(0,0,0,.10);
+
+      --radius: 16px;
+      --radius-sm: 12px;
+    }
+
+    {% if is_rtl %}
+    @import url('https://fonts.googleapis.com/earlyaccess/droidarabickufi.css');
+
+    * :not(.fa):not(.fas):not(.far):not(.fal):not(.fab):not(.fa-solid):not(.fa-regular):not(.fa-light):not(.fa-brands):not([class*="fa-"]) {
+      font-family: 'Droid Arabic Kufi', 'Geeza Pro', 'Arial', 'Tahoma', sans-serif !important;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      text-rendering: optimizeLegibility;
+    }
+
+    html, body{
+      font-family: 'Droid Arabic Kufi', 'Geeza Pro', 'Arial', 'Tahoma', sans-serif !important;
+      direction: rtl !important;
+      unicode-bidi: embed;
+    }
+
+    .fa, .fas, .far, .fal, .fab, .fa-solid, .fa-regular, .fa-light, .fa-brands, [class*="fa-"]{
+      font-family: "Font Awesome 6 Free","Font Awesome 6 Pro","Font Awesome 5 Free","Font Awesome 5 Pro" !important;
+      font-weight: 900 !important;
+      text-rendering: auto !important;
+      -webkit-font-smoothing: antialiased !important;
+      -moz-osx-font-smoothing: grayscale !important;
+      display: inline-block !important;
+    }
+    .fab, .fa-brands{
+      font-family: "Font Awesome 6 Brands","Font Awesome 5 Brands" !important;
+      font-weight: 400 !important;
+    }
+    {% else %}
+    html, body{
+      font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','Roboto','Helvetica','Arial',sans-serif;
+    }
     {% endif %}
 
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    body{
+      background:#f8f9fa;
+      color: var(--text-dark);
+      overflow-x:hidden;
+    }
+    main{min-height:55vh;}
 
-    <!-- Google Fonts for Arabic/Kurdish -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Noto+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    {% if is_rtl %}
+    .me-1 { margin-right: 0 !important; margin-left: 0.25rem !important; }
+    .me-2 { margin-right: 0 !important; margin-left: 0.5rem !important; }
+    .me-3 { margin-right: 0 !important; margin-left: 1rem !important; }
+    .ms-1 { margin-left: 0 !important; margin-right: 0.25rem !important; }
+    .ms-2 { margin-left: 0 !important; margin-right: 0.5rem !important; }
+    .ms-3 { margin-left: 0 !important; margin-right: 1rem !important; }
+    .ms-auto { margin-left: 0 !important; margin-right: auto !important; }
+    .text-end { text-align: left !important; }
+    .text-start { text-align: right !important; }
+    .float-end { float: left !important; }
+    .float-start { float: right !important; }
+    {% endif %}
 
-    <style>
-        :root {
-            --primary-color: #E57625;
-            --secondary-color: #1a1a2e;
-            --accent-color: #16213e;
-        }
+    .btn-warning{
+      background-color: var(--primary-color);
+      border-color: var(--primary-color);
+      color:#fff;
+      font-weight:700;
+      border-radius:12px;
+      transition: transform .2s ease;
+    }
+    .btn-warning:hover{
+      background-color:#d4691f;
+      border-color:#d4691f;
+      color:#fff;
+      transform: translateY(-1px);
+    }
 
-        body {
-            {% if is_rtl %}
-            font-family: 'Cairo', 'Noto Sans Arabic', sans-serif;
-            {% else %}
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            {% endif %}
-            background-color: #f8f9fa;
-        }
+    footer{
+      background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+      color:#fff;
+    }
+    footer a{color:rgba(255,255,255,.82);text-decoration:none;}
+    footer a:hover{color:var(--primary-color);}
+    .footer-social a{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:44px;height:44px;border-radius:14px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+    }
+  </style>
 
-        /* RTL Fixes */
-        {% if is_rtl %}
-        .me-1, .me-2, .me-3 {
-            margin-right: 0 !important;
-            margin-left: 0.25rem !important;
-        }
-        .ms-1, .ms-2, .ms-3, .ms-auto {
-            margin-left: 0 !important;
-            margin-right: auto !important;
-        }
-        .text-end {
-            text-align: left !important;
-        }
-        .text-start {
-            text-align: right !important;
-        }
-        {% endif %}
-
-        /* Primary Button */
-        .btn-primary {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-        .btn-primary:hover {
-            background-color: #d4691f;
-            border-color: #d4691f;
-        }
-
-        /* Warning Button */
-        .btn-warning {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            color: white;
-        }
-        .btn-warning:hover {
-            background-color: #d4691f;
-            border-color: #d4691f;
-            color: white;
-        }
-
-        /* Card Styling */
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-            transition: transform 0.3s ease;
-        }
-        .card:hover {
-            transform: translateY(-5px);
-        }
-
-        /* Footer */
-        footer {
-            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
-            color: white;
-        }
-        footer a {
-            color: rgba(255,255,255,0.8);
-            text-decoration: none;
-        }
-        footer a:hover {
-            color: var(--primary-color);
-        }
-    </style>
-
-    {% block extra_css %}{% endblock %}
+  {% block extra_css %}{% endblock %}
 </head>
 
 <body>
 
-    <!-- ✅ GLOBAL LOADER (ONE FILE) -->
-    {% include "main/loader_onefile.html" %}
+  <!-- Loader -->
+  {% include "main/loader_onefile.html" %}
 
-    <!-- Navbar -->
-    {% include 'navbar.html' %}
+  <!-- ✅ Navbar -->
+  {% include "navbar.html" %}
 
-    <!-- Flash Messages -->
-    <div class="container mt-3">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
-    </div>
+  <!-- Flash Messages -->
+  <div class="container mt-3">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+  </div>
 
-    <!-- Main Content -->
-    <main>
-        {% block content %}{% endblock %}
-    </main>
+  <!-- Main Content -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
 
-    <!-- Footer -->
-    <footer class="py-5 mt-5">
-        <div class="container">
-            <div class="row g-4">
-                <!-- Logo & Description -->
-                <div class="col-lg-4">
-                    <h4 style="color: var(--primary-color);">{{ t('site_name') }}</h4>
-                    <p class="text-light opacity-75">{{ t('best_courts') }}</p>
-                    <div class="d-flex gap-3 mt-3">
-                        <a href="#" class="fs-4"><i class="fab fa-facebook"></i></a>
-                        <a href="#" class="fs-4"><i class="fab fa-instagram"></i></a>
-                        <a href="#" class="fs-4"><i class="fab fa-twitter"></i></a>
-                    </div>
-                </div>
+  <!-- Footer -->
+  <footer class="py-5 mt-5">
+    <div class="container">
+      <div class="row g-4">
+        <div class="col-lg-4">
+          <h4 style="color: var(--primary-color);">{{ t('site_name') }}</h4>
+          <p class="text-light opacity-75">{{ t('best_courts') }}</p>
 
-                <!-- Quick Links -->
-                <div class="col-lg-4">
-                    <h5>{{ t('quick_links') }}</h5>
-                    <ul class="list-unstyled">
-                        <li class="mb-2"><a href="{{ url_for('main.index') }}">{{ t('home') }}</a></li>
-                        <li class="mb-2"><a href="{{ url_for('booking.booking_page') }}">{{ t('booking') }}</a></li>
-                        <li class="mb-2"><a href="{{ url_for('store.products') }}">{{ t('store') }}</a></li>
-                    </ul>
-                </div>
-
-                <!-- Contact -->
-                <div class="col-lg-4">
-                    <h5>{{ t('contact_us') }}</h5>
-                    <ul class="list-unstyled">
-                        {% if settings %}
-                        <li class="mb-2"><i class="fas fa-phone me-2" style="color: var(--primary-color);"></i> {{ settings.phone }}</li>
-                        <li class="mb-2"><i class="fas fa-envelope me-2" style="color: var(--primary-color);"></i> {{ settings.email }}</li>
-                        <li class="mb-2"><i class="fas fa-map-marker-alt me-2" style="color: var(--primary-color);"></i> {{ settings.address }}</li>
-                        {% endif %}
-                    </ul>
-                </div>
-            </div>
-
-            <hr class="my-4 opacity-25">
-
-            <div class="row">
-                <div class="col-md-6 text-center text-md-start">
-                    <p class="mb-0 opacity-75">
-  &copy; 2026 {{ t('site_name') }}. {{ t('all_rights') }} —
-  Developed & Designed by
-  <a href="https://nova-agency.com" target="_blank" class="text-decoration-none fw-semibold">
-    Nova Agency
-  </a>
-</p>
-
-                </div>
-            </div>
+          <div class="d-flex gap-3 mt-3 footer-social">
+            <a href="https://www.instagram.com/padelhouse.iq?igsh=ZWdobmt0NGpjNzFw" class="text-white fs-5" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+            <a href="https://wa.me/750 066 7676" class="text-white fs-5" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
+          </div>
         </div>
-    </footer>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+        <div class="col-lg-4">
+          <h5 class="mb-3">{{ t('quick_links') }}</h5>
+          <ul class="list-unstyled">
+            <li class="mb-2"><a href="{{ url_for('main.index') }}">{{ t('home') }}</a></li>
+            <li class="mb-2"><a href="{{ url_for('booking.booking_page') }}">{{ t('booking') }}</a></li>
+            <li class="mb-2"><a href="{{ url_for('store.products') }}">{{ t('store') }}</a></li>
+          </ul>
+        </div>
 
-    {% block extra_js %}{% endblock %}
+        <div class="col-lg-4">
+  <h5 class="mb-3">{{ t('contact_us') }}</h5>
+  <ul class="list-unstyled">
+    {% if settings %}
+      <li class="mb-2">
+        <i class="fab fa-whatsapp me-2" style="color: var(--primary-color);"></i>
+        <a href="https://wa.me/750667676" class="text-decoration-none text-light">
+          0750 066 7676
+        </a>
+      </li>
 
+      <li class="mb-2">
+        <i class="fas fa-envelope me-2" style="color: var(--primary-color);"></i>
+        {{ settings.email }}
+      </li>
+
+      <li class="mb-2">
+        <i class="fas fa-map-marker-alt me-2" style="color: var(--primary-color);"></i>
+        {{ settings.address }}
+      </li>
+    {% endif %}
+  </ul>
+</div>
+      <hr class="my-4 opacity-25">
+
+      <div class="row">
+        <div class="col-12">
+          <p class="mb-0 opacity-75">
+            &copy; 2026 {{ t('site_name') }}. {{ t('all_rights') }} —
+            Developed & Designed by
+            <a href="https://metinmeki.github.io/Nova-Soft-team/" target="_blank" class="text-decoration-none fw-semibold">
+              Nova Agency
+            </a>
+          </p>
+        </div>
+      </div>
+    </div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

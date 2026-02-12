@@ -1,275 +1,626 @@
 {% extends 'pos/base_pos.html' %}
 
-{% block title %}بيع سريع{% endblock %}
+{% block title %}بيع سريع - POS{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Search & Barcode */
+  .search-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  /* Category Tabs */
+  .category-tabs {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+  }
+
+  .category-tab {
+    padding: 0.6rem 1.2rem;
+    border-radius: 25px;
+    border: 2px solid #e9ecef;
+    background: white;
+    color: var(--secondary-color);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+  }
+
+  .category-tab:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+  }
+
+  .category-tab.active {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    border-color: var(--primary-color);
+  }
+
+  /* Product Grid */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+
+  .product-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+
+  .product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    border-color: var(--primary-color);
+  }
+
+  .product-card img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+  }
+
+  .product-card h6 {
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+    color: var(--secondary-color);
+  }
+
+  .product-card .price {
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  /* Cart */
+  .cart-container {
+    position: sticky;
+    top: 100px;
+  }
+
+  .cart-items {
+    max-height: 50vh;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+  }
+
+  .cart-item {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+    border: 1px solid #e9ecef;
+  }
+
+  .qty-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .qty-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--primary-color);
+    background: white;
+    color: var(--primary-color);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .qty-btn:hover {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  .total-amount {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-color);
+  }
+
+  @media (max-width: 991px) {
+    .product-grid {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row">
-    <!-- المنتجات -->
-    <div class="col-lg-8 mb-4">
-        <!-- البحث والباركود -->
-        <div class="pos-card p-3 mb-3">
-            <div class="row g-2">
-                <div class="col-md-6">
-                    <input type="text" id="barcodeInput" class="barcode-input" 
-                           placeholder="🔍 سكان باركود..." autofocus>
-                </div>
-                <div class="col-md-6">
-                    <input type="text" id="searchInput" class="form-control bg-dark text-white border-secondary py-3" 
-                           placeholder="بحث بالاسم...">
-                </div>
-            </div>
+<div class="page-header mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h2>
+      <i class="fas fa-bolt me-2" style="color: var(--primary-color);"></i>
+      بيع سريع
+    </h2>
+    <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary">
+      <i class="fas fa-arrow-right me-2"></i>
+      رجوع
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Products Section -->
+  <div class="col-lg-8">
+    <!-- Search & Barcode -->
+    <div class="search-card">
+      <div class="row g-2">
+        <div class="col-md-6">
+          <input type="text"
+                 id="barcodeInput"
+                 class="form-control"
+                 placeholder="🔍 امسح الباركود..."
+                 autofocus>
         </div>
-        
-        <!-- التصنيفات -->
-        <div class="category-tabs">
-            <button class="category-tab active" data-category="all">الكل</button>
-            {% for category in categories %}
-                <button class="category-tab" data-category="{{ category.id }}">{{ category.name_ku }}</button>
-            {% endfor %}
+        <div class="col-md-6">
+          <input type="text"
+                 id="searchInput"
+                 class="form-control"
+                 placeholder="بحث بالاسم...">
         </div>
-        
-        <!-- شبكة المنتجات -->
-        <div class="row g-3" id="productsGrid">
-            {% for product in products %}
-            <div class="col-6 col-md-4 col-lg-3 product-item" data-category="{{ product.category_id }}">
-                <div class="pos-card product-card" 
-                     onclick="addToCart({{ product.id }}, '{{ product.name_ku }}', {{ product.price }}, '{{ product.image or '' }}')">
-                    {% if product.image %}
-                        <img src="{{ url_for('static', filename='images/products/' + product.image) }}" alt="{{ product.name_ku }}">
-                    {% else %}
-                        <div class="bg-secondary rounded d-flex align-items-center justify-content-center mx-auto" style="width: 80px; height: 80px;">
-                            <i class="fas fa-box fa-2x"></i>
-                        </div>
-                    {% endif %}
-                    <h6 class="mt-2 mb-1">{{ product.name_ku }}</h6>
-                    <p class="price mb-0">{{ '{:,.0f}'.format(product.price) }}</p>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
+      </div>
     </div>
-    
-    <!-- السلة -->
-    <div class="col-lg-4">
-        <div class="cart-container">
-            <h5 class="mb-3">
-                <i class="fas fa-bolt text-warning me-2"></i>بيع سريع
-            </h5>
-            
-            <!-- عناصر السلة -->
-            <div class="cart-items" id="cartItems">
-                <div id="emptyCart" class="text-center text-muted py-5">
-                    <i class="fas fa-shopping-basket fa-3x mb-3"></i>
-                    <p>السلة فارغة</p>
-                    <small>سكان باركود أو اختر منتج</small>
-                </div>
-            </div>
-            
-            <!-- المجموع -->
-            <div class="cart-total">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span>المجموع:</span>
-                    <span class="total-amount" id="totalAmount">0 IQD</span>
-                </div>
-                
-                <div class="d-grid gap-2">
-                    <div class="btn-group" role="group">
-                        <button class="btn btn-pos-success btn-lg flex-fill" onclick="checkout('cash')" id="cashBtn" disabled>
-                            <i class="fas fa-money-bill-wave me-1"></i>نقدي
-                        </button>
-                        <button class="btn btn-pos btn-lg flex-fill" onclick="checkout('card')" id="cardBtn" disabled>
-                            <i class="fas fa-credit-card me-1"></i>بطاقة
-                        </button>
-                    </div>
-                    <button class="btn btn-outline-danger" onclick="clearCart()" id="clearBtn" disabled>
-                        <i class="fas fa-trash me-2"></i>إفراغ السلة
-                    </button>
-                </div>
-            </div>
-        </div>
+
+    <!-- Categories -->
+    <div class="category-tabs">
+      <button class="category-tab active" data-category="all">
+        <i class="fas fa-th me-1"></i>الكل
+      </button>
+      {% for category in categories %}
+        <button class="category-tab" data-category="{{ category.id }}">
+          {{ category.name_ku }}
+        </button>
+      {% endfor %}
     </div>
+
+    <!-- Products Grid -->
+    <div class="product-grid" id="productsGrid">
+      {% for product in products %}
+      <div class="product-item" data-category="{{ product.category_id }}">
+        <div class="product-card" onclick="addToCart({{ product.id }}, '{{ product.name_ku }}', {{ product.price }}, '{{ product.image or '' }}')">
+          {% if product.image %}
+            <img src="{{ url_for('static', filename='images/products/' + product.image) }}" alt="{{ product.name_ku }}">
+          {% else %}
+            <div style="width: 80px; height: 80px; background: #f8f9fa; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem;">
+              <i class="fas fa-box fa-2x text-muted"></i>
+            </div>
+          {% endif %}
+          <h6>{{ product.name_ku }}</h6>
+          <div class="price">{{ '{:,.0f}'.format(product.price) }} IQD</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Cart Section -->
+  <div class="col-lg-4">
+    <div class="stat-card cart-container">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">
+          <i class="fas fa-shopping-basket me-2" style="color: var(--primary-color);"></i>
+          السلة
+        </h5>
+        <span class="badge bg-primary" style="font-size: 1rem; padding: 0.5rem 1rem;">
+          <span id="itemsCount">0</span>
+        </span>
+      </div>
+
+      <div class="cart-items" id="cartItems">
+        <div id="emptyCart" class="text-center text-muted py-5">
+          <i class="fas fa-shopping-basket fa-3x mb-3 opacity-50"></i>
+          <p class="mb-1">السلة فارغة</p>
+          <small>امسح الباركود أو اختر منتج</small>
+        </div>
+      </div>
+
+      <hr>
+
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <span class="fs-5 fw-bold">المجموع:</span>
+        <span class="total-amount" id="totalAmount">0 IQD</span>
+      </div>
+
+      <div class="d-grid gap-2">
+        <div class="row g-2">
+          <div class="col-6">
+            <button class="btn btn-success w-100 btn-lg" onclick="checkout('cash')" id="cashBtn" disabled>
+              <i class="fas fa-money-bill-wave me-1"></i>نقدي
+            </button>
+          </div>
+          <div class="col-6">
+            <button class="btn btn-info w-100 btn-lg" onclick="checkout('card')" id="cardBtn" disabled>
+              <i class="fas fa-credit-card me-1"></i>بطاقة
+            </button>
+          </div>
+        </div>
+          <button class="btn btn-danger w-100 btn-lg" onclick="openDebtModal()" id="debtBtn" disabled>
+              <i class="fas fa-user-clock me-2"></i>ديون
+          </button>
+        <button class="btn btn-outline-danger" onclick="clearCart()" id="clearBtn" disabled>
+          <i class="fas fa-trash me-2"></i>إفراغ السلة
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Debt Modal -->
+<div class="modal fade" id="debtModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius:16px; overflow:hidden;">
+      <div class="modal-header" style="background:#dc3545; color:#fff;">
+        <h5 class="modal-title">
+          <i class="fas fa-user-clock me-2"></i>تسجيل دين
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div class="mb-2 text-muted">
+          سيتم حفظ السلة كـ <strong>دين</strong> بدون دفع.
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">اسم الشخص (مطلوب)</label>
+          <input type="text" id="debtName" class="form-control" placeholder="مثال: أحمد / أصدقاء">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">رقم الهاتف (اختياري)</label>
+          <input type="text" id="debtPhone" class="form-control" placeholder="07xx xxx xxxx">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">ملاحظة (اختياري)</label>
+          <textarea id="debtNote" class="form-control" rows="2" placeholder="مثال: أخذوا منتجات وما دفعوا"></textarea>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center p-3"
+             style="background:#f8f9fa; border-radius:12px;">
+          <span class="fw-bold">إجمالي الدين:</span>
+          <span class="fw-bold" style="color:#dc3545;" id="debtTotalText">0 IQD</span>
+        </div>
+
+        <div id="debtError" class="text-danger mt-2" style="display:none;"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+        <button type="button" class="btn btn-danger" onclick="submitDebt()" id="debtSaveBtn">
+          <i class="fas fa-save me-2"></i>حفظ الدين
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    let cart = [];
-    
-    function updateCartUI() {
-        const cartItems = document.getElementById('cartItems');
-        const totalAmount = document.getElementById('totalAmount');
-        const emptyCart = document.getElementById('emptyCart');
-        const cashBtn = document.getElementById('cashBtn');
-        const cardBtn = document.getElementById('cardBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        
-        if (cart.length === 0) {
-            cartItems.innerHTML = `
-                <div id="emptyCart" class="text-center text-muted py-5">
-                    <i class="fas fa-shopping-basket fa-3x mb-3"></i>
-                    <p>السلة فارغة</p>
-                    <small>سكان باركود أو اختر منتج</small>
-                </div>
-            `;
-            totalAmount.textContent = '0 IQD';
-            cashBtn.disabled = true;
-            cardBtn.disabled = true;
-            clearBtn.disabled = true;
-            return;
-        }
-        
-        let html = '';
-        let total = 0;
-        
-        cart.forEach((item, index) => {
-            const subtotal = item.price * item.quantity;
-            total += subtotal;
-            
-            html += `
-                <div class="cart-item">
-                    <div>
-                        <h6 class="mb-0">${item.name}</h6>
-                        <small class="text-muted">${formatNumber(item.price)} × ${item.quantity}</small>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="qty-control">
-                            <button class="qty-btn" onclick="updateQty(${index}, ${item.quantity - 1})">-</button>
-                            <span>${item.quantity}</span>
-                            <button class="qty-btn" onclick="updateQty(${index}, ${item.quantity + 1})">+</button>
-                        </div>
-                        <strong class="text-info">${formatNumber(subtotal)}</strong>
-                        <button class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-        
-        cartItems.innerHTML = html;
-        totalAmount.textContent = formatNumber(total) + ' IQD';
-        cashBtn.disabled = false;
-        cardBtn.disabled = false;
-        clearBtn.disabled = false;
-    }
-    
-    function formatNumber(num) {
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    }
-    
-    function addToCart(productId, name, price, image) {
-        const existing = cart.find(item => item.product_id === productId);
-        
-        if (existing) {
-            existing.quantity++;
-        } else {
-            cart.push({
-                product_id: productId,
-                name: name,
-                price: price,
-                quantity: 1,
-                image: image
-            });
-        }
-        
-        updateCartUI();
-    }
-    
-    function updateQty(index, newQty) {
-        if (newQty <= 0) {
-            cart.splice(index, 1);
-        } else {
-            cart[index].quantity = newQty;
-        }
-        updateCartUI();
-    }
-    
-    function removeItem(index) {
-        cart.splice(index, 1);
-        updateCartUI();
-    }
-    
-    function clearCart() {
-        if (confirm('إفراغ السلة؟')) {
-            cart = [];
-            updateCartUI();
-        }
-    }
-    
-    function checkout(paymentMethod) {
-        if (cart.length === 0) return;
-        
-        const items = cart.map(item => ({
-            product_id: item.product_id,
-            quantity: item.quantity
-        }));
-        
-        fetch('/pos/quick-sale/checkout', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                items: items,
-                payment_method: paymentMethod
-            })
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = `/pos/receipt/${data.session_id}`;
-            } else {
-                alert(data.message);
-            }
-        });
-    }
-    
-    // فلترة التصنيفات
-    document.querySelectorAll('.category-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            
-            const category = this.dataset.category;
-            document.querySelectorAll('.product-item').forEach(item => {
-                if (category === 'all' || item.dataset.category === category) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
+let cart = [];
+let lastScanned = "";
+let lastScanAt = 0;
+
+function formatNumber(num) {
+  return (Number(num || 0)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function escapeHtml(str) {
+  return String(str || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function updateCartUI() {
+  const cartItems = document.getElementById('cartItems');
+  const totalAmount = document.getElementById('totalAmount');
+  const cashBtn = document.getElementById('cashBtn');
+  const cardBtn = document.getElementById('cardBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const itemsCount = document.getElementById('itemsCount');
+
+  if (cart.length === 0) {
+    cartItems.innerHTML = `
+      <div id="emptyCart" class="text-center text-muted py-5">
+        <i class="fas fa-shopping-basket fa-3x mb-3 opacity-50"></i>
+        <p class="mb-1">السلة فارغة</p>
+        <small>امسح الباركود أو اختر منتج</small>
+      </div>
+    `;
+    totalAmount.textContent = '0 IQD';
+    itemsCount.textContent = '0';
+    cashBtn.disabled = true;
+    cardBtn.disabled = true;
+    clearBtn.disabled = true;
+    return;
+  }
+
+  let html = '';
+  let total = 0;
+  let totalQty = 0;
+
+  cart.forEach((item, index) => {
+    const subtotal = item.price * item.quantity;
+    total += subtotal;
+    totalQty += item.quantity;
+
+    html += `
+      <div class="cart-item">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div>
+            <h6 class="mb-0">${escapeHtml(item.name)}</h6>
+            <small class="text-muted">${formatNumber(item.price)} × ${item.quantity}</small>
+          </div>
+          <button class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})">
+            <i class="fas fa-trash"></i>
+          </button>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center">
+          <div class="qty-control">
+            <button class="qty-btn" onclick="updateQty(${index}, ${item.quantity - 1})">-</button>
+            <span style="min-width: 30px; text-align: center;">${item.quantity}</span>
+            <button class="qty-btn" onclick="updateQty(${index}, ${item.quantity + 1})">+</button>
+          </div>
+          <strong style="color: var(--primary-color);">${formatNumber(subtotal)} IQD</strong>
+        </div>
+      </div>
+    `;
+  });
+
+  cartItems.innerHTML = html;
+  totalAmount.textContent = formatNumber(total) + ' IQD';
+  itemsCount.textContent = String(totalQty);
+
+  cashBtn.disabled = false;
+  cardBtn.disabled = false;
+  clearBtn.disabled = false;
+}
+const debtBtn = document.getElementById('debtBtn');
+if (debtBtn) debtBtn.disabled = false;
+
+function addToCart(productId, name, price, image) {
+  const existing = cart.find(item => item.product_id === productId);
+  if (existing) {
+    existing.quantity++;
+  } else {
+    cart.push({
+      product_id: productId,
+      name: name,
+      price: Number(price || 0),
+      quantity: 1,
+      image: image || ''
     });
-    
-    // البحث
-    document.getElementById('searchInput').addEventListener('input', function() {
-        const search = this.value.toLowerCase();
-        document.querySelectorAll('.product-item').forEach(item => {
-            const name = item.querySelector('h6').textContent.toLowerCase();
-            item.style.display = name.includes(search) ? 'block' : 'none';
-        });
+  }
+  updateCartUI();
+}
+
+function updateQty(index, newQty) {
+  newQty = Number(newQty || 0);
+  if (newQty <= 0) {
+    cart.splice(index, 1);
+  } else {
+    cart[index].quantity = newQty;
+  }
+  updateCartUI();
+}
+
+function removeItem(index) {
+  cart.splice(index, 1);
+  updateCartUI();
+}
+
+function clearCart() {
+  if (confirm('إفراغ السلة؟')) {
+    cart = [];
+    updateCartUI();
+  }
+}
+
+function checkout(paymentMethod) {
+  if (cart.length === 0) return;
+  const debtBtn = document.getElementById('debtBtn');
+if (debtBtn) debtBtn.disabled = true;
+  const items = cart.map(item => ({
+    product_id: item.product_id,
+    quantity: item.quantity
+  }));
+
+  fetch('/pos/quick-sale/checkout', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      items: items,
+      payment_method: paymentMethod
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      window.location.href = `/pos/receipt/${data.session_id}`;
+    } else {
+      alert(data.message || 'حدث خطأ');
+    }
+  })
+  .catch(() => {
+    alert('فشل الاتصال بالسيرفر');
+  });
+}
+function getCartTotal() {
+  return cart.reduce((sum, it) => sum + (it.price * it.quantity), 0);
+}
+
+function openDebtModal() {
+  if (cart.length === 0) return;
+
+  const total = getCartTotal();
+  document.getElementById('debtTotalText').textContent = formatNumber(total) + " IQD";
+  document.getElementById('debtError').style.display = 'none';
+  document.getElementById('debtName').value = '';
+  document.getElementById('debtPhone').value = '';
+  document.getElementById('debtNote').value = '';
+
+  const modal = new bootstrap.Modal(document.getElementById('debtModal'));
+  modal.show();
+
+  setTimeout(() => document.getElementById('debtName').focus(), 200);
+}
+
+function submitDebt() {
+  if (cart.length === 0) return;
+
+  const name = (document.getElementById('debtName').value || '').trim();
+  const phone = (document.getElementById('debtPhone').value || '').trim();
+  const note = (document.getElementById('debtNote').value || '').trim();
+
+  const err = document.getElementById('debtError');
+  err.style.display = 'none';
+  err.textContent = '';
+
+  if (!name) {
+    err.textContent = 'الرجاء كتابة اسم الشخص';
+    err.style.display = 'block';
+    return;
+  }
+
+  const items = cart.map(it => ({
+    product_id: it.product_id,
+    quantity: it.quantity
+  }));
+
+  const btn = document.getElementById('debtSaveBtn');
+  btn.disabled = true;
+
+  fetch('/pos/quick-sale/debt', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      name: name,
+      phone: phone,
+      note: note,
+      items: items
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    btn.disabled = false;
+
+    if (!data.success) {
+      err.textContent = data.message || 'حدث خطأ';
+      err.style.display = 'block';
+      return;
+    }
+
+    // success: close modal + clear cart
+    const modalEl = document.getElementById('debtModal');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+
+    cart = [];
+    updateCartUI();
+
+    alert('تم تسجيل الدين بنجاح ✅');
+  })
+  .catch(() => {
+    btn.disabled = false;
+    err.textContent = 'فشل الاتصال بالسيرفر';
+    err.style.display = 'block';
+  });
+}
+// Category filter
+document.querySelectorAll('.category-tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+
+    const category = this.dataset.category;
+    document.querySelectorAll('.product-item').forEach(item => {
+      if (category === 'all' || item.dataset.category === category) {
+        item.style.display = 'block';
+      } else {
+        item.style.display = 'none';
+      }
     });
-    
-    // سكان الباركود
-    document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const barcode = this.value.trim();
-            if (barcode) {
-                fetch('/pos/scan-barcode', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: `barcode=${barcode}`
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        addToCart(data.product.id, data.product.name_ku, data.product.price, data.product.image);
-                    } else {
-                        alert('المنتج غير موجود!');
-                    }
-                    this.value = '';
-                });
-            }
-        }
+  });
+});
+
+// Search
+document.getElementById('searchInput').addEventListener('input', function() {
+  const search = this.value.toLowerCase();
+  document.querySelectorAll('.product-item').forEach(item => {
+    const name = item.querySelector('h6').textContent.toLowerCase();
+    item.style.display = name.includes(search) ? 'block' : 'none';
+  });
+});
+
+// Barcode scanner
+// Barcode scanner
+document.getElementById('barcodeInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const barcode = this.value.trim();
+    if (!barcode) return;
+
+    const now = Date.now();
+    if (barcode === lastScanned && (now - lastScanAt) < 300) {
+      this.value = '';
+      return;
+    }
+    lastScanned = barcode;
+    lastScanAt = now;
+
+    fetch('/pos/scan-barcode', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({barcode: barcode})
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        addToCart(data.product.id, data.product.name_ku, data.product.price, data.product.image);
+        // Product added silently, no alert
+        this.value = '';
+        this.focus();
+      } else {
+        alert('المنتج غير موجود!');
+        this.value = '';
+      }
+    })
+    .catch(() => {
+      alert('فشل الاتصال بالسيرفر');
+      this.value = '';
     });
+  }
+});
+
+updateCartUI();
 </script>
 {% endblock %}

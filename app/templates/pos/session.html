@@ -1,527 +1,807 @@
 {% extends 'pos/base_pos.html' %}
 
-{% block title %}{{ session.get_location_name() }}{% endblock %}
+{% block title %}{{ session.get_location_name() }} - POS{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Timer Display */
+  .timer-card {
+    background: linear-gradient(135deg, var(--warning-color) 0%, #ff9800 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+  }
+
+  .timer-display {
+    font-size: 3rem;
+    font-weight: 700;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Product Grid */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+
+  .product-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+  }
+
+  .product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    border-color: var(--primary-color);
+  }
+
+  .product-card img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+  }
+
+  .product-card h6 {
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+    color: var(--secondary-color);
+  }
+
+  .product-card .price {
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1rem;
+  }
+
+  /* Category Tabs */
+  .category-tabs {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+  }
+
+  .category-tab {
+    padding: 0.6rem 1.2rem;
+    border-radius: 25px;
+    border: 2px solid #e9ecef;
+    background: white;
+    color: var(--secondary-color);
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+  }
+
+  .category-tab:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+  }
+
+  .category-tab.active {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    border-color: var(--primary-color);
+  }
+
+  /* Cart Items */
+  .cart-item {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.8rem;
+    border: 1px solid #e9ecef;
+  }
+
+  .qty-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 0.3rem 0.5rem;
+  }
+
+  .qty-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    border: 1px solid var(--primary-color);
+    background: white;
+    color: var(--primary-color);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .qty-btn:hover {
+    background: var(--primary-color);
+    color: white;
+  }
+
+  /* Cart Summary */
+  .cart-summary {
+    position: sticky;
+    top: 100px;
+  }
+
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.5rem 0;
+  }
+
+  .total-amount {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary-color);
+  }
+
+  /* Search & Barcode */
+  .search-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  @media (max-width: 991px) {
+    .timer-display {
+      font-size: 2rem;
+    }
+
+    .product-grid {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row">
-    <!-- معلومات الجلسة -->
-    <div class="col-12 mb-3">
-        <div class="pos-card p-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h4 class="mb-1">
-                        {% if session.session_type == 'stadium' %}
-                            <i class="fas fa-futbol text-info me-2"></i>
-                        {% elif session.session_type == 'table' %}
-                            <i class="fas fa-chair text-info me-2"></i>
-                        {% endif %}
-                        {{ session.get_location_name() }}
-                    </h4>
-                    <span class="text-muted">
-                        <i class="fas fa-user me-1"></i>{{ session.customer_name or 'زائر' }}
-                        {% if session.customer_phone %}
-                            | <i class="fas fa-phone me-1"></i>{{ session.customer_phone }}
-                        {% endif %}
-                    </span>
-                </div>
+<div class="row g-4">
+  <!-- Left Side: Products -->
+  <div class="col-lg-8">
 
-                <!-- التايمر للملعب -->
-                {% if session.session_type == 'stadium' %}
-                <div class="text-center">
-                    <div class="timer-display">
-                        <i class="fas fa-stopwatch me-2"></i>
-                        <span id="timer" class="fs-2 fw-bold text-warning">00:00:00</span>
-                    </div>
-                    <p class="mb-0 text-muted">سعر الساعة: {{ '{:,.0f}'.format(settings.price_per_hour if settings else 40000) }} IQD</p>
-                    <p class="mb-0 mt-1">
-                        <span class="text-info fs-5" id="timePrice">0 IQD</span>
-                        <span id="discountBadge" class="badge bg-success ms-2 d-none">خصم!</span>
-                    </p>
-                </div>
-                {% endif %}
-
-                <div class="text-end">
-                    <p class="mb-1 text-muted">
-                        <i class="fas fa-clock me-1"></i>البداية: {{ session.start_time.strftime('%H:%M') }}
-                    </p>
-                    <span class="badge bg-success fs-6">نشط</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- المنتجات -->
-    <div class="col-lg-8 mb-4">
-        <!-- البحث والباركود -->
-        <div class="pos-card p-3 mb-3">
-            <div class="row g-2">
-                <div class="col-md-6">
-                    <input type="text" id="barcodeInput" class="barcode-input"
-                           placeholder="🔍 سكان باركود أو بحث..." autofocus>
-                </div>
-                <div class="col-md-6">
-                    <input type="text" id="searchInput" class="form-control bg-dark text-white border-secondary py-3"
-                           placeholder="بحث بالاسم...">
-                </div>
-            </div>
-        </div>
-
-        <!-- التصنيفات -->
-        <div class="category-tabs">
-            <button class="category-tab active" data-category="all">الكل</button>
-            {% for category in categories %}
-                <button class="category-tab" data-category="{{ category.id }}">{{ category.name_ku }}</button>
-            {% endfor %}
-        </div>
-
-        <!-- شبكة المنتجات -->
-        <div class="row g-3" id="productsGrid">
-            {% for product in products %}
-            <div class="col-6 col-md-4 col-lg-3 product-item" data-category="{{ product.category_id }}">
-                <div class="pos-card product-card" onclick="addToCart({{ product.id }}, '{{ product.name_ku }}', {{ product.price }})">
-                    {% if product.image %}
-                        <img src="{{ url_for('static', filename='images/products/' + product.image) }}" alt="{{ product.name_ku }}">
-                    {% else %}
-                        <div class="bg-secondary rounded d-flex align-items-center justify-content-center mx-auto" style="width: 80px; height: 80px;">
-                            <i class="fas fa-box fa-2x"></i>
-                        </div>
-                    {% endif %}
-                    <h6 class="mt-2 mb-1">{{ product.name_ku }}</h6>
-                    <p class="price mb-0">{{ '{:,.0f}'.format(product.price) }}</p>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- السلة -->
-    <div class="col-lg-4">
-        <div class="cart-container">
-            <h5 class="mb-3">
-                <i class="fas fa-receipt me-2"></i>الفاتورة
-            </h5>
-
-            <!-- وقت اللعب (للملعب فقط) -->
+    <!-- Session Info -->
+    <div class="stat-card mb-3">
+      <div class="row align-items-center">
+        <div class="col-md-6">
+          <h4 class="mb-1">
             {% if session.session_type == 'stadium' %}
-            <div class="cart-item bg-warning bg-opacity-10 border-warning">
-                <div>
-                    <h6 class="mb-0 text-warning"><i class="fas fa-stopwatch me-2"></i>وقت اللعب</h6>
-                    <small class="text-muted" id="playTimeText">0 ساعة</small>
-                </div>
-                <strong class="text-warning" id="playTimePrice">0 IQD</strong>
-            </div>
+              <i class="fas fa-futbol me-2" style="color: var(--primary-color);"></i>
+            {% else %}
+              <i class="fas fa-chair me-2" style="color: var(--warning-color);"></i>
             {% endif %}
-
-            <!-- عناصر السلة -->
-            <div class="cart-items" id="cartItems">
-                {% for order in session.orders %}
-                    {% for item in order.items %}
-                    <div class="cart-item" id="item-{{ item.id }}">
-                        <div>
-                            <h6 class="mb-0">{{ item.product.name_ku }}</h6>
-                            <small class="text-muted">{{ '{:,.0f}'.format(item.price) }} × {{ item.quantity }}</small>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="qty-control">
-                                <button class="qty-btn" onclick="updateQty({{ item.id }}, {{ item.quantity - 1 }})">-</button>
-                                <span>{{ item.quantity }}</span>
-                                <button class="qty-btn" onclick="updateQty({{ item.id }}, {{ item.quantity + 1 }})">+</button>
-                            </div>
-                            <strong class="text-info">{{ '{:,.0f}'.format(item.price * item.quantity) }}</strong>
-                            <button class="btn btn-sm btn-outline-danger" onclick="removeItem({{ item.id }})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                    {% endfor %}
-                {% endfor %}
-
-                {% if not session.orders %}
-                <div id="emptyCart" class="text-center text-muted py-3">
-                    <i class="fas fa-coffee fa-2x mb-2"></i>
-                    <p class="mb-0">لا توجد طلبات</p>
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- المجموع -->
-            <div class="cart-total">
-                {% if session.session_type == 'stadium' %}
-                <div class="d-flex justify-content-between mb-2">
-                    <span>وقت اللعب:</span>
-                    <span id="timePriceSummary">0 IQD</span>
-                </div>
-                {% endif %}
-                <div class="d-flex justify-content-between mb-2">
-                    <span>الطلبات:</span>
-                    <span id="ordersTotal">{{ '{:,.0f}'.format(session.get_orders_total()) }} IQD</span>
-                </div>
-
-                <!-- خصم تلقائي -->
-                <div class="d-flex justify-content-between mb-2 text-success d-none" id="autoDiscountRow">
-                    <span><i class="fas fa-tag me-1"></i>خصم (12-16):</span>
-                    <span id="autoDiscountAmount">-0 IQD</span>
-                </div>
-
-                <hr class="border-secondary">
-
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="fs-5">المجموع:</span>
-                    <span class="total-amount" id="totalAmount">0 IQD</span>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button class="btn btn-pos-success btn-lg" onclick="closeSession()">
-                        <i class="fas fa-check-circle me-2"></i>إنهاء ودفع
-                    </button>
-                    <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-right me-2"></i>رجوع
-                    </a>
-                    <button class="btn btn-outline-danger" onclick="cancelSession()">
-                        <i class="fas fa-times me-2"></i>إلغاء الجلسة
-                    </button>
-                </div>
-            </div>
+            {{ session.get_location_name() }}
+          </h4>
+          <p class="text-muted mb-0">
+            <i class="fas fa-clock me-1"></i>
+            البداية: {{ session.start_time.strftime('%H:%M') }}
+            <span class="badge bg-success ms-2">نشط</span>
+          </p>
         </div>
+
+        {% if session.session_type == 'stadium' %}
+        <div class="col-md-6 text-center">
+          <div class="timer-display" id="timer" style="color: var(--warning-color);">00:00:00</div>
+          <p class="mb-0 text-muted">
+            سعر الساعة: {{ '{:,.0f}'.format(stadium_price_per_hour or 40000) }} IQD
+          </p>
+        </div>
+        {% endif %}
+      </div>
     </div>
+
+    <!-- Search & Barcode -->
+    <div class="search-card">
+      <div class="row g-2">
+        <div class="col-md-6">
+          <input type="text"
+                 id="barcodeInput"
+                 class="form-control"
+                 placeholder="🔍 امسح الباركود أو ابحث..."
+                 autofocus>
+        </div>
+        <div class="col-md-6">
+          <input type="text"
+                 id="searchInput"
+                 class="form-control"
+                 placeholder="بحث بالاسم...">
+        </div>
+      </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="category-tabs">
+      <button class="category-tab active" data-category="all">
+        <i class="fas fa-th me-1"></i>الكل
+      </button>
+      {% for category in categories %}
+        <button class="category-tab" data-category="{{ category.id }}">
+          {{ category.name_ku }}
+        </button>
+      {% endfor %}
+    </div>
+
+    <!-- Products Grid -->
+    <div class="product-grid" id="productsGrid">
+      {% for product in products %}
+      <div class="product-item" data-category="{{ product.category_id }}">
+        <div class="product-card" onclick="addToCart({{ product.id }}, '{{ product.name_ku }}', {{ product.price }})">
+          {% if product.image %}
+            <img src="{{ url_for('static', filename='images/products/' + product.image) }}" alt="{{ product.name_ku }}">
+          {% else %}
+            <div style="width: 80px; height: 80px; background: #f8f9fa; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem;">
+              <i class="fas fa-box fa-2x text-muted"></i>
+            </div>
+          {% endif %}
+          <h6>{{ product.name_ku }}</h6>
+          <div class="price">{{ '{:,.0f}'.format(product.price) }} IQD</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Right Side: Cart -->
+  <div class="col-lg-4">
+    <div class="stat-card cart-summary">
+      <h5 class="mb-3">
+        <i class="fas fa-receipt me-2" style="color: var(--primary-color);"></i>
+        الفاتورة
+      </h5>
+
+      <!-- Stadium Time -->
+      {% if session.session_type == 'stadium' %}
+      <div class="alert alert-warning">
+        <div class="d-flex justify-content-between align-items-center">
+          <div>
+            <i class="fas fa-stopwatch me-2"></i>
+            <strong>وقت اللعب</strong>
+            <div><small id="playTimeText">0 ساعة</small></div>
+          </div>
+          <strong id="playTimePrice">0 IQD</strong>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Cart Items -->
+      <div style="max-height: 40vh; overflow-y: auto; margin-bottom: 1rem;">
+        {% for order in session.orders %}
+          {% for item in order.items %}
+          <div class="cart-item" id="item-{{ item.id }}">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <h6 class="mb-0">{{ item.product.name_ku }}</h6>
+                <small class="text-muted">{{ '{:,.0f}'.format(item.price) }} × {{ item.quantity }}</small>
+              </div>
+              <button class="btn btn-sm btn-outline-danger" onclick="removeItem({{ item.id }})">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="qty-control">
+                <button class="qty-btn" onclick="updateQty({{ item.id }}, {{ item.quantity - 1 }})">-</button>
+                <span style="min-width: 30px; text-align: center;">{{ item.quantity }}</span>
+                <button class="qty-btn" onclick="updateQty({{ item.id }}, {{ item.quantity + 1 }})">+</button>
+              </div>
+              <strong style="color: var(--primary-color);">{{ '{:,.0f}'.format(item.price * item.quantity) }} IQD</strong>
+            </div>
+          </div>
+          {% endfor %}
+        {% endfor %}
+
+        {% if not session.orders or not session.orders[0].items %}
+        <div class="text-center text-muted py-4">
+          <i class="fas fa-shopping-cart fa-3x mb-2 opacity-50"></i>
+          <p class="mb-0">لا توجد منتجات</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Summary -->
+      <hr>
+
+      {% if session.session_type == 'stadium' %}
+      <div class="summary-row">
+        <span>وقت اللعب:</span>
+        <span id="timePriceSummary">0 IQD</span>
+      </div>
+      {% endif %}
+
+      <div class="summary-row">
+        <span>المنتجات:</span>
+        <span>{{ '{:,.0f}'.format(session.get_orders_total()) }} IQD</span>
+      </div>
+
+      <div class="summary-row text-success d-none" id="autoDiscountRow">
+        <span><i class="fas fa-tag me-1"></i>خصم تلقائي:</span>
+        <span id="autoDiscountAmount">-0 IQD</span>
+      </div>
+
+      <hr style="border-width: 2px;">
+
+      <div class="summary-row mb-3">
+        <span class="fs-5 fw-bold">المجموع:</span>
+        <span class="total-amount" id="totalAmount">0 IQD</span>
+      </div>
+
+      {% if session.session_type == 'stadium' and session.status == 'active' %}
+        {% if not session.end_time %}
+        <form method="POST" action="{{ url_for('pos.finish_play', session_id=session.id) }}" class="mb-2">
+          <button type="submit" class="btn btn-warning btn-lg w-100">
+            <i class="fas fa-stopwatch me-2"></i> إنهاء وقت اللعب
+          </button>
+        </form>
+        {% else %}
+          <div class="alert alert-success text-center mb-2">
+            <i class="fas fa-check-circle me-2"></i>
+            تم إنهاء وقت اللعب ✅
+          </div>
+        {% endif %}
+      {% endif %}
+
+      <!-- Actions -->
+      <div class="d-grid gap-2">
+        <button class="btn btn-success btn-lg" onclick="closeSession()">
+          <i class="fas fa-check-circle me-2"></i>
+          إنهاء ودفع
+        </button>
+
+        <!-- ✅ FIXED: Finish as Debt Button -->
+        <button class="btn btn-warning w-100" onclick="openDebtModal()">
+          <i class="fas fa-hand-holding-usd me-2"></i> إنهاء كدين
+        </button>
+
+        <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary">
+          <i class="fas fa-arrow-right me-2"></i>
+          رجوع
+        </a>
+        <button class="btn btn-outline-danger" onclick="cancelSession()">
+          <i class="fas fa-times me-2"></i>
+          إلغاء الجلسة
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
-<!-- Modal الدفع -->
-<div class="modal fade" id="paymentModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" style="background: #16213e; border: 1px solid #0f3460;">
-            <div class="modal-header border-0">
-                <h5 class="modal-title"><i class="fas fa-money-bill me-2"></i>إتمام الدفع</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form action="{{ url_for('pos.close_session', session_id=session.id) }}" method="POST" id="paymentForm">
-                <div class="modal-body">
-                    <div class="row">
-                        <!-- تفاصيل الفاتورة -->
-                        <div class="col-md-6">
-                            <h6 class="mb-3">📋 تفاصيل الفاتورة</h6>
-                            <div class="bg-dark rounded p-3">
-                                {% if session.session_type == 'stadium' %}
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>⏱️ وقت اللعب:</span>
-                                    <span id="modalPlayTime">0 IQD</span>
-                                </div>
-                                {% endif %}
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>🛒 الطلبات:</span>
-                                    <span>{{ '{:,.0f}'.format(session.get_orders_total()) }} IQD</span>
-                                </div>
-                                <hr class="border-secondary">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span>المجموع الفرعي:</span>
-                                    <span id="modalSubtotal">0 IQD</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2 text-success" id="modalAutoDiscountRow">
-                                    <span>🏷️ خصم (12-16):</span>
-                                    <span id="modalAutoDiscount">-0 IQD</span>
-                                </div>
-                                <div class="d-flex justify-content-between mb-2 text-warning" id="modalManualDiscountRow">
-                                    <span>✂️ خصم يدوي:</span>
-                                    <span id="modalManualDiscount">-0 IQD</span>
-                                </div>
-                                <hr class="border-secondary">
-                                <div class="d-flex justify-content-between">
-                                    <strong class="fs-5">الصافي:</strong>
-                                    <strong class="text-info fs-4" id="modalTotal">0 IQD</strong>
-                                </div>
-                            </div>
-                        </div>
+<!-- ✅ FIXED: Debt Modal -->
+<div class="modal fade" id="debtModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form class="modal-content" id="debtForm" method="POST"
+          action="{{ url_for('pos.finish_session_as_debt', session_id=session.id) }}">
+      <div class="modal-header">
+        <h5 class="modal-title">تسجيل دين</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
 
-                        <!-- الخصم والدفع -->
-                        <div class="col-md-6">
-                            <h6 class="mb-3">💰 الدفع والخصم</h6>
-
-                            <!-- خصم يدوي -->
-                            <div class="mb-3">
-                                <label class="form-label">خصم يدوي (IQD)</label>
-                                <input type="number" name="manual_discount" id="manualDiscountInput"
-                                       class="form-control bg-dark text-white border-secondary"
-                                       value="0" min="0" onchange="updateModalTotals()">
-                            </div>
-
-                            <!-- سبب الخصم -->
-                            <div class="mb-3">
-                                <label class="form-label">سبب الخصم (اختياري)</label>
-                                <input type="text" name="discount_note" id="discountNoteInput"
-                                       class="form-control bg-dark text-white border-secondary"
-                                       placeholder="مثال: زبون دائم، عرض خاص...">
-                            </div>
-
-                            <!-- طريقة الدفع -->
-                            <div class="mb-3">
-                                <label class="form-label">طريقة الدفع</label>
-                                <div class="d-flex gap-2">
-                                    <button type="button" class="btn btn-outline-success flex-fill payment-method active" data-method="cash">
-                                        <i class="fas fa-money-bill-wave me-2"></i>نقدي
-                                    </button>
-                                    <button type="button" class="btn btn-outline-info flex-fill payment-method" data-method="card">
-                                        <i class="fas fa-credit-card me-2"></i>بطاقة
-                                    </button>
-                                </div>
-                                <input type="hidden" name="payment_method" id="paymentMethod" value="cash">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Hidden fields -->
-                    <input type="hidden" name="play_time_minutes" id="playTimeMinutes" value="0">
-                    <input type="hidden" name="play_time_price" id="playTimePriceInput" value="0">
-                    <input type="hidden" name="auto_discount" id="autoDiscountInput" value="0">
-                </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="submit" class="btn btn-pos-success btn-lg">
-                        <i class="fas fa-check me-1"></i> تأكيد الدفع
-                    </button>
-                </div>
-            </form>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label">الاسم *</label>
+          <input name="name" id="debtName" class="form-control" required>
         </div>
+
+        <div class="mb-2">
+          <label class="form-label">رقم الهاتف</label>
+          <input name="phone" id="debtPhone" class="form-control">
+        </div>
+
+        <div class="mb-2">
+          <label class="form-label">ملاحظة</label>
+          <textarea name="note" id="debtNote" class="form-control" rows="2"></textarea>
+        </div>
+
+        <div class="alert alert-info mb-0">
+          المبلغ: <b id="debtTotalAmount">0</b> IQD
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">إلغاء</button>
+        <button class="btn btn-warning" type="submit" id="submitDebtBtn">
+          <i class="fas fa-save me-2"></i>حفظ الدين
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content" style="border-radius: 15px; border: none;">
+      <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); color: white; border-radius: 15px 15px 0 0;">
+        <h5 class="modal-title">
+          <i class="fas fa-money-bill me-2"></i>
+          إتمام الدفع
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form action="{{ url_for('pos.close_session', session_id=session.id) }}" method="POST">
+        <div class="modal-body">
+          <div class="row g-4">
+            <!-- Summary -->
+            <div class="col-md-6">
+              <h6 class="mb-3">تفاصيل الفاتورة</h6>
+              <div class="stat-card">
+                {% if session.session_type == 'stadium' %}
+                <div class="d-flex justify-content-between mb-2">
+                  <span>وقت اللعب:</span>
+                  <span id="modalPlayTime">0 IQD</span>
+                </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-between mb-2">
+                  <span>المنتجات:</span>
+                  <span>{{ '{:,.0f}'.format(session.get_orders_total()) }} IQD</span>
+                </div>
+
+                <hr>
+
+                <div class="d-flex justify-content-between mb-2">
+                  <span>المجموع الفرعي:</span>
+                  <span id="modalSubtotal">0 IQD</span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-2 text-success d-none" id="modalAutoDiscountRow">
+                  <span>خصم تلقائي:</span>
+                  <span id="modalAutoDiscount">-0 IQD</span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-2 text-warning d-none" id="modalManualDiscountRow">
+                  <span>خصم يدوي:</span>
+                  <span id="modalManualDiscount">-0 IQD</span>
+                </div>
+
+                <hr style="border-width: 2px;">
+
+                <div class="d-flex justify-content-between">
+                  <strong class="fs-5">الصافي:</strong>
+                  <strong class="fs-4" style="color: var(--primary-color);" id="modalTotal">0 IQD</strong>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Options -->
+            <div class="col-md-6">
+              <h6 class="mb-3">خيارات الدفع</h6>
+
+              <div class="mb-3">
+                <label class="form-label">خصم يدوي (IQD)</label>
+                <input type="number"
+                       name="manual_discount"
+                       id="manualDiscountInput"
+                       class="form-control"
+                       value="0"
+                       min="0"
+                       onchange="updateModalTotals()">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">سبب الخصم (اختياري)</label>
+                <input type="text"
+                       name="discount_note"
+                       class="form-control"
+                       placeholder="مثال: زبون دائم، عرض خاص...">
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label">طريقة الدفع</label>
+                <div class="d-flex gap-2">
+                  <button type="button" class="btn btn-outline-success flex-fill payment-method active" data-method="cash">
+                    <i class="fas fa-money-bill-wave me-2"></i>نقدي
+                  </button>
+                  <button type="button" class="btn btn-outline-info flex-fill payment-method" data-method="card">
+                    <i class="fas fa-credit-card me-2"></i>بطاقة
+                  </button>
+                </div>
+                <input type="hidden" name="payment_method" id="paymentMethod" value="cash">
+              </div>
+            </div>
+          </div>
+
+          <input type="hidden" name="play_time_minutes" id="playTimeMinutes" value="0">
+          <input type="hidden" name="play_time_price" id="playTimePriceInput" value="0">
+          <input type="hidden" name="auto_discount" id="autoDiscountInput" value="0">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+          <button type="submit" class="btn btn-success btn-lg">
+            <i class="fas fa-check me-2"></i>
+            تأكيد الدفع
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    const sessionId = {{ session.id }};
-    const sessionType = '{{ session.session_type }}';
-    const startTime = new Date('{{ session.start_time.isoformat() }}');
-    const pricePerHour = {{ settings.price_per_hour if settings else 40000 }};
-    const discountStartHour = {{ settings.discount_start_hour if settings else 12 }};
-    const discountEndHour = {{ settings.discount_end_hour if settings else 16 }};
-    const discountAmount = {{ settings.discount_amount if settings and settings.discount_amount else 10000 }};
-    const ordersTotal = {{ session.get_orders_total() }};
+const sessionId = {{ session.id }};
+const sessionType = '{{ session.session_type }}';
+const startTime = new Date('{{ session.start_time.isoformat() }}');
+const pricePerHour = {{ stadium_price_per_hour if stadium_price_per_hour is not none else 40000 }};
+const sessionEndTimeStr = {{ ('"' ~ session.end_time.isoformat() ~ '"') if session.end_time else 'null' }};
+let isPlayFinished = sessionEndTimeStr !== null;
+const endTime = sessionEndTimeStr ? new Date(sessionEndTimeStr) : null;
+const discountPercentage = {{ settings.discount_percentage if settings else 0 }};
+const discountStartHour = {{ settings.discount_start_hour if settings else 12 }};
+const discountEndHour = {{ settings.discount_end_hour if settings else 16 }};
+const ordersTotal = {{ session.get_orders_total() }};
 
-    let currentTimePrice = 0;
-    let currentHours = 0;
-    let currentAutoDiscount = 0;
+let currentTimePrice = 0;
+let currentHours = 0;
+let currentAutoDiscount = 0;
 
-    // التايمر
-    function updateTimer() {
-        if (sessionType !== 'stadium') return;
+function formatNumber(num) {
+  return (Number(num || 0)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
 
-        const now = new Date();
-        const diff = Math.floor((now - startTime) / 1000);
+function updateTimer() {
+  if (sessionType !== 'stadium') return;
 
-        const hours = Math.floor(diff / 3600);
-        const minutes = Math.floor((diff % 3600) / 60);
-        const seconds = diff % 60;
+  const now = new Date();
+  const stopPoint = (isPlayFinished && endTime) ? endTime : now;
+  const diff = Math.floor((stopPoint - startTime) / 1000);
 
-        // عرض التايمر
-        document.getElementById('timer').textContent =
-            String(hours).padStart(2, '0') + ':' +
-            String(minutes).padStart(2, '0') + ':' +
-            String(seconds).padStart(2, '0');
+  const hours = Math.floor(diff / 3600);
+  const minutes = Math.floor((diff % 3600) / 60);
+  const seconds = diff % 60;
 
-        // حساب السعر بالساعة (كل ساعة أو جزء منها)
-        const totalMinutes = hours * 60 + minutes;
-        currentHours = Math.ceil(totalMinutes / 60); // تقريب لأعلى
-        if (currentHours === 0 && totalMinutes > 0) currentHours = 1;
+  document.getElementById('timer').textContent =
+    String(hours).padStart(2, '0') + ':' +
+    String(minutes).padStart(2, '0') + ':' +
+    String(seconds).padStart(2, '0');
 
-        currentTimePrice = currentHours * pricePerHour;
+  const totalMinutes = hours * 60 + minutes;
+  currentHours = Math.max(1, Math.ceil(totalMinutes / 60));
+  currentTimePrice = currentHours * pricePerHour;
 
-        // تحقق من الخصم التلقائي (12-16)
-        const startHour = startTime.getHours();
-        currentAutoDiscount = 0;
+  // Auto discount
+  const startHour = startTime.getHours();
+  currentAutoDiscount = 0;
 
-        if (startHour >= discountStartHour && startHour < discountEndHour) {
-            currentAutoDiscount = discountAmount;
-            document.getElementById('discountBadge').classList.remove('d-none');
-            document.getElementById('autoDiscountRow').classList.remove('d-none');
-            document.getElementById('autoDiscountAmount').textContent = '-' + formatNumber(currentAutoDiscount) + ' IQD';
-        } else {
-            document.getElementById('discountBadge').classList.add('d-none');
-            document.getElementById('autoDiscountRow').classList.add('d-none');
-        }
+  if (startHour >= discountStartHour && startHour < discountEndHour && discountPercentage > 0) {
+    currentAutoDiscount = Math.round(currentTimePrice * (discountPercentage / 100));
+    document.getElementById('autoDiscountRow').classList.remove('d-none');
+    document.getElementById('autoDiscountAmount').textContent = '-' + formatNumber(currentAutoDiscount) + ' IQD';
+  } else {
+    document.getElementById('autoDiscountRow').classList.add('d-none');
+  }
 
-        // تحديث الأسعار
-        document.getElementById('timePrice').textContent = formatNumber(currentTimePrice) + ' IQD';
-        document.getElementById('playTimeText').textContent = currentHours + ' ساعة';
-        document.getElementById('playTimePrice').textContent = formatNumber(currentTimePrice) + ' IQD';
-        document.getElementById('timePriceSummary').textContent = formatNumber(currentTimePrice) + ' IQD';
+  // Update displays
+  document.getElementById('playTimeText').textContent = currentHours + ' ساعة';
+  document.getElementById('playTimePrice').textContent = formatNumber(currentTimePrice) + ' IQD';
+  document.getElementById('timePriceSummary').textContent = formatNumber(currentTimePrice) + ' IQD';
 
-        // المجموع الكلي
-        const subtotal = currentTimePrice + ordersTotal;
-        const grandTotal = Math.max(0, subtotal - currentAutoDiscount);
-        document.getElementById('totalAmount').textContent = formatNumber(grandTotal) + ' IQD';
-    }
+  // Total
+  const subtotal = currentTimePrice + ordersTotal;
+  const grandTotal = Math.max(0, subtotal - currentAutoDiscount);
+  document.getElementById('totalAmount').textContent = formatNumber(grandTotal) + ' IQD';
+}
 
-    // تحديث كل ثانية
-    if (sessionType === 'stadium') {
-        updateTimer();
-        setInterval(updateTimer, 1000);
+if (sessionType === 'stadium') {
+  updateTimer();
+  setInterval(updateTimer, 1000);
+} else {
+  document.getElementById('totalAmount').textContent = formatNumber(ordersTotal) + ' IQD';
+}
+
+function updateModalTotals() {
+  const manualDiscount = parseInt(document.getElementById('manualDiscountInput').value) || 0;
+  const subtotal = currentTimePrice + ordersTotal;
+  const totalDiscount = currentAutoDiscount + manualDiscount;
+  const grandTotal = Math.max(0, subtotal - totalDiscount);
+
+  document.getElementById('modalSubtotal').textContent = formatNumber(subtotal) + ' IQD';
+  document.getElementById('modalManualDiscount').textContent = '-' + formatNumber(manualDiscount) + ' IQD';
+  document.getElementById('modalTotal').textContent = formatNumber(grandTotal) + ' IQD';
+
+  if (manualDiscount > 0) {
+    document.getElementById('modalManualDiscountRow').classList.remove('d-none');
+  } else {
+    document.getElementById('modalManualDiscountRow').classList.add('d-none');
+  }
+}
+
+function addToCart(productId, productName, price) {
+  fetch(`/pos/session/${sessionId}/add-item`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: `product_id=${productId}&quantity=1`
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) location.reload();
+    else alert(data.message);
+  });
+}
+
+function updateQty(itemId, newQty) {
+  fetch(`/pos/session/${sessionId}/update-quantity`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body: `item_id=${itemId}&quantity=${newQty}`
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) location.reload();
+  });
+}
+
+function removeItem(itemId) {
+  if (!confirm('حذف هذا المنتج؟')) return;
+  fetch(`/pos/session/${sessionId}/remove-item/${itemId}`, { method: 'POST' })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) location.reload();
+    });
+}
+
+function closeSession() {
+  document.getElementById('playTimeMinutes').value = currentHours * 60;
+  document.getElementById('playTimePriceInput').value = currentTimePrice;
+  document.getElementById('autoDiscountInput').value = currentAutoDiscount;
+
+  if (sessionType === 'stadium') {
+    document.getElementById('modalPlayTime').textContent = formatNumber(currentTimePrice) + ' IQD';
+    document.getElementById('modalAutoDiscount').textContent = '-' + formatNumber(currentAutoDiscount) + ' IQD';
+
+    if (currentAutoDiscount > 0) {
+      document.getElementById('modalAutoDiscountRow').classList.remove('d-none');
     } else {
-        // للطاولات فقط
-        document.getElementById('totalAmount').textContent = formatNumber(ordersTotal) + ' IQD';
+      document.getElementById('modalAutoDiscountRow').classList.add('d-none');
     }
+  }
 
-    function formatNumber(num) {
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    }
+  updateModalTotals();
+  new bootstrap.Modal(document.getElementById('paymentModal')).show();
+}
 
-    // تحديث المجاميع في المودال
-    function updateModalTotals() {
-        const manualDiscount = parseInt(document.getElementById('manualDiscountInput').value) || 0;
-        const subtotal = currentTimePrice + ordersTotal;
-        const totalDiscount = currentAutoDiscount + manualDiscount;
-        const grandTotal = Math.max(0, subtotal - totalDiscount);
+function cancelSession() {
+  if (!confirm('هل تريد إلغاء هذه الجلسة؟ سيتم حذف كل الطلبات!')) return;
+  fetch(`/pos/session/${sessionId}/cancel`, { method: 'POST' })
+    .then(() => window.location.href = '/pos');
+}
 
-        document.getElementById('modalSubtotal').textContent = formatNumber(subtotal) + ' IQD';
-        document.getElementById('modalManualDiscount').textContent = '-' + formatNumber(manualDiscount) + ' IQD';
-        document.getElementById('modalTotal').textContent = formatNumber(grandTotal) + ' IQD';
+// Payment method selection
+document.querySelectorAll('.payment-method').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.payment-method').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('paymentMethod').value = this.dataset.method;
+  });
+});
 
-        // إظهار/إخفاء صف الخصم اليدوي
-        if (manualDiscount > 0) {
-            document.getElementById('modalManualDiscountRow').classList.remove('d-none');
-        } else {
-            document.getElementById('modalManualDiscountRow').classList.add('d-none');
-        }
-    }
+// Category filter
+document.querySelectorAll('.category-tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
 
-    // إضافة منتج للسلة
-    function addToCart(productId, productName, price) {
-        fetch(`/pos/session/${sessionId}/add-item`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: `product_id=${productId}&quantity=1`
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert(data.message);
-            }
-        });
-    }
-
-    // تحديث الكمية
-    function updateQty(itemId, newQty) {
-        fetch(`/pos/session/${sessionId}/update-quantity`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: `item_id=${itemId}&quantity=${newQty}`
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            }
-        });
-    }
-
-    // حذف منتج
-    function removeItem(itemId) {
-        if (!confirm('حذف هذا المنتج؟')) return;
-
-        fetch(`/pos/session/${sessionId}/remove-item/${itemId}`, {
-            method: 'POST'
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            }
-        });
-    }
-
-    // إنهاء الجلسة
-    function closeSession() {
-        // تحديث القيم
-        document.getElementById('playTimeMinutes').value = currentHours * 60;
-        document.getElementById('playTimePriceInput').value = currentTimePrice;
-        document.getElementById('autoDiscountInput').value = currentAutoDiscount;
-
-        if (sessionType === 'stadium') {
-            document.getElementById('modalPlayTime').textContent = formatNumber(currentTimePrice) + ' IQD';
-            document.getElementById('modalAutoDiscount').textContent = '-' + formatNumber(currentAutoDiscount) + ' IQD';
-
-            if (currentAutoDiscount > 0) {
-                document.getElementById('modalAutoDiscountRow').classList.remove('d-none');
-            } else {
-                document.getElementById('modalAutoDiscountRow').classList.add('d-none');
-            }
-        }
-
-        updateModalTotals();
-
-        const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
-        modal.show();
-    }
-
-    // إلغاء الجلسة
-    function cancelSession() {
-        if (!confirm('هل تريد إلغاء هذه الجلسة؟ سيتم حذف كل الطلبات!')) return;
-
-        fetch(`/pos/session/${sessionId}/cancel`, {
-            method: 'POST'
-        })
-        .then(res => {
-            window.location.href = '/pos';
-        });
-    }
-
-    // اختيار طريقة الدفع
-    document.querySelectorAll('.payment-method').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.payment-method').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            document.getElementById('paymentMethod').value = this.dataset.method;
-        });
+    const category = this.dataset.category;
+    document.querySelectorAll('.product-item').forEach(item => {
+      if (category === 'all' || item.dataset.category === category) {
+        item.style.display = 'block';
+      } else {
+        item.style.display = 'none';
+      }
     });
+  });
+});
 
-    // فلترة التصنيفات
-    document.querySelectorAll('.category-tab').forEach(tab => {
-        tab.addEventListener('click', function() {
-            document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
+// Search
+document.getElementById('searchInput').addEventListener('input', function() {
+  const search = this.value.toLowerCase();
+  document.querySelectorAll('.product-item').forEach(item => {
+    const name = item.querySelector('h6').textContent.toLowerCase();
+    item.style.display = name.includes(search) ? 'block' : 'none';
+  });
+});
 
-            const category = this.dataset.category;
-            document.querySelectorAll('.product-item').forEach(item => {
-                if (category === 'all' || item.dataset.category === category) {
-                    item.style.display = 'block';
-                } else {
-                    item.style.display = 'none';
-                }
-            });
-        });
+// Barcode scanner
+document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const barcode = this.value.trim();
+    if (!barcode) return;
+
+    fetch('/pos/scan-barcode', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({barcode: barcode})
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        addToCart(data.product.id, data.product.name_ku, data.product.price);
+        this.value = '';
+        this.focus();
+      } else {
+        alert('المنتج غير موجود!');
+        this.value = '';
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      this.value = '';
     });
+  }
+});
 
-    // البحث
-    document.getElementById('searchInput').addEventListener('input', function() {
-        const search = this.value.toLowerCase();
-        document.querySelectorAll('.product-item').forEach(item => {
-            const name = item.querySelector('h6').textContent.toLowerCase();
-            item.style.display = name.includes(search) ? 'block' : 'none';
-        });
-    });
+// ========================================
+// ✅ DEBT MODAL FUNCTIONS (FIX FOR LAG)
+// ========================================
 
-    // سكان الباركود
-    document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const barcode = this.value.trim();
-            if (barcode) {
-                fetch('/pos/scan-barcode', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: `barcode=${barcode}`
-                })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        addToCart(data.product.id, data.product.name_ku, data.product.price);
-                    } else {
-                        alert('المنتج غير موجود!');
-                    }
-                    this.value = '';
-                });
-            }
-        }
-    });
+// Open debt modal with calculated total
+function openDebtModal() {
+  // Calculate current total
+  let totalAmount = ordersTotal;
+
+  if (sessionType === 'stadium') {
+    totalAmount += currentTimePrice;
+    totalAmount -= currentAutoDiscount;
+  }
+
+  // Update modal display
+  document.getElementById('debtTotalAmount').textContent = formatNumber(totalAmount);
+
+  // Clear form
+  document.getElementById('debtName').value = '';
+  document.getElementById('debtPhone').value = '';
+  document.getElementById('debtNote').value = '';
+
+  // Open modal
+  const modal = new bootstrap.Modal(document.getElementById('debtModal'));
+  modal.show();
+}
+
+// Handle form submission with loading state
+document.getElementById('debtForm').addEventListener('submit', function(e) {
+  const submitBtn = document.getElementById('submitDebtBtn');
+  const nameInput = document.getElementById('debtName');
+
+  // Validate name
+  if (!nameInput.value.trim()) {
+    e.preventDefault();
+    alert('الرجاء إدخال الاسم!');
+    nameInput.focus();
+    return false;
+  }
+
+  // Show loading state
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
+
+  // Allow form to submit normally
+  return true;
+});
+
+// Reset form when modal closes
+document.getElementById('debtModal').addEventListener('hidden.bs.modal', function() {
+  const submitBtn = document.getElementById('submitDebtBtn');
+  submitBtn.disabled = false;
+  submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>حفظ الدين';
+});
 </script>
 {% endblock %}

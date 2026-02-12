@@ -180,4 +180,97 @@
         </div>
     </div>
 </div>
+
+<!-- ✅ TODAY HISTORY LOG -->
+<div class="row g-4 mt-1">
+  <div class="col-12">
+    <div class="table-card">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">
+          <i class="fas fa-history me-2" style="color:#E57625;"></i>
+          {% if current_lang == 'ku' %}مێژووی ئەمڕۆ{% elif current_lang == 'ar' %}سجل اليوم{% else %}Today's History{% endif %}
+        </h5>
+
+        <!-- optional small refresh hint -->
+        <small class="text-muted">
+          {% if current_lang == 'ar' %}آخر 20 عملية{% elif current_lang == 'ku' %}دوایین ٢٠ کردار{% else %}Last 20 actions{% endif %}
+        </small>
+      </div>
+
+      {% if today_logs %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle">
+          <thead>
+            <tr>
+              <th style="width:160px;">
+                {% if current_lang == 'ku' %}کات{% elif current_lang == 'ar' %}الوقت{% else %}Time{% endif %}
+              </th>
+              <th>
+                {% if current_lang == 'ku' %}کردار{% elif current_lang == 'ar' %}العملية{% else %}Action{% endif %}
+              </th>
+              <th style="width:160px;">
+                {% if current_lang == 'ku' %}بەکارهێنەر{% elif current_lang == 'ar' %}المستخدم{% else %}User{% endif %}
+              </th>
+              <th style="width:160px;">
+                {% if current_lang == 'ku' %}بڕی پارە{% elif current_lang == 'ar' %}المبلغ{% else %}Amount{% endif %}
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for x in today_logs %}
+            <tr>
+              <td class="text-muted">
+                {{ x.created_at.strftime('%H:%M:%S') if x.created_at else '-' }}
+              </td>
+
+              <td>
+                <div style="font-weight:800;">{{ x.title or x.action }}</div>
+
+                {% if x.note %}
+                  <small class="text-muted d-block">{{ x.note }}</small>
+                {% endif %}
+
+                <div class="mt-1">
+                  <span class="badge bg-dark">
+                    {{ x.entity_type or '-' }}{% if x.entity_id %} #{{ x.entity_id }}{% endif %}
+                  </span>
+                  {% if x.payment_method %}
+                    <span class="badge bg-secondary">{{ x.payment_method }}</span>
+                  {% endif %}
+                  {% if x.action %}
+                    <span class="badge bg-light text-dark">{{ x.action }}</span>
+                  {% endif %}
+                </div>
+              </td>
+
+              <td>
+                {% if x.user %}
+                  {{ x.user.username }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+
+              <td style="font-weight:900;">
+                {% if x.amount %}
+                  {{ "{:,.0f}".format(x.amount) }} {{ t('iqd') }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <p class="text-muted text-center py-4">
+          {% if current_lang == 'ku' %}هیچ کردارێک نیە لە ئەمڕۆ{% elif current_lang == 'ar' %}لا يوجد سجل اليوم{% else %}No activity today{% endif %}
+        </p>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
 {% endblock %}

@@ -1,427 +1,236 @@
 <!-- app/templates/navbar.html -->
-<!-- Language-aware Navbar with Kurdish as default -->
-<nav class="navbar navbar-expand-lg sticky-top shadow" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
-    <div class="container">
-        <!-- Logo -->
-        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
-            <img src="{{ url_for('static', filename='images/logo_navbar.png') }}" alt="Padel House" height="45" class="me-2" onerror="this.style.display='none'">
-            <span class="fw-bold" style="color: #E57625;">{{ t('site_name') }}</span>
-        </a>
+<nav class="navbar navbar-expand-lg sticky-top shadow"
+     style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);">
+  <div class="container">
 
-        <!-- Mobile Toggle -->
-        <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <i class="fas fa-bars text-white"></i>
+    <!-- Logo -->
+    <a class="navbar-brand d-flex align-items-center" href="{{ url_for('main.index') }}">
+      <img src="{{ url_for('static', filename='images/logo_navbar.png') }}"
+           alt="Padel House" height="45" class="me-2" onerror="this.style.display='none'">
+      <span class="fw-bold" style="color:#E57625;">{{ t('site_name') }}</span>
+    </a>
+
+    <!-- Mobile Toggle -->
+    <button class="navbar-toggler border-0" type="button"
+            data-bs-toggle="collapse" data-bs-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="fas fa-bars text-white"></i>
+    </button>
+
+    <!-- Nav Items -->
+    <div class="collapse navbar-collapse" id="navbarNav">
+
+      <!-- Center Links -->
+      <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-2">
+        <li class="nav-item">
+          <a class="nav-link px-3 text-white {% if request.endpoint == 'main.index' %}active fw-bold{% endif %}"
+             href="{{ url_for('main.index') }}">
+            <i class="fas fa-home me-1" style="color:#E57625;"></i> {{ t('home') }}
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link px-3 text-white {% if 'booking' in request.endpoint|default('', true) %}active fw-bold{% endif %}"
+             href="{{ url_for('booking.booking_page') }}">
+            <i class="fas fa-calendar-check me-1" style="color:#E57625;"></i> {{ t('booking') }}
+          </a>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link px-3 text-white {% if 'store' in request.endpoint|default('', true) %}active fw-bold{% endif %}"
+             href="{{ url_for('store.products') }}">
+            <i class="fas fa-store me-1" style="color:#E57625;"></i> {{ t('store') }}
+          </a>
+        </li>
+      </ul>
+
+      <!-- Right Side -->
+      <div class="d-flex align-items-center gap-3">
+
+        <!-- ✅ CART BUTTON (OFFCANVAS) -->
+        <button class="btn btn-outline-light btn-sm position-relative cart-btn"
+                type="button"
+                data-bs-toggle="offcanvas"
+                data-bs-target="#cartOffcanvas"
+                aria-controls="cartOffcanvas">
+          <i class="fas fa-shopping-cart"></i>
+          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                id="navCartBadge" style="display:none;">0</span>
         </button>
 
-        <!-- Nav Items -->
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <!-- Center Navigation Links -->
-            <ul class="navbar-nav mx-auto mb-2 mb-lg-0 gap-2">
-                <li class="nav-item">
-                    <a class="nav-link px-3 text-white {% if request.endpoint == 'main.index' %}active fw-bold{% endif %}" href="{{ url_for('main.index') }}">
-                        <i class="fas fa-home me-1" style="color: #E57625;"></i> {{ t('home') }}
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link px-3 text-white {% if 'booking' in request.endpoint|default('', true) %}active fw-bold{% endif %}" href="{{ url_for('booking.booking_page') }}">
-                        <i class="fas fa-calendar-check me-1" style="color: #E57625;"></i> {{ t('booking') }}
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link px-3 text-white {% if 'store' in request.endpoint|default('', true) %}active fw-bold{% endif %}" href="{{ url_for('store.products') }}">
-                        <i class="fas fa-store me-1" style="color: #E57625;"></i> {{ t('store') }}
-                    </a>
-                </li>
-            </ul>
+        <!-- LANGUAGE -->
+        <div class="dropdown">
+          <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center gap-2"
+                  type="button"
+                  id="languageDropdown"
+                  data-bs-toggle="dropdown"
+                  aria-expanded="false">
+            <span>{{ language_flags[current_lang] }}</span>
+            <span>{{ language_names[current_lang] }}</span>
+          </button>
 
-            <!-- Right Side: Cart + Language + Admin -->
-            <div class="d-flex align-items-center gap-3">
-
-                <!-- ============================================ -->
-                <!-- SHOPPING CART DROPDOWN -->
-                <!-- ============================================ -->
-                <div class="dropdown">
-                    <button class="btn btn-outline-light btn-sm position-relative cart-btn"
-                            type="button"
-                            id="cartDropdown"
-                            data-bs-toggle="dropdown"
-                            data-bs-auto-close="outside"
-                            aria-expanded="false">
-                        <i class="fas fa-shopping-cart"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger cart-badge" id="navCartBadge" style="display: none;">
-                            0
-                        </span>
-                    </button>
-
-                    <!-- Cart Dropdown Menu -->
-                    <div class="dropdown-menu dropdown-menu-end cart-dropdown p-0" aria-labelledby="cartDropdown">
-                        <!-- Cart Header -->
-                        <div class="cart-dropdown-header">
-                            <i class="fas fa-shopping-cart me-2"></i>
-                            <span>{% if current_lang == 'ku' %}سەبەتەی کڕین{% elif current_lang == 'ar' %}سلة التسوق{% else %}Shopping Cart{% endif %}</span>
-                            <span class="cart-count-text ms-auto" id="cartCountText">(0)</span>
-                        </div>
-
-                        <!-- Cart Items -->
-                        <div class="cart-dropdown-body" id="cartDropdownItems">
-                            <div class="cart-empty text-center py-4">
-                                <i class="fas fa-shopping-basket fa-3x text-muted mb-3"></i>
-                                <p class="text-muted mb-0">{% if current_lang == 'ku' %}سەبەتە بەتاڵە{% elif current_lang == 'ar' %}السلة فارغة{% else %}Cart is empty{% endif %}</p>
-                            </div>
-                        </div>
-
-                        <!-- Cart Footer -->
-                        <div class="cart-dropdown-footer" id="cartDropdownFooter" style="display: none;">
-                            <div class="d-flex justify-content-between mb-3">
-                                <strong>{% if current_lang == 'ku' %}کۆی گشتی:{% elif current_lang == 'ar' %}المجموع:{% else %}Total:{% endif %}</strong>
-                                <strong class="text-primary" id="cartDropdownTotal">0 {{ t('iqd') }}</strong>
-                            </div>
-                            <div class="d-grid gap-2">
-                                <a href="{{ url_for('store.products') }}" class="btn btn-warning btn-sm">
-                                    <i class="fas fa-shopping-bag me-1"></i>
-                                    {% if current_lang == 'ku' %}بینینی فرۆشگا{% elif current_lang == 'ar' %}عرض المتجر{% else %}View Store{% endif %}
-                                </a>
-                                <button class="btn btn-outline-danger btn-sm" onclick="clearNavCart()">
-                                    <i class="fas fa-trash me-1"></i>
-                                    {% if current_lang == 'ku' %}بەتاڵکردنەوە{% elif current_lang == 'ar' %}إفراغ السلة{% else %}Clear Cart{% endif %}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ============================================ -->
-                <!-- LANGUAGE SWITCHER -->
-                <!-- ============================================ -->
-                <div class="dropdown">
-                    <button class="btn btn-outline-light btn-sm dropdown-toggle d-flex align-items-center gap-2"
-                            type="button"
-                            id="languageDropdown"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false">
-                        <span>{{ language_flags[current_lang] }}</span>
-                        <span>{{ language_names[current_lang] }}</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
-                        {% for lang in languages %}
-                        <li>
-                            <a class="dropdown-item d-flex align-items-center gap-2 {% if lang == current_lang %}active bg-primary{% endif %}"
-                               href="{{ url_for('main.set_language', lang=lang) }}">
-                                <span>{{ language_flags[lang] }}</span>
-                                <span>{{ language_names[lang] }}</span>
-                                {% if lang == current_lang %}
-                                <i class="fas fa-check ms-auto"></i>
-                                {% endif %}
-                            </a>
-                        </li>
-                        {% endfor %}
-                    </ul>
-                </div>
-
-                <!-- Admin Button -->
-                {% if current_user.is_authenticated %}
-                <a href="{{ url_for('admin.dashboard') }}" class="btn btn-warning btn-sm">
-                    <i class="fas fa-user-shield me-1"></i> {{ t('admin') }}
+          <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
+            {% for lang in languages %}
+              <li>
+                <a class="dropdown-item d-flex align-items-center gap-2 {% if lang == current_lang %}active bg-primary{% endif %}"
+                   href="{{ url_for('main.set_language', lang=lang) }}">
+                  <span>{{ language_flags[lang] }}</span>
+                  <span>{{ language_names[lang] }}</span>
+                  {% if lang == current_lang %}<i class="fas fa-check ms-auto"></i>{% endif %}
                 </a>
-                {% else %}
-                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-warning btn-sm">
-                    <i class="fas fa-sign-in-alt me-1"></i> {{ t('login') }}
-                </a>
-                {% endif %}
-            </div>
+              </li>
+            {% endfor %}
+          </ul>
         </div>
-    </div>
+
+  </div>
 </nav>
 
+<!-- ✅ OFFCANVAS CART -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="cartOffcanvas" aria-labelledby="cartOffcanvasLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="cartOffcanvasLabel">
+      <i class="fas fa-shopping-cart me-2" style="color:#E57625;"></i>
+      {% if current_lang == 'ku' %}سەبەتەی کڕین{% elif current_lang == 'ar' %}سلة التسوق{% else %}Shopping Cart{% endif %}
+      <span class="text-muted ms-2" id="cartCountText">(0)</span>
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+
+  <div class="offcanvas-body p-0">
+    <div id="cartOffcanvasItems" class="p-3">
+      <!-- items -->
+    </div>
+
+    <div class="p-3 border-top" id="cartOffcanvasFooter" style="display:none;">
+      <div class="d-flex justify-content-between mb-3">
+        <strong>{% if current_lang == 'ku' %}کۆی گشتی:{% elif current_lang == 'ar' %}المجموع:{% else %}Total:{% endif %}</strong>
+        <strong style="color:#E57625;" id="cartOffcanvasTotal">0 {{ t('iqd') }}</strong>
+      </div>
+
+      <div class="d-grid gap-2">
+        <a href="{{ url_for('store.cart') }}" class="btn btn-warning btn-sm">
+          <i class="fas fa-shopping-bag me-1"></i>
+          {% if current_lang == 'ku' %}چوونە سەبەت{% elif current_lang == 'ar' %}الذهاب للسلة{% else %}Go to Cart{% endif %}
+        </a>
+
+        <a href="{{ url_for('store.checkout') }}" class="btn btn-outline-success btn-sm">
+          <i class="fas fa-credit-card me-1"></i>
+          {% if current_lang == 'ku' %}پارەدان{% elif current_lang == 'ar' %}الدفع{% else %}Checkout{% endif %}
+        </a>
+
+        <button class="btn btn-outline-danger btn-sm" onclick="clearNavCart()">
+          <i class="fas fa-trash me-1"></i>
+          {% if current_lang == 'ku' %}بەتاڵکردنەوە{% elif current_lang == 'ar' %}إفراغ السلة{% else %}Clear Cart{% endif %}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
-    .navbar .nav-link {
-        transition: all 0.3s ease;
-        border-radius: 8px;
-    }
-    .navbar .nav-link:hover {
-        background: rgba(229, 118, 37, 0.2);
-        transform: translateY(-2px);
-    }
-    .navbar .nav-link.active {
-        background: rgba(229, 118, 37, 0.3);
-        color: #E57625 !important;
-    }
-    .dropdown-menu {
-        min-width: 150px;
-    }
-    .dropdown-item {
-        padding: 0.5rem 1rem;
-    }
-    .dropdown-item:hover {
-        background-color: #f8f9fa;
-    }
-    .dropdown-item.active {
-        background-color: #E57625 !important;
-        color: white !important;
-    }
+  .cart-btn{padding:.4rem .6rem;transition:all .25s ease;}
+  .cart-btn:hover{background:rgba(229,118,37,.3) !important;border-color:#E57625 !important;transform:scale(1.05);}
 
-    /* Cart Button Styles */
-    .cart-btn {
-        position: relative;
-        padding: 0.4rem 0.6rem;
-        transition: all 0.3s ease;
-    }
-    .cart-btn:hover {
-        background: rgba(229, 118, 37, 0.3) !important;
-        border-color: #E57625 !important;
-        transform: scale(1.1);
-    }
-    .cart-badge {
-        font-size: 0.65rem;
-        padding: 0.25em 0.5em;
-        min-width: 18px;
-        animation: cartPulse 0.3s ease;
-    }
-    @keyframes cartPulse {
-        0% { transform: translate(-50%, -50%) scale(0.5); }
-        50% { transform: translate(-50%, -50%) scale(1.2); }
-        100% { transform: translate(-50%, -50%) scale(1); }
-    }
-    @keyframes cartBounce {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.2); }
-    }
-    .cart-btn.bounce {
-        animation: cartBounce 0.4s ease;
-    }
-
-    /* Cart Dropdown Styles */
-    .cart-dropdown {
-        width: 320px;
-        max-width: 90vw;
-        border: none;
-        border-radius: 16px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-        overflow: hidden;
-    }
-
-    .cart-dropdown-header {
-        background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        color: white;
-        padding: 15px;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-    }
-
-    .cart-dropdown-header i {
-        color: #E57625;
-    }
-
-    .cart-count-text {
-        font-size: 0.85rem;
-        opacity: 0.8;
-    }
-
-    .cart-dropdown-body {
-        max-height: 300px;
-        overflow-y: auto;
-        padding: 0;
-    }
-
-    .cart-dropdown-body::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .cart-dropdown-body::-webkit-scrollbar-track {
-        background: #f1f1f1;
-    }
-
-    .cart-dropdown-body::-webkit-scrollbar-thumb {
-        background: #E57625;
-        border-radius: 3px;
-    }
-
-    .cart-item {
-        display: flex;
-        align-items: center;
-        padding: 12px 15px;
-        border-bottom: 1px solid #eee;
-        transition: background 0.2s ease;
-    }
-
-    .cart-item:hover {
-        background: #f8f9fa;
-    }
-
-    .cart-item-image {
-        width: 50px;
-        height: 50px;
-        border-radius: 10px;
-        object-fit: cover;
-        background: #f0f0f0;
-    }
-
-    .cart-item-info {
-        flex: 1;
-        margin: 0 12px;
-    }
-
-    .cart-item-name {
-        font-weight: 600;
-        font-size: 0.9rem;
-        color: #1a1a2e;
-        margin-bottom: 2px;
-        display: -webkit-box;
-        -webkit-line-clamp: 1;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    .cart-item-price {
-        font-size: 0.85rem;
-        color: #E57625;
-        font-weight: 600;
-    }
-
-    .cart-item-qty {
-        background: #f0f0f0;
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        color: #666;
-    }
-
-    .cart-item-remove {
-        background: none;
-        border: none;
-        color: #dc3545;
-        padding: 5px;
-        cursor: pointer;
-        opacity: 0.7;
-        transition: all 0.2s ease;
-    }
-
-    .cart-item-remove:hover {
-        opacity: 1;
-        transform: scale(1.2);
-    }
-
-    .cart-dropdown-footer {
-        padding: 15px;
-        background: #f8f9fa;
-        border-top: 2px solid #E57625;
-    }
-
-    .cart-empty {
-        padding: 30px 15px;
-    }
-
-    .cart-empty i {
-        opacity: 0.3;
-    }
+  /* Offcanvas nicer */
+  .offcanvas{width: 360px; max-width: 92vw;}
+  .offcanvas-header{background:#f8f9fa;}
 </style>
 
 <script>
-// Cart functionality for navbar dropdown
-(function() {
-    const IQD = '{{ t("iqd") }}';
-    const EMPTY_MSG = '{% if current_lang == "ku" %}سەبەتە بەتاڵە{% elif current_lang == "ar" %}السلة فارغة{% else %}Cart is empty{% endif %}';
-    const CONFIRM_MSG = '{% if current_lang == "ku" %}دڵنیایت لە بەتاڵکردنەوەی سەبەتە؟{% elif current_lang == "ar" %}هل أنت متأكد من إفراغ السلة؟{% else %}Are you sure you want to clear the cart?{% endif %}';
+(function(){
+  const IQD = "{{ t('iqd') }}";
+  const EMPTY_MSG = '{% if current_lang == "ku" %}سەبەتە بەتاڵە{% elif current_lang == "ar" %}السلة فارغة{% else %}Cart is empty{% endif %}';
+  const CONFIRM_MSG = '{% if current_lang == "ku" %}دڵنیایت لە بەتاڵکردنەوەی سەبەتە؟{% elif current_lang == "ar" %}هل أنت متأكد من إفراغ السلة؟{% else %}Are you sure you want to clear the cart?{% endif %}';
 
-    function formatNumber(num) {
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  function formatNumber(num){
+    return (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  }
+
+  function getCart(){
+    return JSON.parse(localStorage.getItem('padelCart')) || [];
+  }
+
+  function updateCartUI(){
+    const cart = getCart();
+    const badge = document.getElementById("navCartBadge");
+    const countText = document.getElementById("cartCountText");
+    const itemsBox = document.getElementById("cartOffcanvasItems");
+    const footer = document.getElementById("cartOffcanvasFooter");
+    const totalEl = document.getElementById("cartOffcanvasTotal");
+
+    const totalItems = cart.reduce((s,i)=>s + (i.quantity||1), 0);
+    const totalPrice = cart.reduce((s,i)=>s + ((i.price||0) * (i.quantity||1)), 0);
+
+    if (badge){
+      if (totalItems > 0){
+        badge.style.display = "inline-block";
+        badge.textContent = totalItems > 99 ? "99+" : totalItems;
+      } else {
+        badge.style.display = "none";
+      }
     }
 
-    function updateNavCart() {
-        const cart = JSON.parse(localStorage.getItem('padelCart')) || [];
-        const badge = document.getElementById('navCartBadge');
-        const countText = document.getElementById('cartCountText');
-        const itemsContainer = document.getElementById('cartDropdownItems');
-        const footer = document.getElementById('cartDropdownFooter');
-        const totalEl = document.getElementById('cartDropdownTotal');
-        const btn = document.getElementById('cartDropdown');
+    if (countText) countText.textContent = "(" + totalItems + ")";
 
-        const totalItems = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
-        const totalPrice = cart.reduce((sum, item) => sum + (item.price * (item.quantity || 1)), 0);
+    if (!itemsBox) return;
 
-        // Update badge
-        if (badge) {
-            if (totalItems > 0) {
-                badge.textContent = totalItems > 99 ? '99+' : totalItems;
-                badge.style.display = 'inline-block';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-
-        // Update count text
-        if (countText) {
-            countText.textContent = '(' + totalItems + ')';
-        }
-
-        // Update items list
-        if (itemsContainer) {
-            if (cart.length === 0) {
-                itemsContainer.innerHTML = '<div class="cart-empty text-center py-4"><i class="fas fa-shopping-basket fa-3x text-muted mb-3"></i><p class="text-muted mb-0">' + EMPTY_MSG + '</p></div>';
-                if (footer) footer.style.display = 'none';
-            } else {
-                let html = '';
-                cart.forEach(function(item, index) {
-                    html += '<div class="cart-item">' +
-                        '<img src="' + (item.image || 'https://via.placeholder.com/50?text=P') + '" alt="' + item.name + '" class="cart-item-image" onerror="this.src=\'https://via.placeholder.com/50?text=P\'">' +
-                        '<div class="cart-item-info">' +
-                            '<div class="cart-item-name">' + item.name + '</div>' +
-                            '<div class="cart-item-price">' + formatNumber(item.price) + ' ' + IQD + '</div>' +
-                        '</div>' +
-                        '<span class="cart-item-qty">×' + (item.quantity || 1) + '</span>' +
-                        '<button class="cart-item-remove" onclick="removeNavCartItem(' + index + ')" title="Remove">' +
-                            '<i class="fas fa-times"></i>' +
-                        '</button>' +
-                    '</div>';
-                });
-                itemsContainer.innerHTML = html;
-
-                if (footer) {
-                    footer.style.display = 'block';
-                    if (totalEl) {
-                        totalEl.textContent = formatNumber(totalPrice) + ' ' + IQD;
-                    }
-                }
-            }
-        }
-
-        // Bounce animation
-        if (btn && totalItems > 0) {
-            btn.classList.add('bounce');
-            setTimeout(function() { btn.classList.remove('bounce'); }, 400);
-        }
+    if (cart.length === 0){
+      itemsBox.innerHTML =
+        '<div class="text-center py-4">' +
+          '<i class="fas fa-shopping-basket fa-3x text-muted mb-3"></i>' +
+          '<p class="text-muted mb-0">' + EMPTY_MSG + '</p>' +
+        '</div>';
+      if (footer) footer.style.display = "none";
+      return;
     }
 
-    // Remove item from cart
-    window.removeNavCartItem = function(index) {
-        var cart = JSON.parse(localStorage.getItem('padelCart')) || [];
-        cart.splice(index, 1);
-        localStorage.setItem('padelCart', JSON.stringify(cart));
-        updateNavCart();
-        window.dispatchEvent(new Event('cartUpdated'));
-    };
+    let html = "";
+    cart.forEach((item, idx) => {
+      html +=
+        '<div class="d-flex align-items-center gap-3 py-2 border-bottom">' +
+          '<img src="'+ (item.image || '{{ url_for('static', filename='images/placeholder.png') }}') +'" style="width:60px;height:60px;border-radius:12px;object-fit:cover;" onerror="this.src=\'{{ url_for('static', filename='images/placeholder.png') }}\'">' +
+          '<div class="flex-grow-1">' +
+            '<div style="font-weight:700;">'+ (item.name || 'Item') +'</div>' +
+            '<div class="text-muted" style="font-size:.9rem;">'+ formatNumber(item.price) +' '+ IQD +' · ×'+ (item.quantity||1) +'</div>' +
+          '</div>' +
+          '<button class="btn btn-sm btn-outline-danger" onclick="removeNavCartItem('+idx+')"><i class="fas fa-times"></i></button>' +
+        '</div>';
+    });
 
-    // Clear entire cart
-    window.clearNavCart = function() {
-        if (confirm(CONFIRM_MSG)) {
-            localStorage.removeItem('padelCart');
-            updateNavCart();
-            window.dispatchEvent(new Event('cartUpdated'));
-        }
-    };
+    itemsBox.innerHTML = html;
 
-    // Update on page load
-    document.addEventListener('DOMContentLoaded', updateNavCart);
+    if (footer){
+      footer.style.display = "block";
+      if (totalEl) totalEl.textContent = formatNumber(totalPrice) + " " + IQD;
+    }
+  }
 
-    // Listen for cart updates
-    window.addEventListener('cartUpdated', updateNavCart);
+  window.removeNavCartItem = function(index){
+    const cart = getCart();
+    cart.splice(index, 1);
+    localStorage.setItem('padelCart', JSON.stringify(cart));
+    updateCartUI();
+    window.dispatchEvent(new Event('cartUpdated'));
+  };
 
-    // Check periodically for changes from other tabs
-    setInterval(updateNavCart, 2000);
+  window.clearNavCart = function(){
+    if (confirm(CONFIRM_MSG)){
+      localStorage.removeItem('padelCart');
+      updateCartUI();
+      window.dispatchEvent(new Event('cartUpdated'));
+    }
+  };
 
-    // Make function globally available
-    window.updateNavCart = updateNavCart;
+  document.addEventListener("DOMContentLoaded", updateCartUI);
+  window.addEventListener("cartUpdated", updateCartUI);
+
+  // Update when offcanvas opens
+  document.addEventListener('shown.bs.offcanvas', function (e) {
+    if (e.target && e.target.id === 'cartOffcanvas') updateCartUI();
+  });
+
+  // keep in sync
+  setInterval(updateCartUI, 2000);
 })();
 </script>

@@ -17,6 +17,7 @@
                 <option value="cancelled">{{ t('cancelled') }}</option>
             </select>
         </div>
+
         <div class="col-md-3">
             <label class="form-label">{{ t('select_stadium') }}</label>
             <select id="filter-stadium" class="form-select">
@@ -26,13 +27,16 @@
                 {% endfor %}
             </select>
         </div>
+
         <div class="col-md-3">
             <label class="form-label">{{ t('select_date') }}</label>
             <input type="date" id="filter-date" class="form-control">
         </div>
+
         <div class="col-md-3">
             <label class="form-label">{{ t('search') }}</label>
-            <input type="text" id="filter-search" class="form-control" placeholder="{% if current_lang == 'ku' %}ناو یان ژمارە{% elif current_lang == 'ar' %}الاسم أو الرقم{% else %}Name or phone{% endif %}">
+            <input type="text" id="filter-search" class="form-control"
+                   placeholder="{% if current_lang == 'ku' %}ناو یان ژمارە{% elif current_lang == 'ar' %}الاسم أو الرقم{% else %}Name or phone{% endif %}">
         </div>
     </div>
 
@@ -52,6 +56,7 @@
                     <th>{{ t('actions') }}</th>
                 </tr>
             </thead>
+
             <tbody>
                 {% if bookings %}
                     {% for booking in bookings %}
@@ -61,29 +66,52 @@
                         <td>{{ booking.customer_phone }}</td>
                         <td>{{ booking.stadium.name if booking.stadium else '-' }}</td>
                         <td>{{ booking.date }}</td>
-                        <td>{{ booking.start_hour|default(0) }}:00 - {{ booking.end_hour|default(0) }}:00</td>
-                        <td>{% if booking.total_price %}{{ "{:,.0f}".format(booking.total_price) }}{% else %}0{% endif %} {{ t('iqd') }}</td>
+
                         <td>
-                            {% if booking.status == 'pending' %}
-                            <span class="badge badge-pending">{{ t('pending') }}</span>
-                            {% elif booking.status == 'confirmed' %}
-                            <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
-                            {% elif booking.status == 'cancelled' %}
-                            <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
+                            {% if booking.start_time and booking.end_time %}
+                                {{ booking.start_time.strftime('%H:%M') }} - {{ booking.end_time.strftime('%H:%M') }}
                             {% else %}
-                            <span class="badge badge-completed">{{ t('completed') }}</span>
+                                -
                             {% endif %}
                         </td>
+
+                        <td>
+                            {{ "{:,.0f}".format(booking.final_price or 0) }} {{ t('iqd') }}
+                        </td>
+
+                        <td>
+                            {% if booking.status == 'pending' %}
+                                <span class="badge badge-pending">{{ t('pending') }}</span>
+                            {% elif booking.status == 'confirmed' %}
+                                <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
+                            {% elif booking.status == 'cancelled' %}
+                                <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
+                            {% else %}
+                                <span class="badge badge-completed">{{ t('completed') }}</span>
+                            {% endif %}
+                        </td>
+
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <a href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}" class="btn btn-outline-primary" title="{{ t('view') }}">
+                                <a href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}"
+                                   class="btn btn-outline-primary" title="{{ t('view') }}">
                                     <i class="fas fa-eye"></i>
                                 </a>
+
                                 {% if booking.status == 'pending' %}
-                                <button class="btn btn-outline-success btn-confirm" data-id="{{ booking.id }}" title="{{ t('confirm') }}">
+                                <!-- ✅ ONE CLICK APPROVE -->
+                                <button type="button"
+                                        class="btn btn-outline-success"
+                                        onclick="approveBooking({{ booking.id }}, this); return false;"
+                                        title="{{ t('confirm') }}">
                                     <i class="fas fa-check"></i>
                                 </button>
-                                <button class="btn btn-outline-danger btn-cancel" data-id="{{ booking.id }}" title="{{ t('cancel') }}">
+
+                                <!-- ✅ CANCEL -->
+                                <button type="button"
+                                        class="btn btn-outline-danger"
+                                        onclick="cancelBooking({{ booking.id }}, this); return false;"
+                                        title="{{ t('cancel') }}">
                                     <i class="fas fa-times"></i>
                                 </button>
                                 {% endif %}
@@ -104,40 +132,61 @@
 
 {% block extra_js %}
 <script>
-// Confirm booking
-document.querySelectorAll('.btn-confirm').forEach(btn => {
-    btn.addEventListener('click', async function() {
-        if (!confirm('{% if current_lang == "ku" %}دڵنیایت لە دڵنیاکردنەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من التأكيد؟{% else %}Are you sure you want to confirm?{% endif %}')) return;
+async function approveBooking(id, btn) {
+    // ✅ prevent double click
+    btn.disabled = true;
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
-        const id = this.dataset.id;
-        const response = await fetch(`/admin/api/booking/${id}/status`, {
+    try {
+        const res = await fetch(`/admin/api/booking/${id}/approve`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'confirmed' })
+            headers: { 'Content-Type': 'application/json' }
         });
 
-        if (response.ok) {
-            location.reload();
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new Error((data && data.message) || 'Approve failed');
         }
-    });
-});
 
-// Cancel booking
-document.querySelectorAll('.btn-cancel').forEach(btn => {
-    btn.addEventListener('click', async function() {
-        if (!confirm('{% if current_lang == "ku" %}دڵنیایت لە هەڵوەشاندنەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من الإلغاء؟{% else %}Are you sure you want to cancel?{% endif %}')) return;
+        // optional message:
+        // alert(data.message || 'Approved ✅');
 
-        const id = this.dataset.id;
-        const response = await fetch(`/admin/api/booking/${id}/status`, {
+        location.reload();
+
+    } catch (err) {
+        alert(err.message || 'Connection error');
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+    }
+}
+
+async function cancelBooking(id, btn) {
+    btn.disabled = true;
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    try {
+        const res = await fetch(`/admin/api/booking/${id}/status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'cancelled' })
         });
 
-        if (response.ok) {
-            location.reload();
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new Error((data && data.message) || 'Cancel failed');
         }
-    });
-});
+
+        location.reload();
+
+    } catch (err) {
+        alert(err.message || 'Connection error');
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+    }
+}
 </script>
 {% endblock %}

@@ -28,6 +28,7 @@
                         {% endif %}
                     </h6>
                 </div>
+
                 <div class="col-md-6">
                     <p class="text-muted mb-1">{{ t('customer_email') }}</p>
                     <h6>{{ booking.customer_email or '-' }}</h6>
@@ -57,10 +58,19 @@
                     <p class="text-muted mb-1">{{ t('select_date') }}</p>
                     <h6>{{ booking.date or '-' }}</h6>
                 </div>
+
+                <!-- ✅ FIX: use start_time/end_time -->
                 <div class="col-md-6">
                     <p class="text-muted mb-1">{{ t('select_time') }}</p>
-                    <h6>{{ booking.start_hour|default(0) }}:00 - {{ booking.end_hour|default(0) }}:00</h6>
+                    <h6>
+                        {% if booking.start_time and booking.end_time %}
+                            {{ booking.start_time.strftime('%H:%M') }} - {{ booking.end_time.strftime('%H:%M') }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </h6>
                 </div>
+
                 <div class="col-md-6">
                     <p class="text-muted mb-1">{{ t('duration') }}</p>
                     <h6>{{ booking.duration_hours|default(1) }} {{ t('hour') if booking.duration_hours == 1 else t('hours') }}</h6>
@@ -68,23 +78,27 @@
 
                 <div class="col-12"><hr></div>
 
+                <!-- ✅ FIX: price uses original_price -->
                 <div class="col-md-4">
                     <p class="text-muted mb-1">{{ t('price') }}</p>
-                    <h6>{{ "{:,.0f}".format(booking.base_price|default(0)) }} {{ t('iqd') }}</h6>
+                    <h6>{{ "{:,.0f}".format(booking.original_price or 0) }} {{ t('iqd') }}</h6>
                 </div>
+
                 <div class="col-md-4">
                     <p class="text-muted mb-1">{{ t('discount') }}</p>
                     <h6 class="text-success">
                         {% if booking.discount_percentage and booking.discount_percentage > 0 %}
-                        -{{ "{:,.0f}".format(booking.discount_amount|default(0)) }} {{ t('iqd') }} ({{ booking.discount_percentage }}%)
+                        -{{ "{:,.0f}".format(booking.discount_amount or 0) }} {{ t('iqd') }} ({{ booking.discount_percentage }}%)
                         {% else %}
                         -
                         {% endif %}
                     </h6>
                 </div>
+
+                <!-- ✅ FIX: total uses final_price -->
                 <div class="col-md-4">
                     <p class="text-muted mb-1">{{ t('total') }}</p>
-                    <h5 style="color: #E57625;">{{ "{:,.0f}".format(booking.total_price|default(0)) }} {{ t('iqd') }}</h5>
+                    <h5 style="color: #E57625;">{{ "{:,.0f}".format(booking.final_price or 0) }} {{ t('iqd') }}</h5>
                 </div>
             </div>
         </div>
@@ -110,9 +124,6 @@
                 <i class="fas fa-check-double me-2"></i>
                 {% if current_lang == 'ku' %}تەواوکردن{% elif current_lang == 'ar' %}إكمال{% else %}Complete{% endif %}
             </button>
-            <button class="btn btn-danger w-100 mb-2" id="btn-cancel">
-                <i class="fas fa-times me-2"></i>{{ t('cancel') }}
-            </button>
             {% endif %}
 
             <hr>
@@ -128,7 +139,8 @@
                 <i class="fas fa-sticky-note me-2" style="color: #E57625;"></i>
                 {{ t('notes') }}
             </h5>
-            <textarea class="form-control" rows="4" id="booking-notes" placeholder="{% if current_lang == 'ku' %}تێبینی زیادبکە...{% elif current_lang == 'ar' %}أضف ملاحظة...{% else %}Add notes...{% endif %}">{{ booking.notes or '' }}</textarea>
+            <textarea class="form-control" rows="4" id="booking-notes"
+                      placeholder="{% if current_lang == 'ku' %}تێبینی زیادبکە...{% elif current_lang == 'ar' %}أضف ملاحظة...{% else %}Add notes...{% endif %}">{{ booking.notes or '' }}</textarea>
             <button class="btn btn-outline-primary w-100 mt-2" id="btn-save-notes">
                 <i class="fas fa-save me-2"></i>{{ t('save') }}
             </button>
@@ -163,28 +175,24 @@ async function updateStatus(status) {
     }
 }
 
-// Confirm button
 document.getElementById('btn-confirm')?.addEventListener('click', () => {
     if (confirm('{% if current_lang == "ku" %}دڵنیایت لە دڵنیاکردنەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من التأكيد؟{% else %}Are you sure you want to confirm?{% endif %}')) {
         updateStatus('confirmed');
     }
 });
 
-// Cancel button
 document.getElementById('btn-cancel')?.addEventListener('click', () => {
     if (confirm('{% if current_lang == "ku" %}دڵنیایت لە هەڵوەشاندنەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من الإلغاء؟{% else %}Are you sure you want to cancel?{% endif %}')) {
         updateStatus('cancelled');
     }
 });
 
-// Complete button
 document.getElementById('btn-complete')?.addEventListener('click', () => {
     if (confirm('{% if current_lang == "ku" %}دڵنیایت لە تەواوکردن؟{% elif current_lang == "ar" %}هل أنت متأكد من الإكمال؟{% else %}Are you sure you want to mark as complete?{% endif %}')) {
         updateStatus('completed');
     }
 });
 
-// Save notes button
 document.getElementById('btn-save-notes')?.addEventListener('click', async () => {
     const notes = document.getElementById('booking-notes').value;
 

@@ -41,6 +41,17 @@
     .time-slot.selected.discount::after {
         color: white;
     }
+
+    /* ✅ New: highlight the full range (for duration > 1) */
+    .time-slot.in-range {
+        background: rgba(229, 118, 37, 0.15);
+        border-color: #E57625;
+    }
+    .time-slot.in-range.discount {
+        background: rgba(40, 167, 69, 0.12);
+        border-color: #28a745;
+    }
+
     .stadium-card {
         cursor: pointer;
         transition: all 0.3s ease;
@@ -85,7 +96,13 @@
                             <div class="card stadium-card h-100" data-stadium-id="{{ stadium.id }}" data-price="{{ stadium.price_per_hour }}">
                                 <div class="card-body text-center">
                                     <i class="fas fa-futbol fa-2x mb-3" style="color: #E57625;"></i>
-                                    <h5 class="card-title">{{ stadium.name }}</h5>
+                                    <h5 class="card-title">
+                                        {% if loop.index == 1 %}
+                                            {% if current_lang == 'ku' %}یاریگای ڕەش{% elif current_lang == 'ar' %}الملعب الأسود{% else %}Black Court{% endif %}
+                                        {% else %}
+                                            {% if current_lang == 'ku' %}یاریگای پرتەقاڵی{% elif current_lang == 'ar' %}الملعب البرتقالي{% else %}Orange Court{% endif %}
+                                        {% endif %}
+                                    </h5>
                                     <p class="card-text text-muted">{{ stadium.location }}</p>
                                     <p class="fw-bold" style="color: #E57625;">
                                         {{ "{:,.0f}".format(stadium.price_per_hour|default(50000)) }} {{ t('iqd') }}/{{ t('hour') }}
@@ -136,6 +153,17 @@
                             {% endif %}
                         </p>
                     </div>
+
+                    <!-- ✅ New message area -->
+                    <div id="range-warning" class="alert alert-warning mt-3" style="display:none;">
+                        {% if current_lang == 'ku' %}
+                        تکایە ماوەی هەڵبژێردراو بەردەست نییە. کاتێکی تر هەڵبژێرە یان ماوە کەم بکە.
+                        {% elif current_lang == 'ar' %}
+                        المدة المختارة غير متاحة بالكامل. اختر وقتًا آخر أو قلّل المدة.
+                        {% else %}
+                        Selected duration is not fully available. Choose another time or reduce duration.
+                        {% endif %}
+                    </div>
                 </div>
             </div>
 
@@ -154,9 +182,17 @@
 
                         <input type="radio" class="btn-check" name="duration" id="duration2" value="2">
                         <label class="btn btn-outline-warning" for="duration2">2 {{ t('hours') }}</label>
+                    </div>
 
-                        <input type="radio" class="btn-check" name="duration" id="duration3" value="3">
-                        <label class="btn btn-outline-warning" for="duration3">3 {{ t('hours') }}</label>
+                    <!-- ✅ Small hint -->
+                    <div class="text-muted mt-2" style="font-size: 13px;">
+                        {% if current_lang == 'ku' %}
+                        دەتوانیت ١ یان ٢ کاتژمێر هەڵبژێریت، بەڵام دەبێت هەموو کاتەکان بەردەست بن.
+                        {% elif current_lang == 'ar' %}
+                        يمكنك اختيار ١ أو ٢، لكن يجب أن تكون كل الساعات متاحة.
+                        {% else %}
+                        You can select 1 or 2 hours, but all hours must be available.
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -194,7 +230,7 @@
                 <div class="card-header bg-warning text-white">
                     <h5 class="mb-0">
                         <i class="fas fa-receipt me-2"></i>
-                        {% if current_lang == 'ku' %}پوختەی حجز{% elif current_lang == 'ar' %}ملخص الحجز{% else %}Booking Summary{% endif %}
+                        {{ t('booking_summary') }}
                     </h5>
                 </div>
                 <div class="card-body">
@@ -249,11 +285,11 @@ const TRANSLATIONS = {
     hour: "{{ t('hour') }}",
     hours: "{{ t('hours') }}",
     iqd: "{{ t('iqd') }}",
-    available: "{{ t('available') }}",
-    booked: "{{ t('booked') }}",
-    booking_success: "{% if current_lang == 'ku' %}حجز سەرکەوتوو بوو{% elif current_lang == 'ar' %}تم الحجز بنجاح{% else %}Booking successful{% endif %}",
-    booking_failed: "{% if current_lang == 'ku' %}حجز سەرنەکەوت{% elif current_lang == 'ar' %}فشل الحجز{% else %}Booking failed{% endif %}",
-    fill_required: "{% if current_lang == 'ku' %}تکایە ناو و ژمارە بنووسە{% elif current_lang == 'ar' %}يرجى ملء الحقول المطلوبة{% else %}Please fill required fields{% endif %}"
+    booking_failed: "{% if current_lang == 'ku' %}حجز سەرنەکەفت{% elif current_lang == 'ar' %}فشل الحجز{% else %}Booking failed{% endif %}",
+    fill_required: "{% if current_lang == 'ku' %}تکایە خانێن پێدڤی پڕ بکە{% elif current_lang == 'ar' %}يرجى ملء الحقول المطلوبة{% else %}Please fill required fields{% endif %}",
+    duration_not_available: "{% if current_lang == 'ku' %}ماوەی هەڵبژێردراو بەردەست نییە{% elif current_lang == 'ar' %}المدة غير متاحة{% else %}Duration not available{% endif %}",
+    black_court: "{% if current_lang == 'ku' %}یاریگای ڕەش{% elif current_lang == 'ar' %}الملعب الأسود{% else %}Black Court{% endif %}",
+    orange_court: "{% if current_lang == 'ku' %}یاریگای پرتەقاڵی{% elif current_lang == 'ar' %}الملعب البرتقالي{% else %}Orange Court{% endif %}"
 };
 
 class BookingSystem {
@@ -261,55 +297,58 @@ class BookingSystem {
         this.stadiumId = null;
         this.stadiumName = null;
         this.pricePerHour = 0;
+
         this.selectedDate = null;
-        this.selectedHour = null;
+        this.selectedHour = null;     // start hour
         this.duration = 1;
-        this.isDiscount = false;
+
+        // ✅ store availability map: hour -> { booked, discount, display }
+        this.slotsMap = new Map();
 
         this.init();
     }
 
     init() {
-        // Set minimum date to today
         const today = new Date().toISOString().split('T')[0];
-        document.getElementById('booking-date').min = today;
-        document.getElementById('booking-date').value = today;
+        const dateInput = document.getElementById('booking-date');
+        dateInput.min = today;
+        dateInput.value = today;
         this.selectedDate = today;
 
-        // Stadium selection
-        document.querySelectorAll('.stadium-card').forEach(card => {
-            card.addEventListener('click', () => this.selectStadium(card));
+        document.querySelectorAll('.stadium-card').forEach((card, index) => {
+            card.addEventListener('click', () => this.selectStadium(card, index));
         });
 
-        // Date selection
-        document.getElementById('booking-date').addEventListener('change', (e) => {
+        dateInput.addEventListener('change', (e) => {
             this.selectedDate = e.target.value;
             this.selectedHour = null;
+            this.hideWarning();
             this.loadTimeSlots();
             this.updateSummary();
         });
 
-        // Duration selection
         document.querySelectorAll('input[name="duration"]').forEach(input => {
             input.addEventListener('change', (e) => {
                 this.duration = parseInt(e.target.value);
-                this.updateSummary();
+                this.applyRangeUI();      // ✅ highlight range
+                this.updateSummary();     // ✅ validate + price
             });
         });
 
-        // Confirm booking
         document.getElementById('confirm-booking').addEventListener('click', () => this.confirmBooking());
     }
 
-    selectStadium(card) {
+    selectStadium(card, index) {
         document.querySelectorAll('.stadium-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
 
         this.stadiumId = card.dataset.stadiumId;
-        this.stadiumName = card.querySelector('.card-title').textContent;
+        // ✅ Use translated names based on index
+        this.stadiumName = index === 0 ? TRANSLATIONS.black_court : TRANSLATIONS.orange_court;
         this.pricePerHour = parseInt(card.dataset.price) || 50000;
 
         this.selectedHour = null;
+        this.hideWarning();
         this.loadTimeSlots();
         this.updateSummary();
     }
@@ -320,75 +359,155 @@ class BookingSystem {
         const container = document.getElementById('time-slots');
         container.innerHTML = '<p class="text-center w-100 py-3"><i class="fas fa-spinner fa-spin fa-2x"></i></p>';
 
+        this.slotsMap.clear();
+
         try {
             const response = await fetch(`/booking/api/availability?stadium_id=${this.stadiumId}&date=${this.selectedDate}`);
-
-            if (!response.ok) {
-                throw new Error('Failed to load slots');
-            }
+            if (!response.ok) throw new Error('Failed to load slots');
 
             const slots = await response.json();
-
             container.innerHTML = '';
 
-            // Check if slots is an array
-            if (!Array.isArray(slots)) {
-                throw new Error('Invalid response format');
-            }
-
-            if (slots.length === 0) {
+            if (!Array.isArray(slots) || slots.length === 0) {
                 container.innerHTML = '<p class="text-muted w-100 text-center py-4">{% if current_lang == "ku" %}هیچ کاتێک بەردەست نییە{% elif current_lang == "ar" %}لا توجد أوقات متاحة{% else %}No time slots available{% endif %}</p>';
                 return;
             }
 
             slots.forEach(slot => {
+                const hour = parseInt(slot.hour);
+                const booked = slot.is_booked || slot.booked || false;
+
+                // ✅ FIXED: Discount should show from 12:00 to 16:00 (hours 12, 13, 14, 15, 16)
+                // Discount window is 12-16 inclusive, which means: 12:00-16:59
+                const discount = (slot.is_discount || slot.discount || false) && hour <= 16;
+
+                const display = slot.time || slot.display || `${hour}:00`;
+
+                this.slotsMap.set(hour, { booked, discount, display });
+
                 const div = document.createElement('div');
+                div.className = `time-slot ${booked ? 'booked' : ''} ${discount ? 'discount' : ''}`;
+                div.dataset.hour = hour;
+                div.textContent = display;
 
-                // Handle both naming conventions
-                const isBooked = slot.is_booked || slot.booked || false;
-                const isDiscount = slot.is_discount || slot.discount || false;
-                const displayTime = slot.time || slot.display || `${slot.hour}:00`;
-
-                div.className = `time-slot ${isBooked ? 'booked' : ''} ${isDiscount ? 'discount' : ''}`;
-                div.dataset.hour = slot.hour;
-                div.dataset.discount = isDiscount;
-                div.textContent = displayTime;
-
-                if (!isBooked) {
-                    div.addEventListener('click', () => this.selectTime(div, slot));
+                if (!booked) {
+                    div.addEventListener('click', () => this.selectTime(div, hour));
                 }
 
                 container.appendChild(div);
             });
+
+            // after reload, apply range highlight (if any)
+            this.applyRangeUI();
+            this.updateSummary();
+
         } catch (error) {
             console.error('Error loading time slots:', error);
             container.innerHTML = '<p class="text-danger w-100 text-center py-4">{% if current_lang == "ku" %}هەڵە لە بارکردن{% elif current_lang == "ar" %}خطأ في التحميل{% else %}Error loading time slots{% endif %}</p>';
         }
     }
 
-    selectTime(element, slot) {
-        document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
-        element.classList.add('selected');
+    selectTime(element, hour) {
+        document.querySelectorAll('.time-slot').forEach(s => {
+            s.classList.remove('selected', 'in-range');
+        });
 
-        this.selectedHour = slot.hour;
-        this.isDiscount = slot.is_discount || slot.discount || false;
+        element.classList.add('selected');
+        this.selectedHour = hour;
+
+        this.applyRangeUI();
         this.updateSummary();
+    }
+
+    // ✅ highlight range based on selectedHour + duration
+    applyRangeUI() {
+        document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('in-range'));
+
+        if (this.selectedHour === null) return;
+
+        const start = this.selectedHour;
+        const end = start + this.duration; // end is exclusive
+
+        document.querySelectorAll('.time-slot').forEach(el => {
+            const h = parseInt(el.dataset.hour);
+            if (h >= start && h < end) {
+                el.classList.add('in-range');
+            }
+        });
+    }
+
+    // ✅ check if full duration is available (no booked in range)
+    isDurationAvailable() {
+        if (this.selectedHour === null) return false;
+
+        const start = this.selectedHour;
+        const end = start + this.duration;
+
+        for (let h = start; h < end; h++) {
+            const info = this.slotsMap.get(h);
+            // if missing hour or booked => not available
+            if (!info || info.booked) return false;
+        }
+        return true;
+    }
+
+    // ✅ discount hours inside range
+    countDiscountHoursInRange() {
+        if (this.selectedHour === null) return 0;
+
+        const start = this.selectedHour;
+        const end = start + this.duration;
+
+        let count = 0;
+        for (let h = start; h < end; h++) {
+            const info = this.slotsMap.get(h);
+            if (info && info.discount) count++;
+        }
+        return count;
+    }
+
+    showWarning() {
+        const box = document.getElementById('range-warning');
+        box.style.display = 'block';
+    }
+
+    hideWarning() {
+        const box = document.getElementById('range-warning');
+        box.style.display = 'none';
     }
 
     updateSummary() {
         document.getElementById('summary-stadium').textContent = this.stadiumName || '-';
         document.getElementById('summary-date').textContent = this.selectedDate || '-';
-        document.getElementById('summary-time').textContent = this.selectedHour !== null ? `${this.selectedHour}:00` : '-';
-        document.getElementById('summary-duration').textContent = `${this.duration} ${this.duration === 1 ? TRANSLATIONS.hour : TRANSLATIONS.hours}`;
+        document.getElementById('summary-duration').textContent =
+            `${this.duration} ${this.duration === 1 ? TRANSLATIONS.hour : TRANSLATIONS.hours}`;
 
+        // time range
+        if (this.selectedHour !== null) {
+            const start = this.selectedHour;
+            const end = start + this.duration;
+            document.getElementById('summary-time').textContent = `${start}:00 - ${end}:00`;
+        } else {
+            document.getElementById('summary-time').textContent = '-';
+        }
+
+        // validate duration availability
+        const okRange = this.isDurationAvailable();
+        if (this.selectedHour !== null && !okRange) this.showWarning();
+        else this.hideWarning();
+
+        // pricing
         const basePrice = this.pricePerHour * this.duration;
-        const discount = this.isDiscount ? basePrice * 0.25 : 0;
+
+        // ✅ discount only on discounted hours inside range
+        const discountedHours = okRange ? this.countDiscountHoursInRange() : 0;
+        const discount = discountedHours > 0 ? (this.pricePerHour * discountedHours * 0.25) : 0;
         const total = basePrice - discount;
 
         document.getElementById('summary-price').textContent = `${basePrice.toLocaleString()} ${TRANSLATIONS.iqd}`;
 
         const discountRow = document.getElementById('discount-row');
-        if (this.isDiscount && discount > 0) {
+        if (discount > 0) {
             discountRow.style.cssText = 'display: flex !important';
             document.getElementById('summary-discount').textContent = `-${discount.toLocaleString()} ${TRANSLATIONS.iqd}`;
         } else {
@@ -397,8 +516,8 @@ class BookingSystem {
 
         document.getElementById('summary-total').textContent = `${total.toLocaleString()} ${TRANSLATIONS.iqd}`;
 
-        // Enable/disable confirm button
-        const canConfirm = this.stadiumId && this.selectedDate && this.selectedHour !== null;
+        // ✅ enable confirm only if range is valid
+        const canConfirm = this.stadiumId && this.selectedDate && this.selectedHour !== null && okRange;
         document.getElementById('confirm-booking').disabled = !canConfirm;
     }
 
@@ -409,6 +528,11 @@ class BookingSystem {
 
         if (!customerName || !customerPhone) {
             alert(TRANSLATIONS.fill_required);
+            return;
+        }
+
+        if (!this.isDurationAvailable()) {
+            alert(TRANSLATIONS.duration_not_available);
             return;
         }
 

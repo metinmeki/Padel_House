@@ -8,3 +8,4 @@ from app.models.settings import Settings
 from app.models.table import Table
 from app.models.pos_session import POSSession
 from app.models.pos_order import POSOrder, POSOrderItem
+from app.models.expense import Expense

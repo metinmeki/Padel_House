@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 import os
+import secrets
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -16,6 +17,14 @@ migrate = Migrate()
 def create_app(config_name='development'):
     app = Flask(__name__)
 
+    # ---------------- SECURITY CONFIG ----------------
+    # ✅ STRONG SECRET KEY - Change this in production!
+    app.config['SECRET_KEY'] = os.getenv(
+        'SECRET_KEY',
+        secrets.token_hex(32)  # Auto-generate strong key if not in .env
+    )
+
+    # ---------------- DB CONFIG ----------------
     if config_name == 'production':
         app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
             'DATABASE_URL',
@@ -24,10 +33,6 @@ def create_app(config_name='development'):
     else:
         app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///padel_house.db'
 
-    app.config['SECRET_KEY'] = os.getenv(
-        'SECRET_KEY',
-        'dev-secret-key-change-in-production'
-    )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SESSION_PERMANENT'] = True
 
@@ -39,7 +44,7 @@ def create_app(config_name='development'):
     login_manager.login_message = 'يرجى تسجيل الدخول أولاً'
     login_manager.login_message_category = 'warning'
 
-    # Register Blueprints
+    # ---------------- REGISTER BLUEPRINTS ----------------
     from app.routes.main import main_bp
     from app.routes.booking import booking_bp
     from app.routes.store import store_bp
@@ -54,28 +59,38 @@ def create_app(config_name='development'):
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(pos_bp, url_prefix='/pos')
 
-    # User loader
+    # ---------------- USER LOADER ----------------
     from app.models.user import User
 
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # Language System
+    # ---------------- LANGUAGE SYSTEM (DEFAULT = ENGLISH) ----------------
     from app.models.settings import Settings
     from app.translations import get_translation
+
+    @app.before_request
+    def ensure_language():
+        # ✅ Set English as the default language for first-time visitors
+        if 'lang' not in session:
+            session['lang'] = 'en'
 
     @app.context_processor
     def inject_globals():
         settings = Settings.query.first()
-        current_lang = session.get('lang', 'ku')
+        current_lang = session.get('lang', 'en')  # ✅ Default is English
 
         def t(key):
             return get_translation(key, current_lang)
 
         language_flags = {'ku': '🇮🇶', 'ar': '🇸🇦', 'en': '🇬🇧'}
         language_names = {'ku': 'کوردی', 'ar': 'العربية', 'en': 'English'}
-        languages = ['ku', 'ar', 'en']
+
+        # ✅ Show English first in the language list
+        languages = ['en', 'ar', 'ku']
+
+        # ✅ RTL only for Kurdish/Arabic
         is_rtl = current_lang in ['ku', 'ar']
 
         return {
@@ -88,7 +103,7 @@ def create_app(config_name='development'):
             'is_rtl': is_rtl
         }
 
-    # Database Init
+    # ---------------- DATABASE INIT ----------------
     with app.app_context():
         db.create_all()
 
@@ -97,7 +112,7 @@ def create_app(config_name='development'):
             default_settings = Settings(
                 opening_hour=12,
                 closing_hour=4,
-                price_per_hour=80000,
+                price_per_hour=40000,
                 discount_percentage=25,
                 discount_start_hour=12,
                 discount_end_hour=16,
@@ -116,14 +131,14 @@ def create_app(config_name='development'):
                 name='یاریگای ١',
                 description='یاریگایەکی پڕۆفیشناڵ',
                 location='دهۆک',
-                price_per_hour=80000,
+                price_per_hour=40000,
                 is_active=True
             )
             stadium2 = Stadium(
                 name='یاریگای ٢',
                 description='یاریگایەکی باش',
                 location='دهۆک',
-                price_per_hour=80000,
+                price_per_hour=40000,
                 is_active=True
             )
             db.session.add(stadium1)
@@ -149,7 +164,7 @@ def create_app(config_name='development'):
             admin = User(
                 username='admin',
                 email='admin@padelhouse.iq',
-                role='super_admin'
+                is_admin=True  # ✅ Added is_admin flag
             )
             admin.set_password('admin123')
             db.session.add(admin)

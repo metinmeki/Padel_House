@@ -1,0 +1,456 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ product.get_name(current_lang) }} - {{ t('store') }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-detail-container {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        padding: 40px;
+        margin-top: 30px;
+    }
+
+    .product-image-main {
+        width: 100%;
+        height: 400px;
+        object-fit: cover;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .product-title {
+        font-size: 32px;
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 16px;
+    }
+
+    .product-category {
+        display: inline-block;
+        background: #f0f0f0;
+        color: #666;
+        padding: 6px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+
+    .product-price {
+        font-size: 36px;
+        font-weight: 800;
+        color: #E57625;
+        margin-bottom: 20px;
+    }
+
+    .product-description {
+        color: #666;
+        line-height: 1.8;
+        font-size: 16px;
+        margin-bottom: 30px;
+    }
+
+    .stock-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 30px;
+        padding: 16px 20px;
+        background: #f8f9fa;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+
+    .stock-info.in-stock {
+        background: #e8f5e9;
+        color: #2e7d32;
+    }
+
+    .stock-info.low-stock {
+        background: #fff3e0;
+        color: #ef6c00;
+    }
+
+    .stock-info.out-of-stock {
+        background: #ffebee;
+        color: #c62828;
+    }
+
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 30px;
+    }
+
+    .quantity-btn {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        border: 2px solid #E57625;
+        background: white;
+        color: #E57625;
+        font-size: 20px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .quantity-btn:hover {
+        background: #E57625;
+        color: white;
+    }
+
+    .quantity-input {
+        width: 80px;
+        height: 48px;
+        text-align: center;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    .btn-add-to-cart {
+        background: #E57625;
+        border: none;
+        padding: 16px 48px;
+        font-size: 18px;
+        font-weight: 600;
+        border-radius: 12px;
+        transition: all 0.3s;
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .btn-add-to-cart:hover {
+        background: #c9621c;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(229, 118, 37, 0.4);
+    }
+
+    .btn-add-to-cart:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .related-products {
+        margin-top: 60px;
+    }
+
+    .related-product-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+
+    .related-product-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 6px 20px rgba(229, 118, 37, 0.2);
+    }
+
+    .related-product-card img {
+        height: 180px;
+        object-fit: cover;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+
+    .custom-toast {
+        background: white;
+        border-radius: 12px;
+        padding: 16px 24px;
+        box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+        animation: slideIn 0.3s ease;
+        min-width: 300px;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .custom-toast.success {
+        border-left: 4px solid #4caf50;
+    }
+
+    .custom-toast-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #4caf50;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+
+    .custom-toast-content {
+        flex: 1;
+    }
+
+    .custom-toast-title {
+        font-weight: 700;
+        color: #1a1a2e;
+        margin-bottom: 4px;
+    }
+
+    .custom-toast-message {
+        color: #666;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mt-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.index') }}">{{ t('home') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('store.products') }}">{{ t('store') }}</a></li>
+            <li class="breadcrumb-item active">{{ product.get_name(current_lang) }}</li>
+        </ol>
+    </nav>
+
+    <!-- Product Detail -->
+    <div class="product-detail-container">
+        <div class="row g-5">
+            <!-- Product Image -->
+            <div class="col-lg-6">
+                {% if product.image %}
+                <img src="{{ url_for('static', filename='images/products/' + product.image) }}"
+                     class="product-image-main"
+                     alt="{{ product.get_name(current_lang) }}">
+                {% else %}
+                <div class="product-image-main d-flex align-items-center justify-content-center bg-light">
+                    <i class="fas fa-box fa-5x text-secondary"></i>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Product Info -->
+            <div class="col-lg-6">
+                <h1 class="product-title">{{ product.get_name(current_lang) }}</h1>
+
+                {% if product.category %}
+                <span class="product-category">
+                    <i class="fas fa-tag me-2"></i>{{ product.category.get_name(current_lang) }}
+                </span>
+                {% endif %}
+
+                <div class="product-price">
+                    {{ "{:,.0f}".format(product.price) }} {{ t('iqd') }}
+                </div>
+
+                <p class="product-description">
+                    {{ product.get_description(current_lang) or t('no_description') }}
+                </p>
+
+                <!-- Stock Info -->
+                {% if product.stock <= 0 %}
+                <div class="stock-info out-of-stock">
+                    <i class="fas fa-times-circle"></i>
+                    <span>{% if current_lang == 'ku' %}نەماوە{% elif current_lang == 'ar' %}نفذ من المخزون{% else %}Out of Stock{% endif %}</span>
+                </div>
+                {% elif product.stock < 5 %}
+                <div class="stock-info low-stock">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>{% if current_lang == 'ku' %}تەنها {{ product.stock }} دانە ماوە{% elif current_lang == 'ar' %}باقي {{ product.stock }} فقط{% else %}Only {{ product.stock }} left{% endif %}</span>
+                </div>
+                {% else %}
+                <div class="stock-info in-stock">
+                    <i class="fas fa-check-circle"></i>
+                    <span>{% if current_lang == 'ku' %}بەردەستە{% elif current_lang == 'ar' %}متوفر{% else %}In Stock{% endif %}</span>
+                </div>
+                {% endif %}
+
+                <!-- Quantity Control -->
+                {% if product.stock > 0 %}
+                <div class="quantity-control">
+                    <label class="fw-bold">{% if current_lang == 'ku' %}بڕ{% elif current_lang == 'ar' %}الكمية{% else %}Quantity{% endif %}:</label>
+                    <button type="button" class="quantity-btn" onclick="changeQuantity(-1)">−</button>
+                    <input type="number" id="quantity" class="quantity-input" value="1" min="1" max="{{ product.stock }}">
+                    <button type="button" class="quantity-btn" onclick="changeQuantity(1)">+</button>
+                </div>
+
+                <!-- Add to Cart Button -->
+                <button onclick="addToCart()" class="btn btn-add-to-cart" {% if product.stock <= 0 %}disabled{% endif %}>
+                    <i class="fas fa-cart-plus"></i>
+                    {{ t('add_to_cart') }}
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Products -->
+    {% if related_products %}
+    <div class="related-products">
+        <h3 class="mb-4">
+            <i class="fas fa-box-open me-2" style="color: #E57625;"></i>
+            {% if current_lang == 'ku' %}بەرهەمی هاوشێوە{% elif current_lang == 'ar' %}منتجات مشابهة{% else %}Related Products{% endif %}
+        </h3>
+
+        <div class="row g-4">
+            {% for related in related_products %}
+            <div class="col-md-3">
+                <a href="{{ url_for('store.product_detail', product_id=related.id) }}" class="text-decoration-none">
+                    <div class="card related-product-card">
+                        {% if related.image %}
+                        <img src="{{ url_for('static', filename='images/products/' + related.image) }}"
+                             class="card-img-top"
+                             alt="{{ related.get_name(current_lang) }}">
+                        {% else %}
+                        <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 180px;">
+                            <i class="fas fa-box fa-3x text-secondary"></i>
+                        </div>
+                        {% endif %}
+
+                        <div class="card-body text-center">
+                            <h6 class="card-title text-dark">{{ related.get_name(current_lang) }}</h6>
+                            <p class="text-warning fw-bold mb-0">{{ "{:,.0f}".format(related.price) }} {{ t('iqd') }}</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Cart Floating Button -->
+<a href="{{ url_for('store.cart') }}" class="btn btn-warning btn-lg rounded-circle position-fixed shadow-lg"
+   style="bottom: 30px; {% if is_rtl %}left{% else %}right{% endif %}: 30px; width: 60px; height: 60px; z-index: 1000;">
+    <i class="fas fa-shopping-cart"></i>
+    <span id="cart-count" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+        0
+    </span>
+</a>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Cart from localStorage
+let cart = JSON.parse(localStorage.getItem('padelCart')) || [];
+
+function updateCartCount() {
+    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+    document.getElementById('cart-count').textContent = count;
+}
+
+// Change quantity
+function changeQuantity(delta) {
+    const input = document.getElementById('quantity');
+    let value = parseInt(input.value) || 1;
+    const maxStock = parseInt(input.max);
+    value = Math.max(1, Math.min(value + delta, maxStock));
+    input.value = value;
+}
+
+// Add to cart
+async function addToCart() {
+    const productId = {{ product.id }};
+    const quantity = parseInt(document.getElementById('quantity').value);
+    const maxStock = {{ product.stock }};
+
+    // Check stock
+    if (quantity > maxStock) {
+        showToast(
+            '{% if current_lang == "ku" %}هەڵە{% elif current_lang == "ar" %}خطأ{% else %}Error{% endif %}',
+            '{% if current_lang == "ku" %}بڕی داواکراو لە کۆگا زیاترە{% elif current_lang == "ar" %}الكمية المطلوبة أكثر من المتوفر{% else %}Quantity exceeds stock{% endif %}'
+        );
+        return;
+    }
+
+    try {
+        const response = await fetch('/store/cart/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ product_id: productId, quantity: quantity })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Update localStorage
+            const existingItem = cart.find(item => item.product_id === productId);
+            if (existingItem) {
+                existingItem.quantity += quantity;
+            } else {
+                cart.push({
+                    product_id: productId,
+                    quantity: quantity,
+                    name: '{{ product.get_name(current_lang) }}',
+                    price: {{ product.price }},
+                    image: '{{ product.image or "" }}'
+                });
+            }
+            localStorage.setItem('padelCart', JSON.stringify(cart));
+            updateCartCount();
+
+            showToast(
+                '{% if current_lang == "ku" %}سەرکەوتوو بوو{% elif current_lang == "ar" %}نجح{% else %}Success{% endif %}',
+                '{% if current_lang == "ku" %}زیادکرا بۆ سەبەتە{% elif current_lang == "ar" %}تمت الإضافة للسلة{% else %}Added to cart{% endif %}'
+            );
+        } else {
+            showToast('{% if current_lang == "ku" %}هەڵە{% elif current_lang == "ar" %}خطأ{% else %}Error{% endif %}', data.message);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showToast(
+            '{% if current_lang == "ku" %}هەڵە{% elif current_lang == "ar" %}خطأ{% else %}Error{% endif %}',
+            '{% if current_lang == "ku" %}هەڵەیەک ڕوویدا{% elif current_lang == "ar" %}حدث خطأ{% else %}An error occurred{% endif %}'
+        );
+    }
+}
+
+// Show toast notification
+function showToast(title, message) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = 'custom-toast success';
+    toast.innerHTML = `
+        <div class="custom-toast-icon"><i class="fas fa-check"></i></div>
+        <div class="custom-toast-content">
+            <div class="custom-toast-title">${title}</div>
+            <div class="custom-toast-message">${message}</div>
+        </div>
+    `;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Initialize
+updateCartCount();
+</script>
+{% endblock %}

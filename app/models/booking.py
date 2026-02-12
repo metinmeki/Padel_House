@@ -1,6 +1,5 @@
-# booking.py - Updated with Pending/Approval System
-from app import db
 from datetime import datetime
+from app import db
 
 
 class Booking(db.Model):
@@ -28,6 +27,11 @@ class Booking(db.Model):
 
     # Status: pending, confirmed, completed, cancelled
     status = db.Column(db.String(20), default='pending')
+
+    # ✅ Google Sheets sync tracking (send only after approval)
+    sheet_sent = db.Column(db.Boolean, default=False)
+    sheet_sent_at = db.Column(db.DateTime, nullable=True)
+    sheet_last_error = db.Column(db.Text, nullable=True)
 
     # Notes and rejection reason
     notes = db.Column(db.Text)
@@ -61,7 +65,12 @@ class Booking(db.Model):
             'notes': self.notes,
             'rejection_reason': self.rejection_reason,
             'created_at': str(self.created_at) if self.created_at else None,
-            'confirmed_at': str(self.confirmed_at) if self.confirmed_at else None
+            'confirmed_at': str(self.confirmed_at) if self.confirmed_at else None,
+
+            # ✅ Sheets fields (optional to expose)
+            'sheet_sent': bool(self.sheet_sent),
+            'sheet_sent_at': str(self.sheet_sent_at) if self.sheet_sent_at else None,
+            'sheet_last_error': self.sheet_last_error
         }
 
     def get_status_badge(self):

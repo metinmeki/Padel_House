@@ -57,6 +57,7 @@
                                 </small>
                             </label>
                         </div>
+
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="delivery" id="delivery" value="delivery">
                             <label class="form-check-label" for="delivery">
@@ -110,9 +111,7 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    <div id="order-items">
-                        <!-- Items will be loaded here -->
-                    </div>
+                    <div id="order-items"></div>
 
                     <hr>
 
@@ -120,9 +119,11 @@
                         <span>{{ t('products') }}</span>
                         <span id="items-total">0 {{ t('iqd') }}</span>
                     </div>
-                    <div class="d-flex justify-content-between mb-2" id="delivery-fee-row" style="display: none;">
+
+                    <!-- ✅ Delivery Fee Row (locked hidden unless .show-fee) -->
+                    <div class="d-flex justify-content-between mb-2" id="delivery-fee-row">
                         <span>{% if current_lang == 'ku' %}کرێی گەیاندن{% elif current_lang == 'ar' %}رسوم التوصيل{% else %}Delivery Fee{% endif %}</span>
-                        <span id="delivery-fee">5,000 {{ t('iqd') }}</span>
+                        <span id="delivery-fee">0 {{ t('iqd') }}</span>
                     </div>
 
                     <hr>
@@ -144,113 +145,134 @@
         </div>
     </div>
 </div>
+
+<!-- ✅ HARD CSS FIX: prevents any external CSS from forcing it visible -->
+<style>
+  #delivery-fee-row { display: none !important; }
+  #delivery-fee-row.show-fee { display: flex !important; }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 const TRANS = {
-    iqd: "{{ t('iqd') }}",
-    place_order: "{{ t('place_order') }}",
-    order_success: "{{ t('order_success') }}"
+  iqd: "{{ t('iqd') }}",
+  place_order: "{{ t('place_order') }}"
 };
 
 let cart = JSON.parse(localStorage.getItem('padelCart')) || [];
 const deliveryFee = 5000;
 
 function renderOrderItems() {
-    const container = document.getElementById('order-items');
+  const container = document.getElementById('order-items');
 
-    if (cart.length === 0) {
-        window.location.href = "{{ url_for('store.cart') }}";
-        return;
-    }
+  if (cart.length === 0) {
+    window.location.href = "{{ url_for('store.cart') }}";
+    return;
+  }
 
-    container.innerHTML = cart.map(item => `
-        <div class="d-flex justify-content-between mb-2">
-            <span>${item.name} x${item.quantity}</span>
-            <span>${(item.price * item.quantity).toLocaleString()} ${TRANS.iqd}</span>
-        </div>
-    `).join('');
+  container.innerHTML = cart.map(item => `
+    <div class="d-flex justify-content-between mb-2">
+      <span>${item.name} x${item.quantity}</span>
+      <span>${(item.price * item.quantity).toLocaleString()} ${TRANS.iqd}</span>
+    </div>
+  `).join('');
 
-    updateTotals();
+  updateTotals();
 }
 
 function updateTotals() {
-    const itemsTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const isDelivery = document.getElementById('delivery').checked;
-    const total = isDelivery ? itemsTotal + deliveryFee : itemsTotal;
+  const itemsTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const isDelivery = document.getElementById('delivery').checked;
 
-    document.getElementById('items-total').textContent = `${itemsTotal.toLocaleString()} ${TRANS.iqd}`;
-    document.getElementById('delivery-fee-row').style.display = isDelivery ? 'flex' : 'none';
-    document.getElementById('grand-total').textContent = `${total.toLocaleString()} ${TRANS.iqd}`;
+  const total = isDelivery ? (itemsTotal + deliveryFee) : itemsTotal;
+
+  document.getElementById('items-total').textContent = `${itemsTotal.toLocaleString()} ${TRANS.iqd}`;
+  document.getElementById('grand-total').textContent = `${total.toLocaleString()} ${TRANS.iqd}`;
+
+  const feeRow = document.getElementById('delivery-fee-row');
+  const feeEl = document.getElementById('delivery-fee');
+
+  // ✅ Only show if delivery
+  if (isDelivery) {
+    feeRow.classList.add('show-fee');
+    feeEl.textContent = `${deliveryFee.toLocaleString()} ${TRANS.iqd}`;
+  } else {
+    feeRow.classList.remove('show-fee');
+    feeEl.textContent = `0 ${TRANS.iqd}`;
+  }
 }
 
 // Delivery method change
 document.querySelectorAll('input[name="delivery"]').forEach(input => {
-    input.addEventListener('change', function() {
-        document.getElementById('address-section').style.display = this.value === 'delivery' ? 'block' : 'none';
-        updateTotals();
-    });
+  input.addEventListener('change', function() {
+    document.getElementById('address-section').style.display = (this.value === 'delivery') ? 'block' : 'none';
+    updateTotals();
+  });
 });
 
 // Place order
 document.getElementById('place-order').addEventListener('click', async function() {
-    const name = document.getElementById('customer-name').value.trim();
-    const phone = document.getElementById('customer-phone').value.trim();
-    const email = document.getElementById('customer-email').value.trim();
-    const deliveryMethod = document.querySelector('input[name="delivery"]:checked').value;
+  const name = document.getElementById('customer-name').value.trim();
+  const phone = document.getElementById('customer-phone').value.trim();
+  const email = document.getElementById('customer-email').value.trim();
+  const deliveryMethod = document.querySelector('input[name="delivery"]:checked').value;
 
-    if (!name || !phone) {
-        alert('{% if current_lang == "ku" %}تکایە ناو و ژمارەی مۆبایل بنووسە{% elif current_lang == "ar" %}يرجى إدخال الاسم ورقم الهاتف{% else %}Please enter name and phone{% endif %}');
-        return;
+  if (!name || !phone) {
+    alert('{% if current_lang == "ku" %}تکایە ناو و ژمارەی مۆبایل بنووسە{% elif current_lang == "ar" %}يرجى إدخال الاسم ورقم الهاتف{% else %}Please enter name and phone{% endif %}');
+    return;
+  }
+
+  if (deliveryMethod === 'delivery') {
+    const area = document.getElementById('area').value;
+    const address = document.getElementById('address').value.trim();
+    if (!area || !address) {
+      alert('{% if current_lang == "ku" %}تکایە ناوچە و ناونیشان بنووسە{% elif current_lang == "ar" %}يرجى إدخال المنطقة والعنوان{% else %}Please enter area and address{% endif %}');
+      return;
     }
+  }
 
-    if (deliveryMethod === 'delivery') {
-        const area = document.getElementById('area').value;
-        const address = document.getElementById('address').value.trim();
-        if (!area || !address) {
-            alert('{% if current_lang == "ku" %}تکایە ناوچە و ناونیشان بنووسە{% elif current_lang == "ar" %}يرجى إدخال المنطقة والعنوان{% else %}Please enter area and address{% endif %}');
-            return;
-        }
+  const btn = this;
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>...';
+
+  try {
+    const response = await fetch('/store/api/order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        customer_name: name,
+        customer_phone: phone,
+        customer_email: email,
+        delivery_method: deliveryMethod,
+        area: document.getElementById('area').value,
+        address: document.getElementById('address').value,
+        notes: document.getElementById('notes').value,
+        items: cart
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      localStorage.removeItem('padelCart');
+      window.location.href = `/store/order-success/${result.order_id}`;
+    } else {
+      alert(result.message || 'Error placing order');
     }
-
-    const btn = this;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>...';
-
-    try {
-        const response = await fetch('/store/api/order', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                customer_name: name,
-                customer_phone: phone,
-                customer_email: email,
-                delivery_method: deliveryMethod,
-                area: document.getElementById('area').value,
-                address: document.getElementById('address').value,
-                notes: document.getElementById('notes').value,
-                items: cart
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            localStorage.removeItem('padelCart');
-            window.location.href = `/store/order-success/${result.order_id}`;
-        } else {
-            alert(result.message || 'Error placing order');
-        }
-    } catch (error) {
-        alert('Error placing order');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = `<i class="fas fa-check me-2"></i>${TRANS.place_order}`;
-    }
+  } catch (error) {
+    alert('Error placing order');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<i class="fas fa-check me-2"></i>${TRANS.place_order}`;
+  }
 });
 
 // Initialize
-renderOrderItems();
+document.addEventListener('DOMContentLoaded', () => {
+  renderOrderItems();
+  // ✅ extra safety for slow mobile rendering
+  setTimeout(updateTotals, 50);
+});
 </script>
 {% endblock %}

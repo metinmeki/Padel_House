@@ -1,167 +1,183 @@
 {% extends "base.html" %}
 
+{% set is_ku = current_lang in ['ku','ckb'] %}
+
 {% block title %}
-{% if current_lang == 'ku' %}پشتڕاستکردنەوەی حجز{% elif current_lang == 'ar' %}تأكيد الحجز{% else %}Booking Confirmation{% endif %}
+{% if is_ku %}پشتڕاستکردنەوەی حجز
+{% elif current_lang == 'ar' %}تأكيد الحجز
+{% else %}Booking Confirmation{% endif %}
 {% endblock %}
 
 {% block content %}
 <div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
 
-            <!-- Status Card -->
-            <div class="card shadow-lg border-0" style="border-radius: 15px; overflow: hidden;">
+      <div class="card shadow-lg border-0" style="border-radius: 15px; overflow: hidden;">
 
-                <!-- Header based on status -->
-                {% if booking.status == 'pending' %}
-                <div class="card-header text-center py-4" style="background: linear-gradient(135deg, #ffc107, #ff9800);">
-                    <i class="fas fa-clock fa-3x text-white mb-3"></i>
-                    <h3 class="text-white mb-0">
-                        {% if current_lang == 'ku' %}حجزەکەت وەرگیرا!
-                        {% elif current_lang == 'ar' %}تم استلام حجزك!
-                        {% else %}Booking Received!{% endif %}
-                    </h3>
-                </div>
-                {% elif booking.status == 'confirmed' %}
-                <div class="card-header text-center py-4" style="background: linear-gradient(135deg, #28a745, #20c997);">
-                    <i class="fas fa-check-circle fa-3x text-white mb-3"></i>
-                    <h3 class="text-white mb-0">
-                        {% if current_lang == 'ku' %}حجز پشتڕاستکرایەوە!
-                        {% elif current_lang == 'ar' %}تم تأكيد الحجز!
-                        {% else %}Booking Confirmed!{% endif %}
-                    </h3>
-                </div>
-                {% elif booking.status == 'cancelled' %}
-                <div class="card-header text-center py-4" style="background: linear-gradient(135deg, #dc3545, #c82333);">
-                    <i class="fas fa-times-circle fa-3x text-white mb-3"></i>
-                    <h3 class="text-white mb-0">
-                        {% if current_lang == 'ku' %}حجز هەڵوەشایەوە
-                        {% elif current_lang == 'ar' %}تم إلغاء الحجز
-                        {% else %}Booking Cancelled{% endif %}
-                    </h3>
-                </div>
-                {% endif %}
+        {# ===== Header based on status ===== #}
+        {% if booking.status == 'pending' %}
+        <div class="card-header text-center py-4" style="background: linear-gradient(135deg, #ffc107, #ff9800);">
+          <i class="fa-solid fa-clock fa-3x text-white mb-3"></i>
+          <h3 class="text-white mb-0">
+            {% if is_ku %}حجزەکەت وەرگیرا!
+            {% elif current_lang == 'ar' %}تم استلام حجزك!
+            {% else %}Booking Received!{% endif %}
+          </h3>
+        </div>
 
-                <div class="card-body p-4">
+        {% elif booking.status == 'confirmed' %}
+        <div class="card-header text-center py-4" style="background: linear-gradient(135deg, #28a745, #20c997);">
+          <i class="fa-solid fa-circle-check fa-3x text-white mb-3"></i>
+          <h3 class="text-white mb-0">
+            {% if is_ku %}حجز پشتڕاستکرایەوە!
+            {% elif current_lang == 'ar' %}تم تأكيد الحجز!
+            {% else %}Booking Confirmed!{% endif %}
+          </h3>
+        </div>
 
-                    <!-- Pending Message -->
-                    {% if booking.status == 'pending' %}
-                    <div class="alert alert-warning mb-4">
-                        <i class="fas fa-info-circle me-2"></i>
-                        {% if current_lang == 'ku' %}
-                        تیمەکەمان بەزووی پەیوەندیت پێوە دەکات بۆ پشتڕاستکردنەوەی حجزەکەت.
-                        {% elif current_lang == 'ar' %}
-                        سيتواصل معك فريقنا قريباً لتأكيد حجزك.
-                        {% else %}
-                        Our team will contact you shortly to confirm your booking.
-                        {% endif %}
-                    </div>
-                    {% endif %}
+        {% elif booking.status == 'cancelled' %}
+        <div class="card-header text-center py-4" style="background: linear-gradient(135deg, #dc3545, #c82333);">
+          <i class="fa-solid fa-circle-xmark fa-3x text-white mb-3"></i>
+          <h3 class="text-white mb-0">
+            {% if is_ku %}حجز هەڵوەشایەوە
+            {% elif current_lang == 'ar' %}تم إلغاء الحجز
+            {% else %}Booking Cancelled{% endif %}
+          </h3>
+        </div>
+        {% endif %}
 
-                    <!-- Booking Details -->
-                    <h5 class="mb-3">
-                        <i class="fas fa-info-circle me-2 text-primary"></i>
-                        {% if current_lang == 'ku' %}زانیاری حجز{% elif current_lang == 'ar' %}تفاصيل الحجز{% else %}Booking Details{% endif %}
-                    </h5>
+        <div class="card-body p-4">
 
-                    <table class="table table-borderless">
-                        <tr>
-                            <td class="text-muted" style="width: 40%;">
-                                {% if current_lang == 'ku' %}ژمارەی حجز{% elif current_lang == 'ar' %}رقم الحجز{% else %}Booking ID{% endif %}
-                            </td>
-                            <td class="fw-bold">#{{ booking.id }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">
-                                {% if current_lang == 'ku' %}یاریگا{% elif current_lang == 'ar' %}الملعب{% else %}Stadium{% endif %}
-                            </td>
-                            <td class="fw-bold">{{ booking.stadium.name }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">
-                                {% if current_lang == 'ku' %}بەروار{% elif current_lang == 'ar' %}التاريخ{% else %}Date{% endif %}
-                            </td>
-                            <td class="fw-bold">{{ booking.date.strftime('%Y-%m-%d') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">
-                                {% if current_lang == 'ku' %}کات{% elif current_lang == 'ar' %}الوقت{% else %}Time{% endif %}
-                            </td>
-                            <td class="fw-bold">{{ booking.start_time.strftime('%H:%M') }} - {{ booking.end_time.strftime('%H:%M') }}</td>
-                        </tr>
-                        <tr>
-                            <td class="text-muted">
-                                {% if current_lang == 'ku' %}ماوە{% elif current_lang == 'ar' %}المدة{% else %}Duration{% endif %}
-                            </td>
-                            <td class="fw-bold">{{ booking.duration_hours }} {% if current_lang == 'ku' %}کاتژمێر{% elif current_lang == 'ar' %}ساعة{% else %}hour(s){% endif %}</td>
-                        </tr>
-                    </table>
+          {# ===== Pending Message ===== #}
+          {% if booking.status == 'pending' %}
+          <div class="alert alert-warning mb-4">
+            <i class="fa-solid fa-circle-info me-2"></i>
+            {% if is_ku %}
+              تیمەکەمان بەزووی پەیوەندیت پێوە دەکات بۆ پشتڕاستکردنەوەی حجزەکەت.
+            {% elif current_lang == 'ar' %}
+              سيتواصل معك فريقنا قريباً لتأكيد حجزك.
+            {% else %}
+              Our team will contact you shortly to confirm your booking.
+            {% endif %}
+          </div>
+          {% endif %}
 
-                    <hr>
+          {# ===== Booking Details ===== #}
+          <h5 class="mb-3">
+            <i class="fa-solid fa-circle-info me-2 text-primary"></i>
+            {% if is_ku %}زانیاری حجز{% elif current_lang == 'ar' %}تفاصيل الحجز{% else %}Booking Details{% endif %}
+          </h5>
 
-                    <!-- Price Details -->
-                    <h5 class="mb-3">
-                        <i class="fas fa-receipt me-2 text-success"></i>
-                        {% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %}
-                    </h5>
+          <table class="table table-borderless mb-0">
+            <tr>
+              <td class="text-muted" style="width: 40%;">
+                {% if is_ku %}ژمارەی حجز{% elif current_lang == 'ar' %}رقم الحجز{% else %}Booking ID{% endif %}
+              </td>
+              <td class="fw-bold">#{{ booking.id }}</td>
+            </tr>
 
-                    <table class="table table-borderless">
-                        <tr>
-                            <td class="text-muted">
-                                {% if current_lang == 'ku' %}نرخی ئەسڵی{% elif current_lang == 'ar' %}السعر الأصلي{% else %}Original Price{% endif %}
-                            </td>
-                            <td class="fw-bold">{{ "{:,.0f}".format(booking.original_price) }} IQD</td>
-                        </tr>
-                        {% if booking.discount_percentage > 0 %}
-                        <tr>
-                            <td class="text-muted">
-                                {% if current_lang == 'ku' %}داشکان{% elif current_lang == 'ar' %}الخصم{% else %}Discount{% endif %}
-                                <span class="badge bg-success">{{ booking.discount_percentage }}%</span>
-                            </td>
-                            <td class="fw-bold text-success">-{{ "{:,.0f}".format(booking.discount_amount) }} IQD</td>
-                        </tr>
-                        {% endif %}
-                        <tr class="border-top">
-                            <td class="text-muted fs-5">
-                                {% if current_lang == 'ku' %}کۆی گشتی{% elif current_lang == 'ar' %}المجموع{% else %}Total{% endif %}
-                            </td>
-                            <td class="fw-bold fs-4 text-primary">{{ "{:,.0f}".format(booking.final_price) }} IQD</td>
-                        </tr>
-                    </table>
+            <tr>
+              <td class="text-muted">
+                {% if is_ku %}یاریگا{% elif current_lang == 'ar' %}الملعب{% else %}Stadium{% endif %}
+              </td>
+              <td class="fw-bold">{{ booking.stadium.name }}</td>
+            </tr>
 
-                    <!-- Status Badge -->
-                    <div class="text-center mt-4">
-                        <span class="badge {{ booking.get_status_badge() }} fs-6 px-4 py-2">
-                            {% if booking.status == 'pending' %}
-                                <i class="fas fa-clock me-2"></i>
-                                {% if current_lang == 'ku' %}چاوەڕوانی پشتڕاستکردنەوە{% elif current_lang == 'ar' %}في انتظار التأكيد{% else %}Awaiting Confirmation{% endif %}
-                            {% elif booking.status == 'confirmed' %}
-                                <i class="fas fa-check me-2"></i>
-                                {% if current_lang == 'ku' %}پشتڕاستکراو{% elif current_lang == 'ar' %}مؤكد{% else %}Confirmed{% endif %}
-                            {% elif booking.status == 'cancelled' %}
-                                <i class="fas fa-times me-2"></i>
-                                {% if current_lang == 'ku' %}هەڵوەشێندراوە{% elif current_lang == 'ar' %}ملغي{% else %}Cancelled{% endif %}
-                            {% endif %}
-                        </span>
-                    </div>
+            <tr>
+              <td class="text-muted">
+                {% if is_ku %}بەروار{% elif current_lang == 'ar' %}التاريخ{% else %}Date{% endif %}
+              </td>
+              <td class="fw-bold">{{ booking.date.strftime('%Y-%m-%d') }}</td>
+            </tr>
 
-                </div>
+            <tr>
+              <td class="text-muted">
+                {% if is_ku %}کات{% elif current_lang == 'ar' %}الوقت{% else %}Time{% endif %}
+              </td>
+              <td class="fw-bold">{{ booking.start_time.strftime('%H:%M') }} - {{ booking.end_time.strftime('%H:%M') }}</td>
+            </tr>
 
-                <!-- Footer Actions -->
-                <div class="card-footer bg-light text-center py-3">
-                    <a href="{{ url_for('booking.booking_page') }}" class="btn btn-outline-primary me-2">
-                        <i class="fas fa-plus me-2"></i>
-                        {% if current_lang == 'ku' %}حجزی نوێ{% elif current_lang == 'ar' %}حجز جديد{% else %}New Booking{% endif %}
-                    </a>
-                    <a href="{{ url_for('main.index') }}" class="btn btn-primary">
-                        <i class="fas fa-home me-2"></i>
-                        {% if current_lang == 'ku' %}سەرەتا{% elif current_lang == 'ar' %}الرئيسية{% else %}Home{% endif %}
-                    </a>
-                </div>
+            {# ✅ FIXED DURATION ROW (no English leak) #}
+            <tr>
+              <td class="text-muted">
+                {% if is_ku %}ماوە{% elif current_lang == 'ar' %}المدة{% else %}Duration{% endif %}
+              </td>
+              <td class="fw-bold">
+                {{ booking.duration_hours }}
+                {% if is_ku %}کاتژمێر{% elif current_lang == 'ar' %}ساعة{% else %}hour(s){% endif %}
+              </td>
+            </tr>
+          </table>
 
-            </div>
+          <hr>
+
+          {# ===== Price Details ===== #}
+          <h5 class="mb-3">
+            <i class="fa-solid fa-receipt me-2 text-success"></i>
+            {% if is_ku %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %}
+          </h5>
+
+          <table class="table table-borderless">
+            <tr>
+              <td class="text-muted">
+                {% if is_ku %}نرخی ئەسڵی{% elif current_lang == 'ar' %}السعر الأصلي{% else %}Original Price{% endif %}
+              </td>
+              <td class="fw-bold">{{ "{:,.0f}".format(booking.original_price) }} IQD</td>
+            </tr>
+
+            {% if booking.discount_percentage > 0 %}
+            <tr>
+              <td class="text-muted">
+                {% if is_ku %}داشکان{% elif current_lang == 'ar' %}الخصم{% else %}Discount{% endif %}
+                <span class="badge bg-success">{{ booking.discount_percentage }}%</span>
+              </td>
+              <td class="fw-bold text-success">-{{ "{:,.0f}".format(booking.discount_amount) }} IQD</td>
+            </tr>
+            {% endif %}
+
+            <tr class="border-top">
+              <td class="text-muted fs-5">
+                {% if is_ku %}کۆی گشتی{% elif current_lang == 'ar' %}المجموع{% else %}Total{% endif %}
+              </td>
+              <td class="fw-bold fs-4 text-primary">{{ "{:,.0f}".format(booking.final_price) }} IQD</td>
+            </tr>
+          </table>
+
+          {# ===== Status Badge ===== #}
+          <div class="text-center mt-4">
+            <span class="badge {{ booking.get_status_badge() }} fs-6 px-4 py-2">
+              {% if booking.status == 'pending' %}
+                <i class="fa-solid fa-clock me-2"></i>
+                {% if is_ku %}چاوەڕوانی پشتڕاستکردنەوە{% elif current_lang == 'ar' %}في انتظار التأكيد{% else %}Awaiting Confirmation{% endif %}
+              {% elif booking.status == 'confirmed' %}
+                <i class="fa-solid fa-check me-2"></i>
+                {% if is_ku %}پشتڕاستکراو{% elif current_lang == 'ar' %}مؤكد{% else %}Confirmed{% endif %}
+              {% elif booking.status == 'cancelled' %}
+                <i class="fa-solid fa-xmark me-2"></i>
+                {% if is_ku %}هەڵوەشێندراوە{% elif current_lang == 'ar' %}ملغي{% else %}Cancelled{% endif %}
+              {% endif %}
+            </span>
+          </div>
 
         </div>
+
+        {# ===== Footer Actions ===== #}
+        <div class="card-footer bg-light text-center py-3">
+          <a href="{{ url_for('booking.booking_page') }}" class="btn btn-outline-primary me-2">
+            <i class="fa-solid fa-plus me-2"></i>
+            {% if is_ku %}حجزی نوێ{% elif current_lang == 'ar' %}حجز جديد{% else %}New Booking{% endif %}
+          </a>
+
+          <a href="{{ url_for('main.index') }}" class="btn btn-primary">
+            <i class="fa-solid fa-house me-2"></i>
+            {% if is_ku %}سەرەتا{% elif current_lang == 'ar' %}الرئيسية{% else %}Home{% endif %}
+          </a>
+        </div>
+
+      </div>
+
     </div>
+  </div>
 </div>
 {% endblock %}

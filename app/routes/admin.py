@@ -1,9 +1,10 @@
-# admin.py (routes) - Updated with Pending Bookings Approval System
-from flask import Blueprint, render_template, request, jsonify, redirect, url_for
+# app/routes/admin.py
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 from functools import wraps
 from app import db
+
 from app.models.stadium import Stadium
 from app.models.booking import Booking
 from app.models.settings import Settings
@@ -11,26 +12,46 @@ from app.models.product import Product
 from app.models.category import Category
 from app.models.order import Order, OrderItem
 from app.models.user import User
-from datetime import datetime, date
+from app.models.expense import Expense
+from datetime import datetime, date, timedelta
 import os
 import random
+import io
+
+# Notifications
+from app.services.notify import notify_admins
+from sqlalchemy import func
+from app.models.notification import Notification
+from app.models.manual_debt import ManualDebt
+
+# Services
+from app.services.google_sheets import send_booking_to_sheet
+from app.services.barcode_service import BarcodeService, XPrinterService
+
+# ✅ Activity log
+from app.models.activity_log import ActivityLog
+from app.services.activity_service import log_activity
+
+# POS
+try:
+    from app.models.pos_session import POSSession
+except Exception:
+    POSSession = None
+
+# ✅ Image compression (Pillow)
+try:
+    from app.utils.image_tools import compress_product_image
+except Exception:
+    compress_product_image = None
 
 
 def generate_product_barcode():
     """Generate a unique 13-digit barcode for EAN-13 format"""
-    # Prefix: 743 (custom for Padel House)
     prefix = "743"
-
-    # Timestamp: YYMMDD (6 digits)
-    timestamp = datetime.now().strftime("%y%m%d")
-
-    # Random: 3 digits
+    timestamp = datetime.now().strftime("%y%m%d")  # YYMMDD
     random_part = ''.join([str(random.randint(0, 9)) for _ in range(3)])
-
-    # Combine first 12 digits
     barcode_12 = f"{prefix}{timestamp}{random_part}"
 
-    # Calculate check digit (EAN-13 algorithm)
     total = 0
     for i, digit in enumerate(barcode_12):
         if i % 2 == 0:
@@ -38,7 +59,6 @@ def generate_product_barcode():
         else:
             total += int(digit) * 3
     check_digit = (10 - (total % 10)) % 10
-
     return f"{barcode_12}{check_digit}"
 
 
@@ -52,50 +72,147 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def super_admin_required(f):
-    """Decorator to require super_admin role"""
+def save_product_image(file):
+    """
+    Saves product image in /static/images/products as optimized .webp
+    If compress_product_image is not available, fallback to normal save.
+    """
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
+    filename = secure_filename(file.filename)
+    base = os.path.splitext(filename)[0]
+    stamp = datetime.now().strftime('%Y%m%d%H%M%S')
+
+    # temp original
+    temp_name = f"temp_{stamp}_{filename}"
+    temp_path = os.path.join(UPLOAD_FOLDER, temp_name)
+    file.save(temp_path)
+
+    # final name (webp)
+    final_name = f"{stamp}_{base}.webp"
+    final_path = os.path.join(UPLOAD_FOLDER, final_name)
+
+    # compress if tool exists
+    if compress_product_image:
+        try:
+            out_path = compress_product_image(
+                input_path=temp_path,
+                output_path=final_path,
+                max_size=(900, 900),
+                quality=78,
+                to_webp=True
+            )
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+            return os.path.basename(out_path)
+        except Exception:
+            pass
+
+    # Fallback (no compression)
+    fallback_name = f"{stamp}_{filename}"
+    fallback_path = os.path.join(UPLOAD_FOLDER, fallback_name)
+    try:
+        os.replace(temp_path, fallback_path)
+    except Exception:
+        fallback_name = temp_name
+    return fallback_name
+
+
+def super_admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for('auth.login'))
         if current_user.role != 'super_admin':
-            return jsonify({'success': False, 'message': 'غير مصرح لك بهذا الإجراء'}), 403
+            flash('غير مصرح لك بهذا الإجراء', 'danger')
+            return redirect(url_for('admin.dashboard'))
         return f(*args, **kwargs)
-
     return decorated_function
 
 
-# ===== CONTEXT PROCESSOR FOR PENDING COUNT =====
+def permission_required(permission_attr: str):
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if not current_user.is_authenticated:
+                return redirect(url_for('auth.login'))
+
+            # super admin always allowed
+            if getattr(current_user, "role", None) == "super_admin":
+                return f(*args, **kwargs)
+
+            # check specific permission boolean in User model
+            if not getattr(current_user, permission_attr, False):
+                flash("غير مصرح لك", "danger")
+                return redirect(url_for('admin.dashboard'))
+
+            return f(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
 @admin_bp.app_context_processor
 def inject_pending_count():
-    """Inject pending bookings count into all admin templates"""
     if current_user.is_authenticated:
         pending_bookings_count = Booking.query.filter_by(status='pending').count()
         return {'pending_bookings_count': pending_bookings_count}
     return {'pending_bookings_count': 0}
 
 
-# ===== ADMIN DASHBOARD =====
+@admin_bp.app_context_processor
+def inject_pending_orders_count():
+    if current_user.is_authenticated:
+        pending_orders_count = Order.query.filter_by(status='pending').count()
+        return {'pending_orders_count': pending_orders_count}
+    return {'pending_orders_count': 0}
+
+
+# ===== ADMIN HOME - Smart Redirect =====
 @admin_bp.route('/')
+@login_required
+def admin_home():
+    """Smart redirect to first accessible page"""
+    if current_user.role == 'super_admin' or getattr(current_user, 'can_access_dashboard', False):
+        return redirect(url_for('admin.dashboard'))
+    elif getattr(current_user, 'can_manage_bookings', False):
+        return redirect(url_for('admin.manage_bookings'))
+    elif getattr(current_user, 'can_manage_products', False):
+        return redirect(url_for('admin.manage_products'))
+    elif getattr(current_user, 'can_manage_orders', False):
+        return redirect(url_for('admin.manage_orders'))
+    elif getattr(current_user, 'can_manage_stadiums', False):
+        return redirect(url_for('admin.manage_stadiums'))
+    elif getattr(current_user, 'can_view_reports', False):
+        return redirect(url_for('admin.reports'))
+    elif getattr(current_user, 'can_manage_settings', False):
+        return redirect(url_for('admin.manage_settings'))
+    else:
+        flash('ليس لديك أي صلاحيات للوصول إلى لوحة التحكم', 'danger')
+        return redirect(url_for('auth.logout'))
+
+
+# ===== ADMIN DASHBOARD =====
 @admin_bp.route('/dashboard')
 @login_required
 def dashboard():
-    """Admin dashboard with statistics"""
-    # 1. Booking statistics
+    # ✅ Check dashboard permission
+    if current_user.role != 'super_admin':
+        if not getattr(current_user, 'can_access_dashboard', False):
+            flash('غير مصرح لك بالوصول إلى لوحة التحكم', 'danger')
+            return redirect(url_for('admin.admin_home'))
+
     total_bookings = Booking.query.count()
 
-    # Calculate Total Revenue
     total_revenue = db.session.query(
         db.func.sum(Booking.final_price)
     ).filter(Booking.status.in_(['confirmed', 'completed'])).scalar() or 0
 
-    # Calculate Today's Bookings Count
     today_bookings = Booking.query.filter(
         Booking.date == date.today()
     ).count()
 
-    # Calculate Today's Revenue
     today_revenue = db.session.query(
         db.func.sum(Booking.final_price)
     ).filter(
@@ -103,15 +220,12 @@ def dashboard():
         Booking.date == date.today()
     ).scalar() or 0
 
-    # Pending bookings count
     pending_bookings = Booking.query.filter_by(status='pending').count()
 
-    # 2. Store statistics
     total_products = Product.query.filter_by(is_active=True).count()
     total_orders = Order.query.count()
     pending_orders = Order.query.filter_by(status='pending').count()
 
-    # Calculate store revenue
     store_revenue = db.session.query(
         db.func.sum(Order.total_price)
     ).filter(Order.status.in_(['confirmed', 'completed', 'delivered'])).scalar() or 0
@@ -119,25 +233,33 @@ def dashboard():
     stadiums = Stadium.query.all()
     recent_bookings = Booking.query.order_by(Booking.created_at.desc()).limit(5).all()
     recent_orders = Order.query.order_by(Order.created_at.desc()).limit(5).all()
-
-    # Get pending bookings for quick access
     pending_booking_list = Booking.query.filter_by(status='pending').order_by(Booking.created_at.desc()).limit(5).all()
 
-    return render_template('admin/dashboard.html',
-                           total_bookings=total_bookings,
-                           total_revenue=total_revenue,
-                           today_revenue=today_revenue,
-                           today_bookings=today_bookings,
-                           pending_bookings=pending_bookings,
-                           total_products=total_products,
-                           total_orders=total_orders,
-                           pending_orders=pending_orders,
-                           store_revenue=store_revenue,
-                           stadiums=stadiums,
-                           recent_bookings=recent_bookings,
-                           recent_orders=recent_orders,
-                           pending_booking_list=pending_booking_list
-                           )
+    # ✅ TODAY LOGS (UTC)
+    start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    end = start + timedelta(days=1)
+    today_logs = ActivityLog.query.filter(
+        ActivityLog.created_at >= start,
+        ActivityLog.created_at < end
+    ).order_by(ActivityLog.created_at.desc()).limit(30).all()
+
+    return render_template(
+        'admin/dashboard.html',
+        total_bookings=total_bookings,
+        total_revenue=total_revenue,
+        today_revenue=today_revenue,
+        today_bookings=today_bookings,
+        pending_bookings=pending_bookings,
+        total_products=total_products,
+        total_orders=total_orders,
+        pending_orders=pending_orders,
+        store_revenue=store_revenue,
+        stadiums=stadiums,
+        recent_bookings=recent_bookings,
+        recent_orders=recent_orders,
+        pending_booking_list=pending_booking_list,
+        today_logs=today_logs
+    )
 
 
 # ========================================
@@ -146,73 +268,142 @@ def dashboard():
 
 @admin_bp.route('/pending-bookings')
 @login_required
+@permission_required('can_manage_bookings')
 def pending_bookings():
-    """View all pending bookings that need admin approval"""
     bookings = Booking.query.filter_by(status='pending').order_by(Booking.created_at.desc()).all()
     stadiums = Stadium.query.all()
-    return render_template('admin/pending_bookings.html',
-                           bookings=bookings,
-                           stadiums=stadiums)
+    return render_template('admin/pending_bookings.html', bookings=bookings, stadiums=stadiums)
 
 
 @admin_bp.route('/api/booking/<int:booking_id>/approve', methods=['POST'])
 @login_required
 def approve_booking(booking_id):
-    """Approve a pending booking - Admin calls customer then approves"""
     booking = Booking.query.get(booking_id)
 
     if not booking:
         return jsonify({'success': False, 'message': 'الحجز غير موجود'}), 404
-
     if booking.status != 'pending':
         return jsonify({'success': False, 'message': 'هذا الحجز ليس معلقاً'}), 400
 
-    # Update booking status
+    # ✅ Approve
     booking.status = 'confirmed'
     booking.confirmed_at = datetime.utcnow()
-
-    # Record who approved it (if field exists)
     if hasattr(booking, 'confirmed_by'):
         booking.confirmed_by = current_user.id
 
     db.session.commit()
 
+    # ✅ Notify (approved)
+    try:
+        notify_admins(
+            title="Booking approved ✅",
+            message=f"Booking #{booking.id} confirmed for {booking.customer_name}",
+            url=f"/admin/booking/{booking.id}",
+            ntype="booking_approved"
+        )
+    except Exception as e:
+        print("❌ Notification error:", e)
+
+    # ✅ Send to Google Sheets ONLY ONCE
+    if not getattr(booking, 'sheet_sent', False):
+        try:
+            send_booking_to_sheet(booking)
+
+            if hasattr(booking, 'sheet_sent'):
+                booking.sheet_sent = True
+            if hasattr(booking, 'sheet_sent_at'):
+                booking.sheet_sent_at = datetime.utcnow()
+            if hasattr(booking, 'sheet_last_error'):
+                booking.sheet_last_error = None
+            db.session.commit()
+
+        except Exception as e:
+            err = str(e)
+            print("❌ Google Sheets error:", err)
+
+            if hasattr(booking, 'sheet_last_error'):
+                booking.sheet_last_error = err
+                db.session.commit()
+
+            return jsonify({
+                'success': True,
+                'message': f'تم قبول الحجز ✅ لكن حدث خطأ أثناء الإرسال إلى Google Sheets: {err}',
+                'booking_id': booking.id,
+                'new_status': 'confirmed',
+                'sheet_sent': False
+            }), 200
+
+    # ✅ LOG IT
+    try:
+        log_activity(
+            action="approve_booking",
+            entity_type="booking",
+            entity_id=booking.id,
+            title="Approved booking",
+            note=f"Customer: {booking.customer_name} | Stadium: {booking.stadium.name if booking.stadium else '-'} | Date: {booking.date}",
+            amount=int(booking.final_price or 0),
+            payment_method="booking"
+        )
+    except Exception as e:
+        print("❌ Activity log error:", e)
+
     return jsonify({
         'success': True,
         'message': f'تم قبول حجز {booking.customer_name} بنجاح ✅',
         'booking_id': booking.id,
-        'new_status': 'confirmed'
+        'new_status': 'confirmed',
+        'sheet_sent': True
     })
 
 
 @admin_bp.route('/api/booking/<int:booking_id>/reject', methods=['POST'])
 @login_required
 def reject_booking(booking_id):
-    """Reject a pending booking with optional reason"""
     booking = Booking.query.get(booking_id)
 
     if not booking:
         return jsonify({'success': False, 'message': 'الحجز غير موجود'}), 404
-
     if booking.status != 'pending':
         return jsonify({'success': False, 'message': 'هذا الحجز ليس معلقاً'}), 400
 
     data = request.json or {}
-    rejection_reason = data.get('reason', '')
+    rejection_reason = (data.get('reason') or '').strip()
 
-    # Update booking status
+    # ✅ reject
     booking.status = 'cancelled'
-
-    # Store rejection reason
     if hasattr(booking, 'rejection_reason'):
-        booking.rejection_reason = rejection_reason
+        booking.rejection_reason = rejection_reason or None
 
-    # Also add to notes for backup
     if rejection_reason:
         existing_notes = booking.notes or ''
         booking.notes = f"{existing_notes}\n[رفض] سبب الرفض: {rejection_reason}".strip()
 
     db.session.commit()
+
+    # ✅ Notify (SAFE)
+    try:
+        notify_admins(
+            title="Booking rejected ❌",
+            message=f"Booking #{booking.id} rejected for {booking.customer_name}. Reason: {rejection_reason or '-'}",
+            url=f"/admin/booking/{booking.id}",
+            ntype="booking_rejected"
+        )
+    except Exception as e:
+        print("❌ Notification error:", e)
+
+    # ✅ LOG IT
+    try:
+        log_activity(
+            action="reject_booking",
+            entity_type="booking",
+            entity_id=booking.id,
+            title="Rejected booking",
+            note=f"Customer: {booking.customer_name} | Reason: {rejection_reason or '-'}",
+            amount=int(booking.final_price or 0),
+            payment_method="booking"
+        )
+    except Exception as e:
+        print("❌ Activity log error:", e)
 
     return jsonify({
         'success': True,
@@ -225,49 +416,47 @@ def reject_booking(booking_id):
 # ===== MANAGE BOOKINGS =====
 @admin_bp.route('/bookings')
 @login_required
+@permission_required('can_manage_bookings')
 def manage_bookings():
-    """View and manage all bookings"""
     status_filter = request.args.get('status', 'all')
     stadium_filter = request.args.get('stadium', 'all')
 
     query = Booking.query
-
     if status_filter != 'all':
         query = query.filter_by(status=status_filter)
-
     if stadium_filter != 'all':
-        query = query.filter_by(stadium_id=int(stadium_filter))
+        try:
+            query = query.filter_by(stadium_id=int(stadium_filter))
+        except (ValueError, TypeError):
+            pass
 
     bookings = query.order_by(Booking.date.desc(), Booking.created_at.desc()).all()
     stadiums = Stadium.query.all()
 
-    return render_template('admin/bookings.html',
-                           bookings=bookings,
-                           stadiums=stadiums,
-                           current_status=status_filter,
-                           current_stadium=stadium_filter
-                           )
+    return render_template(
+        'admin/bookings.html',
+        bookings=bookings,
+        stadiums=stadiums,
+        current_status=status_filter,
+        current_stadium=stadium_filter
+    )
 
 
-# ===== BOOKING DETAILS =====
 @admin_bp.route('/booking/<int:booking_id>')
 @login_required
 def booking_detail(booking_id):
-    """View specific booking details"""
     booking = Booking.query.get_or_404(booking_id)
     return render_template('admin/booking_detail.html', booking=booking)
 
 
-# ===== UPDATE BOOKING STATUS =====
 @admin_bp.route('/api/booking/<int:booking_id>/status', methods=['POST'])
 @login_required
 def update_booking_status(booking_id):
-    """Update booking status"""
     booking = Booking.query.get(booking_id)
     if not booking:
         return jsonify({'success': False, 'message': 'Booking not found'}), 404
 
-    data = request.json
+    data = request.json or {}
     new_status = data.get('status')
 
     if new_status not in ['pending', 'confirmed', 'completed', 'cancelled']:
@@ -276,30 +465,29 @@ def update_booking_status(booking_id):
     old_status = booking.status
     booking.status = new_status
 
-    # If confirming, record confirmation time
     if new_status == 'confirmed' and old_status == 'pending':
         booking.confirmed_at = datetime.utcnow()
         if hasattr(booking, 'confirmed_by'):
             booking.confirmed_by = current_user.id
 
     db.session.commit()
-
     return jsonify({'success': True, 'message': f'تم تحديث الحجز إلى {new_status}'})
 
 
-# ===== DELETE BOOKING =====
 @admin_bp.route('/api/booking/<int:booking_id>', methods=['DELETE'])
 @login_required
 def delete_booking(booking_id):
-    """Delete booking"""
     booking = Booking.query.get(booking_id)
     if not booking:
         return jsonify({'success': False, 'message': 'Booking not found'}), 404
 
-    db.session.delete(booking)
-    db.session.commit()
-
-    return jsonify({'success': True, 'message': 'تم حذف الحجز بنجاح'})
+    try:
+        db.session.delete(booking)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'تم حذف الحجز بنجاح'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ========================================
@@ -308,8 +496,8 @@ def delete_booking(booking_id):
 
 @admin_bp.route('/products')
 @login_required
+@permission_required('can_manage_products')
 def manage_products():
-    """View and manage all products"""
     products = Product.query.order_by(Product.created_at.desc()).all()
     categories = Category.query.filter_by(is_active=True).all()
     return render_template('admin/products.html', products=products, categories=categories)
@@ -317,53 +505,23 @@ def manage_products():
 
 @admin_bp.route('/api/product', methods=['POST'])
 @login_required
-def add_product():
+def add_product_api():
+    """API endpoint for adding products via AJAX"""
     try:
-        # Multilingual names
         name_ku = request.form.get('name_ku')
         name_ar = request.form.get('name_ar')
         name_en = request.form.get('name_en')
-
-        # Multilingual descriptions
         description_ku = request.form.get('description_ku')
         description_ar = request.form.get('description_ar')
         description_en = request.form.get('description_en')
-
-        category_id = request.form.get('category_id')
         price = request.form.get('price')
         stock = request.form.get('stock', 0)
-        is_active = request.form.get('is_active', 'true') == 'true'
+        category_id = request.form.get('category_id')
+        show_in_website = request.form.get('show_in_website') == 'true'
+        show_in_pos = request.form.get('show_in_pos') == 'true'
 
-        # ✅ جديد: أين يظهر المنتج
-        show_in_website = request.form.get('show_in_website', 'true') == 'true'
-        show_in_pos = request.form.get('show_in_pos', 'true') == 'true'
-
-        # ✅ باركود - توليد تلقائي فقط لمنتجات المتجر (الموقع)
-        barcode = request.form.get('barcode', '').strip()
-        if not barcode and show_in_website:
-            # Auto-generate barcode ONLY for store/website products
-            barcode = generate_product_barcode()
-        elif not barcode:
-            # No barcode for POS-only items (coffee, food, etc.)
-            barcode = None
-
-        # Validation
-        if not name_ku or not price or not category_id:
-            return jsonify({
-                'success': False,
-                'message': 'ناوی کوردی، نرخ و پۆل پێویستن'
-            }), 400
-
-        # Handle image upload
-        image_filename = None
-        if 'image' in request.files:
-            file = request.files['image']
-            if file and file.filename and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
-                os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                file.save(os.path.join(UPLOAD_FOLDER, filename))
-                image_filename = filename
+        if not name_ku or not price:
+            return jsonify({'success': False, 'message': 'ناو و نرخ پێویستن / الاسم والسعر مطلوبان'}), 400
 
         product = Product(
             name_ku=name_ku,
@@ -372,42 +530,195 @@ def add_product():
             description_ku=description_ku,
             description_ar=description_ar,
             description_en=description_en,
-            category_id=int(category_id),
             price=int(price),
             stock=int(stock),
-            image=image_filename,
-            is_active=is_active,
+            category_id=int(category_id) if category_id else None,
             show_in_website=show_in_website,
             show_in_pos=show_in_pos,
-            barcode=barcode
+            is_active=True
         )
 
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename and allowed_file(file.filename):
+                product.image = save_product_image(file)
+
         db.session.add(product)
+        db.session.flush()
+
+        barcode_value, filename = BarcodeService.save_barcode_image(
+            product.id,
+            product.name_ku or product.name_ar or 'Product'
+        )
+        product.barcode = barcode_value
+
         db.session.commit()
+
+        # ✅ LOG IT
+        try:
+            log_activity(
+                action="add_product",
+                entity_type="product",
+                entity_id=product.id,
+                title="Added product",
+                note=f"{product.name_ku or product.name_ar or product.name_en} | Price: {product.price}",
+                amount=int(product.price or 0),
+                payment_method="store"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        if request.form.get('print_label') == 'true':
+            try:
+                XPrinterService.print_barcode_label(
+                    product.id,
+                    product.name_ku or product.name_ar,
+                    product.price,
+                    barcode_value
+                )
+            except Exception as e:
+                print("❌ Print error:", e)
 
         return jsonify({
             'success': True,
-            'message': 'بەرهەم بە سەرکەوتوویی زیاد کرا',
-            'product_id': product.id
+            'message': 'بەرهەم بە سەرکەوتوویی زیادکرا / تمت إضافة المنتج بنجاح',
+            'product': {
+                'id': product.id,
+                'name_ku': product.name_ku,
+                'name_ar': product.name_ar,
+                'name_en': product.name_en,
+                'barcode': product.barcode,
+                'price': product.price,
+                'stock': product.stock,
+                'category_id': product.category_id,
+                'image': product.image
+            }
         }), 201
 
     except Exception as e:
         db.session.rollback()
+        return jsonify({'success': False, 'message': f'هەڵە / خطأ: {str(e)}'}), 500
+
+
+@admin_bp.route('/products/add', methods=['POST'])
+@login_required
+def add_product():
+    if current_user.role not in ['admin', 'super_admin']:
+        flash('Unauthorized', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+    try:
+        product = Product(
+            name_ku=request.form.get('name_ku'),
+            name_ar=request.form.get('name_ar'),
+            name_en=request.form.get('name_en'),
+            description_ku=request.form.get('description_ku'),
+            description_ar=request.form.get('description_ar'),
+            description_en=request.form.get('description_en'),
+            price=int(request.form.get('price', 0)),
+            stock=int(request.form.get('stock', 0)),
+            category_id=request.form.get('category_id') or None,
+            show_in_website=request.form.get('show_in_website') == 'on',
+            show_in_pos=request.form.get('show_in_pos') == 'on'
+        )
+
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename and allowed_file(file.filename):
+                product.image = save_product_image(file)
+
+        db.session.add(product)
+        db.session.flush()
+
+        barcode_value, filename = BarcodeService.save_barcode_image(product.id, product.name_ku or 'Product')
+        product.barcode = barcode_value
+
+        db.session.commit()
+
+        # ✅ LOG IT
+        try:
+            log_activity(
+                action="add_product",
+                entity_type="product",
+                entity_id=product.id,
+                title="Added product",
+                note=f"{product.name_ku or product.name_ar or product.name_en} | Price: {product.price}",
+                amount=int(product.price or 0),
+                payment_method="store"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        if request.form.get('print_label') == 'on':
+            try:
+                success, message = XPrinterService.print_barcode_label(
+                    product.id, product.name_ku or 'Product', product.price, barcode_value
+                )
+                if not success:
+                    flash(f'زیادکرا بەڵام چاپکردن سەرکەوتوو نەبوو: {message}', 'warning')
+                else:
+                    flash('بەرهەم زیادکرا و لێبڵ چاپکرا!', 'success')
+            except Exception:
+                flash('بەرهەم زیادکرا بەڵام چاپکردن سەرکەوتوو نەبوو', 'warning')
+        else:
+            flash('بەرهەم بە سەرکەوتوویی زیادکرا!', 'success')
+
+        return redirect(url_for('admin.manage_products'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'هەڵە: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_products'))
+
+
+@admin_bp.route('/products/<int:product_id>/print-barcode')
+@login_required
+def print_product_barcode(product_id):
+    if current_user.role not in ['admin', 'super_admin']:
+        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+
+    product = Product.query.get_or_404(product_id)
+
+    if not product.barcode:
+        barcode_value, filename = BarcodeService.save_barcode_image(product.id, product.name_ku or 'Product')
+        product.barcode = barcode_value
+        db.session.commit()
+
+    try:
+        success, message = XPrinterService.print_barcode_label(
+            product.id, product.name_ku or 'Product', product.price, product.barcode
+        )
+        return jsonify({'success': success, 'message': message})
+    except Exception as e:
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/products/<int:product_id>/barcode-image')
+@login_required
+def get_barcode_image(product_id):
+    product = Product.query.get_or_404(product_id)
+
+    if not product.barcode:
+        barcode_value, filename = BarcodeService.save_barcode_image(product.id, product.name_ku or 'Product')
+        product.barcode = barcode_value
+        db.session.commit()
+
+    try:
+        barcode_value, image_bytes = BarcodeService.generate_barcode(product.id, product.name_ku or 'Product')
+        return send_file(io.BytesIO(image_bytes), mimetype='image/png', as_attachment=False)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 @admin_bp.route('/api/product/<int:product_id>', methods=['PUT', 'POST'])
 @login_required
 def update_product(product_id):
-    """Update product - FIXED to handle all fields including visibility"""
     product = Product.query.get(product_id)
     if not product:
         return jsonify({'success': False, 'message': 'المنتج غير موجود'}), 404
 
     try:
-        # Handle form data
         if request.form:
-            # Multilingual names
             if 'name_ku' in request.form:
                 product.name_ku = request.form['name_ku']
             if 'name_ar' in request.form:
@@ -415,7 +726,6 @@ def update_product(product_id):
             if 'name_en' in request.form:
                 product.name_en = request.form['name_en']
 
-            # Multilingual descriptions
             if 'description_ku' in request.form:
                 product.description_ku = request.form['description_ku']
             if 'description_ar' in request.form:
@@ -423,44 +733,43 @@ def update_product(product_id):
             if 'description_en' in request.form:
                 product.description_en = request.form['description_en']
 
-            # Basic fields
             if 'category_id' in request.form:
-                product.category_id = int(request.form['category_id']) if request.form['category_id'] else None
+                try:
+                    product.category_id = int(request.form['category_id']) if request.form['category_id'] else None
+                except (ValueError, TypeError):
+                    product.category_id = None
             if 'price' in request.form:
-                product.price = int(request.form['price'])
+                try:
+                    product.price = int(request.form['price'])
+                except (ValueError, TypeError):
+                    pass
             if 'stock' in request.form:
-                product.stock = int(request.form['stock'])
+                try:
+                    product.stock = int(request.form['stock'])
+                except (ValueError, TypeError):
+                    pass
 
-            # ✅ FIXED: Handle checkboxes properly (unchecked = not in form = false)
             product.is_active = request.form.get('is_active') == 'true'
             product.show_in_website = request.form.get('show_in_website') == 'true'
             product.show_in_pos = request.form.get('show_in_pos') == 'true'
 
-            # Barcode
             if 'barcode' in request.form:
                 product.barcode = request.form['barcode'].strip() or None
 
-            # Handle image upload
             if 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename and allowed_file(file.filename):
-                    filename = secure_filename(file.filename)
-                    filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
-
-                    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-                    file.save(os.path.join(UPLOAD_FOLDER, filename))
-
-                    # Delete old image if exists
                     if product.image:
                         old_image_path = os.path.join(UPLOAD_FOLDER, product.image)
                         if os.path.exists(old_image_path):
-                            os.remove(old_image_path)
+                            try:
+                                os.remove(old_image_path)
+                            except Exception:
+                                pass
+                    product.image = save_product_image(file)
 
-                    product.image = filename
-
-        # Handle JSON data
         elif request.is_json:
-            data = request.json
+            data = request.json or {}
             if 'name_ku' in data:
                 product.name_ku = data['name_ku']
             if 'name_ar' in data:
@@ -476,9 +785,15 @@ def update_product(product_id):
             if 'category_id' in data:
                 product.category_id = data['category_id']
             if 'price' in data:
-                product.price = int(data['price'])
+                try:
+                    product.price = int(data['price'])
+                except (ValueError, TypeError):
+                    pass
             if 'stock' in data:
-                product.stock = int(data['stock'])
+                try:
+                    product.stock = int(data['stock'])
+                except (ValueError, TypeError):
+                    pass
             if 'is_active' in data:
                 product.is_active = data['is_active']
             if 'show_in_website' in data:
@@ -489,11 +804,7 @@ def update_product(product_id):
                 product.barcode = data['barcode']
 
         db.session.commit()
-
-        return jsonify({
-            'success': True,
-            'message': 'تم تحديث المنتج بنجاح'
-        })
+        return jsonify({'success': True, 'message': 'تم تحديث المنتج بنجاح'})
 
     except Exception as e:
         db.session.rollback()
@@ -503,32 +814,50 @@ def update_product(product_id):
 @admin_bp.route('/api/product/<int:product_id>', methods=['DELETE'])
 @login_required
 def delete_product(product_id):
-    """Delete product"""
     product = Product.query.get(product_id)
     if not product:
         return jsonify({'success': False, 'message': 'المنتج غير موجود'}), 404
 
     try:
-        # Delete image file if exists
+        # Delete related order items
+        db.session.execute(db.text('DELETE FROM order_item WHERE product_id = :pid'), {'pid': product_id})
+        db.session.execute(db.text('DELETE FROM pos_order_item WHERE product_id = :pid'), {'pid': product_id})
+
         if product.image:
             image_path = os.path.join(UPLOAD_FOLDER, product.image)
             if os.path.exists(image_path):
-                os.remove(image_path)
+                try:
+                    os.remove(image_path)
+                except Exception:
+                    pass
 
-        db.session.delete(product)
+        db.session.execute(db.text('DELETE FROM product WHERE id = :pid'), {'pid': product_id})
         db.session.commit()
 
-        return jsonify({'success': True, 'message': 'تم حذف المنتج بنجاح'})
+        return jsonify({'success': True, 'message': 'بەرهەمەکە بە سەرکەوتوویی سڕایەوە'})
 
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+@admin_bp.route('/api/order/<int:order_id>', methods=['GET'])
+@login_required
+def get_order_api(order_id):
+    order = Order.query.get_or_404(order_id)
+    return jsonify(order.to_dict())
+
+
+@admin_bp.route('/api/booking/<int:booking_id>', methods=['GET'])
+@login_required
+def get_booking_api(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+    return jsonify(booking.to_dict())
+
+
 @admin_bp.route('/api/product/<int:product_id>/toggle', methods=['POST'])
 @login_required
 def toggle_product(product_id):
-    """Toggle product active status"""
     product = Product.query.get(product_id)
     if not product:
         return jsonify({'success': False, 'message': 'المنتج غير موجود'}), 404
@@ -540,14 +869,9 @@ def toggle_product(product_id):
     return jsonify({'success': True, 'message': f'تم تحديث المنتج: {status}', 'is_active': product.is_active})
 
 
-# ========================================
-# ===== BARCODE PRINTING =====
-# ========================================
-
 @admin_bp.route('/print-barcodes')
 @login_required
 def print_barcodes():
-    """Barcode printing page"""
     products = Product.query.filter_by(is_active=True).order_by(Product.name_ku).all()
     categories = Category.query.filter_by(is_active=True).all()
     return render_template('admin/print_barcodes.html', products=products, categories=categories)
@@ -556,26 +880,18 @@ def print_barcodes():
 @admin_bp.route('/api/product/<int:product_id>/regenerate-barcode', methods=['POST'])
 @login_required
 def regenerate_barcode(product_id):
-    """Regenerate barcode for a product"""
     product = Product.query.get(product_id)
     if not product:
         return jsonify({'success': False, 'message': 'المنتج غير موجود'}), 404
 
-    # Generate new barcode
     new_barcode = generate_product_barcode()
-
-    # Make sure it's unique
     while Product.query.filter_by(barcode=new_barcode).first():
         new_barcode = generate_product_barcode()
 
     product.barcode = new_barcode
     db.session.commit()
 
-    return jsonify({
-        'success': True,
-        'message': 'تم توليد باركود جديد',
-        'barcode': new_barcode
-    })
+    return jsonify({'success': True, 'message': 'تم توليد باركود جديد', 'barcode': new_barcode})
 
 
 # ========================================
@@ -585,7 +901,6 @@ def regenerate_barcode(product_id):
 @admin_bp.route('/categories')
 @login_required
 def manage_categories():
-    """View and manage all categories"""
     categories = Category.query.order_by(Category.created_at.desc()).all()
     return render_template('admin/categories.html', categories=categories)
 
@@ -596,75 +911,121 @@ def add_category():
     data = request.get_json()
 
     if not data or not data.get('name_ku'):
-        return jsonify({
-            'success': False,
-            'message': 'ناوی پۆل (کوردی) پێویستە'
-        }), 400
+        return jsonify({'success': False, 'message': 'ناوی پۆل (کوردی) پێویستە'}), 400
 
     if Category.query.filter_by(name_ku=data['name_ku']).first():
-        return jsonify({
-            'success': False,
-            'message': 'ئەم پۆلە پێشتر تۆمارکراوە'
-        }), 409
+        return jsonify({'success': False, 'message': 'ئەم پۆلە پێشتر تۆمارکراوە'}), 409
 
-    category = Category(
-        name_ku=data['name_ku'],
-        name_ar=data.get('name_ar'),
-        name_en=data.get('name_en'),
-        description_ku=data.get('description_ku'),
-        description_ar=data.get('description_ar'),
-        description_en=data.get('description_en'),
-        is_active=True
-    )
+    try:
+        category = Category(
+            name_ku=data['name_ku'],
+            name_ar=data.get('name_ar'),
+            name_en=data.get('name_en'),
+            description_ku=data.get('description_ku'),
+            description_ar=data.get('description_ar'),
+            description_en=data.get('description_en'),
+            is_active=True
+        )
 
-    db.session.add(category)
-    db.session.commit()
+        db.session.add(category)
+        db.session.commit()
 
-    return jsonify({
-        'success': True,
-        'message': 'پۆل بە سەرکەوتوویی زیاد کرا',
-        'category_id': category.id
-    }), 201
+        # ✅ LOG
+        try:
+            log_activity(
+                action="add_category",
+                entity_type="category",
+                entity_id=category.id,
+                title="Added category",
+                note=f"{category.name_ku or category.name_ar or category.name_en}",
+                payment_method="store"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'پۆل بە سەرکەوتوویی زیاد کرا', 'category_id': category.id}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @admin_bp.route('/api/category/<int:category_id>', methods=['PUT'])
 @login_required
 def update_category(category_id):
-    """Update category"""
     category = Category.query.get(category_id)
     if not category:
         return jsonify({'success': False, 'message': 'التصنيف غير موجود'}), 404
 
-    data = request.json
+    data = request.json or {}
 
-    if 'name' in data:
-        category.name = data['name']
-    if 'name_en' in data:
-        category.name_en = data['name_en']
-    if 'is_active' in data:
-        category.is_active = data['is_active']
+    try:
+        if 'name_ku' in data:
+            category.name_ku = data['name_ku']
+        if 'name_ar' in data:
+            category.name_ar = data['name_ar']
+        if 'name_en' in data:
+            category.name_en = data['name_en']
+        if 'is_active' in data:
+            category.is_active = bool(data['is_active'])
 
-    db.session.commit()
+        db.session.commit()
 
-    return jsonify({'success': True, 'message': 'تم تحديث التصنيف بنجاح'})
+        # ✅ LOG
+        try:
+            log_activity(
+                action="update_category",
+                entity_type="category",
+                entity_id=category.id,
+                title="Updated category",
+                note=f"{category.name_ku or category.name_ar or category.name_en}",
+                payment_method="store"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'تم تحديث التصنيف بنجاح'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @admin_bp.route('/api/category/<int:category_id>', methods=['DELETE'])
 @login_required
 def delete_category(category_id):
-    """Delete category"""
     category = Category.query.get(category_id)
     if not category:
         return jsonify({'success': False, 'message': 'التصنيف غير موجود'}), 404
 
-    # Check if has products
-    if category.products:
+    if getattr(category, 'products', None) and category.products:
         return jsonify({'success': False, 'message': 'لا يمكن حذف تصنيف يحتوي على منتجات'}), 409
 
-    db.session.delete(category)
-    db.session.commit()
+    try:
+        cid = category.id
+        cname = category.name_ku or category.name_ar or category.name_en
 
-    return jsonify({'success': True, 'message': 'تم حذف التصنيف بنجاح'})
+        db.session.delete(category)
+        db.session.commit()
+
+        # ✅ LOG
+        try:
+            log_activity(
+                action="delete_category",
+                entity_type="category",
+                entity_id=cid,
+                title="Deleted category",
+                note=f"{cname}",
+                payment_method="store"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'تم حذف التصنيف بنجاح'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ========================================
@@ -674,26 +1035,19 @@ def delete_category(category_id):
 @admin_bp.route('/orders')
 @login_required
 def manage_orders():
-    """View and manage all orders"""
     status_filter = request.args.get('status', 'all')
 
     query = Order.query
-
     if status_filter != 'all':
         query = query.filter_by(status=status_filter)
 
     orders = query.order_by(Order.created_at.desc()).all()
-
-    return render_template('admin/orders.html',
-                           orders=orders,
-                           current_status=status_filter
-                           )
+    return render_template('admin/orders.html', orders=orders, current_status=status_filter)
 
 
 @admin_bp.route('/order/<int:order_id>')
 @login_required
 def order_detail(order_id):
-    """View specific order details"""
     order = Order.query.get_or_404(order_id)
     return render_template('admin/order_detail.html', order=order)
 
@@ -701,47 +1055,144 @@ def order_detail(order_id):
 @admin_bp.route('/api/order/<int:order_id>/status', methods=['POST'])
 @login_required
 def update_order_status(order_id):
-    """Update order status"""
     order = Order.query.get(order_id)
     if not order:
         return jsonify({'success': False, 'message': 'الطلب غير موجود'}), 404
 
-    data = request.json
-    new_status = data.get('status')
+    data = request.json or {}
+    new_status = (data.get('status') or '').strip()
 
     if new_status not in ['pending', 'confirmed', 'processing', 'delivered', 'cancelled']:
         return jsonify({'success': False, 'message': 'حالة غير صالحة'}), 400
 
-    # If cancelling, restore stock
-    if new_status == 'cancelled' and order.status != 'cancelled':
+    old_status = order.status
+
+    # ✅ Restore stock only when moving to cancelled (first time)
+    if new_status == 'cancelled' and old_status != 'cancelled':
         for item in order.items:
-            item.product.stock += item.quantity
+            if item.product and hasattr(item.product, "stock") and item.product.stock is not None:
+                item.product.stock += int(item.quantity or 0)
 
     order.status = new_status
     db.session.commit()
 
-    return jsonify({'success': True, 'message': f'تم تحديث الطلب بنجاح'})
+    # ✅ Notify on important statuses (SAFE)
+    try:
+        if new_status == 'confirmed' and old_status != 'confirmed':
+            notify_admins(
+                title="Order confirmed ✅",
+                message=f"Order #{order.id} confirmed for {order.customer_name} ({order.customer_phone})",
+                url=f"/admin/order/{order.id}",
+                ntype="order_confirmed"
+            )
+
+        elif new_status == 'cancelled' and old_status != 'cancelled':
+            notify_admins(
+                title="Order cancelled ❌",
+                message=f"Order #{order.id} cancelled for {order.customer_name} ({order.customer_phone})",
+                url=f"/admin/order/{order.id}",
+                ntype="order_cancelled"
+            )
+
+    except Exception as e:
+        print("❌ Notification error:", e)
+
+    # ✅ Send to Google Sheets ONLY ONCE when confirmed
+    if new_status == 'confirmed' and old_status != 'confirmed':
+        sheet_already_sent = bool(getattr(order, "sheet_sent", False))
+
+        if not sheet_already_sent:
+            try:
+                # Build items string
+                items_list = []
+                for it in (order.items or []):
+                    pname = "-"
+                    try:
+                        if it.product:
+                            if hasattr(it.product, "get_name"):
+                                pname = it.product.get_name('ku')
+                            else:
+                                pname = getattr(it.product, "name_ku", getattr(it.product, "name_ar", getattr(it.product, "name_en", "Product")))
+                    except Exception:
+                        pass
+                    items_list.append(f"{pname} x{int(it.quantity or 0)}")
+
+                items_str = " | ".join(items_list)
+
+                from app.services.google_sheets import send_order_to_sheet
+                send_order_to_sheet(order, items_str)
+
+                if hasattr(order, "sheet_sent"):
+                    order.sheet_sent = True
+                if hasattr(order, "sheet_sent_at"):
+                    order.sheet_sent_at = datetime.utcnow()
+                if hasattr(order, "sheet_last_error"):
+                    order.sheet_last_error = None
+
+                db.session.commit()
+
+            except Exception as e:
+                print("❌ Google Sheets error:", e)
+                if hasattr(order, "sheet_last_error"):
+                    order.sheet_last_error = str(e)
+                    db.session.commit()
+
+    # ✅ LOG IT
+    try:
+        log_activity(
+            action="update_order_status",
+            entity_type="order",
+            entity_id=order.id,
+            title="Order status changed",
+            note=f"Old: {old_status} → New: {new_status}",
+            amount=int(order.total_price or 0),
+            payment_method="store"
+        )
+    except Exception as e:
+        print("❌ Activity log error:", e)
+
+    return jsonify({'success': True, 'message': 'تم تحديث الطلب بنجاح', 'new_status': new_status})
 
 
 @admin_bp.route('/api/order/<int:order_id>', methods=['DELETE'])
 @login_required
 def delete_order(order_id):
-    """Delete order"""
     order = Order.query.get(order_id)
     if not order:
         return jsonify({'success': False, 'message': 'الطلب غير موجود'}), 404
 
-    # Restore stock if order wasn't cancelled
-    if order.status != 'cancelled':
-        for item in order.items:
-            item.product.stock += item.quantity
+    try:
+        if order.status != 'cancelled':
+            for item in order.items:
+                if item.product:
+                    item.product.stock += item.quantity
 
-    # Delete order items first
-    OrderItem.query.filter_by(order_id=order_id).delete()
-    db.session.delete(order)
-    db.session.commit()
+        oid = order.id
+        total = int(order.total_price or 0)
 
-    return jsonify({'success': True, 'message': 'تم حذف الطلب بنجاح'})
+        OrderItem.query.filter_by(order_id=order_id).delete()
+        db.session.delete(order)
+        db.session.commit()
+
+        # ✅ LOG
+        try:
+            log_activity(
+                action="delete_order",
+                entity_type="order",
+                entity_id=oid,
+                title="Deleted order",
+                note="Order deleted from admin",
+                amount=total,
+                payment_method="store"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'تم حذف الطلب بنجاح'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ========================================
@@ -750,8 +1201,8 @@ def delete_order(order_id):
 
 @admin_bp.route('/stadiums')
 @login_required
+@permission_required('can_manage_stadiums')
 def manage_stadiums():
-    """View and manage stadiums"""
     stadiums = Stadium.query.all()
     return render_template('admin/stadiums.html', stadiums=stadiums)
 
@@ -759,78 +1210,124 @@ def manage_stadiums():
 @admin_bp.route('/api/stadium', methods=['POST'])
 @login_required
 def add_stadium():
-    """Add new stadium"""
-    data = request.json
+    data = request.json or {}
 
     if Stadium.query.filter_by(name=data.get('name')).first():
         return jsonify({'success': False, 'message': 'اسم الملعب موجود مسبقاً'}), 409
 
-    stadium = Stadium(
-        name=data.get('name'),
-        description=data.get('description'),
-        location=data.get('location'),
-        price_per_hour=float(data.get('price_per_hour', 50000)),
-        image_url=data.get('image_url'),
-        is_active=data.get('is_active', True)
-    )
+    try:
+        stadium = Stadium(
+            name=data.get('name'),
+            description=data.get('description'),
+            location=data.get('location'),
+            price_per_hour=float(data.get('price_per_hour', 50000)),
+            image_url=data.get('image_url'),
+            is_active=data.get('is_active', True)
+        )
 
-    db.session.add(stadium)
-    db.session.commit()
+        db.session.add(stadium)
+        db.session.commit()
 
-    return jsonify({
-        'success': True,
-        'message': 'تم إضافة الملعب بنجاح',
-        'stadium': stadium.to_dict()
-    }), 201
+        # ✅ LOG
+        try:
+            log_activity(
+                action="add_stadium",
+                entity_type="stadium",
+                entity_id=stadium.id,
+                title="Added stadium",
+                note=f"{stadium.name}",
+                payment_method="booking"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'تم إضافة الملعب بنجاح', 'stadium': stadium.to_dict()}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @admin_bp.route('/api/stadium/<int:stadium_id>', methods=['PUT'])
 @login_required
 def update_stadium(stadium_id):
-    """Update stadium details"""
     stadium = Stadium.query.get(stadium_id)
     if not stadium:
         return jsonify({'success': False, 'message': 'الملعب غير موجود'}), 404
 
-    data = request.json
+    data = request.json or {}
 
-    if 'name' in data:
-        stadium.name = data['name']
-    if 'description' in data:
-        stadium.description = data['description']
-    if 'location' in data:
-        stadium.location = data['location']
-    if 'price_per_hour' in data:
-        stadium.price_per_hour = float(data['price_per_hour'])
-    if 'is_active' in data:
-        stadium.is_active = data['is_active']
-    if 'image_url' in data:
-        stadium.image_url = data['image_url']
+    try:
+        if 'name' in data:
+            stadium.name = data['name']
+        if 'description' in data:
+            stadium.description = data['description']
+        if 'location' in data:
+            stadium.location = data['location']
+        if 'price_per_hour' in data:
+            stadium.price_per_hour = float(data['price_per_hour'])
+        if 'is_active' in data:
+            stadium.is_active = data['is_active']
+        if 'image_url' in data:
+            stadium.image_url = data['image_url']
 
-    db.session.commit()
+        db.session.commit()
 
-    return jsonify({
-        'success': True,
-        'message': 'تم تحديث الملعب بنجاح',
-        'stadium': stadium.to_dict()
-    })
+        # ✅ LOG
+        try:
+            log_activity(
+                action="update_stadium",
+                entity_type="stadium",
+                entity_id=stadium.id,
+                title="Updated stadium",
+                note=f"{stadium.name} | Active: {stadium.is_active}",
+                payment_method="booking"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'تم تحديث الملعب بنجاح', 'stadium': stadium.to_dict()})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @admin_bp.route('/api/stadium/<int:stadium_id>', methods=['DELETE'])
 @login_required
 def delete_stadium(stadium_id):
-    """Delete stadium"""
     stadium = Stadium.query.get(stadium_id)
     if not stadium:
         return jsonify({'success': False, 'message': 'الملعب غير موجود'}), 404
 
-    if stadium.bookings:
+    if getattr(stadium, 'bookings', None) and stadium.bookings:
         return jsonify({'success': False, 'message': 'لا يمكن حذف ملعب لديه حجوزات'}), 409
 
-    db.session.delete(stadium)
-    db.session.commit()
+    try:
+        sid = stadium.id
+        sname = stadium.name
 
-    return jsonify({'success': True, 'message': 'تم حذف الملعب بنجاح'})
+        db.session.delete(stadium)
+        db.session.commit()
+
+        # ✅ LOG
+        try:
+            log_activity(
+                action="delete_stadium",
+                entity_type="stadium",
+                entity_id=sid,
+                title="Deleted stadium",
+                note=sname,
+                payment_method="booking"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'تم حذف الملعب بنجاح'})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 # ========================================
@@ -839,168 +1336,310 @@ def delete_stadium(stadium_id):
 
 @admin_bp.route('/settings', methods=['GET', 'POST'])
 @login_required
+@permission_required('can_manage_settings')
 def manage_settings():
-    """View and manage settings"""
-    if request.method == 'POST':
-        settings = Settings.query.first()
-        if not settings:
-            settings = Settings()
-            db.session.add(settings)
-
-        if request.is_json:
-            data = request.json
-        else:
-            data = request.form
-
-        if 'opening_hour' in data:
-            settings.opening_hour = int(data['opening_hour'])
-        if 'closing_hour' in data:
-            settings.closing_hour = int(data['closing_hour'])
-        if 'price_per_hour' in data:
-            settings.price_per_hour = float(data['price_per_hour'])
-        if 'discount_percentage' in data:
-            settings.discount_percentage = int(data['discount_percentage'])
-        if 'discount_start_hour' in data:
-            settings.discount_start_hour = int(data['discount_start_hour'])
-        if 'discount_end_hour' in data:
-            settings.discount_end_hour = int(data['discount_end_hour'])
-        if 'phone' in data:
-            settings.phone = data['phone']
-        if 'email' in data:
-            settings.email = data['email']
-        if 'address' in data:
-            settings.address = data['address']
-
+    settings = Settings.query.first()
+    if not settings:
+        settings = Settings()
+        db.session.add(settings)
         db.session.commit()
 
-        if request.is_json:
-            return jsonify({
-                'success': True,
-                'message': 'تم تحديث الإعدادات بنجاح',
-                'settings': settings.to_dict()
-            })
-        else:
+    if request.method == 'POST':
+        try:
+            data = request.get_json(silent=True) if request.is_json else request.form
+            data = data or {}
+
+            if data.get('opening_hour') is not None:
+                try:
+                    settings.opening_hour = int(data.get('opening_hour'))
+                except (ValueError, TypeError):
+                    pass
+            if data.get('closing_hour') is not None:
+                try:
+                    settings.closing_hour = int(data.get('closing_hour'))
+                except (ValueError, TypeError):
+                    pass
+            if data.get('price_per_hour') is not None:
+                try:
+                    settings.price_per_hour = float(data.get('price_per_hour'))
+                except (ValueError, TypeError):
+                    pass
+
+            if data.get('discount_percentage') is not None:
+                try:
+                    settings.discount_percentage = int(data.get('discount_percentage'))
+                except (ValueError, TypeError):
+                    pass
+            if data.get('discount_start_hour') is not None:
+                try:
+                    settings.discount_start_hour = int(data.get('discount_start_hour'))
+                except (ValueError, TypeError):
+                    pass
+            if data.get('discount_end_hour') is not None:
+                try:
+                    settings.discount_end_hour = int(data.get('discount_end_hour'))
+                except (ValueError, TypeError):
+                    pass
+
+            if data.get('site_name') is not None:
+                settings.site_name = str(data.get('site_name')).strip()
+            if data.get('phone') is not None:
+                settings.phone = str(data.get('phone')).strip()
+            if data.get('email') is not None:
+                settings.email = str(data.get('email')).strip()
+            if data.get('address') is not None:
+                settings.address = str(data.get('address')).strip()
+
+            if data.get('facebook') is not None:
+                settings.facebook = str(data.get('facebook')).strip() or None
+            if data.get('instagram') is not None:
+                settings.instagram = str(data.get('instagram')).strip() or None
+            if data.get('whatsapp') is not None:
+                settings.whatsapp = str(data.get('whatsapp')).strip() or None
+
+            db.session.commit()
+
+            # ✅ LOG
+            try:
+                log_activity(
+                    action="update_settings",
+                    entity_type="settings",
+                    entity_id=getattr(settings, "id", None),
+                    title="Updated settings",
+                    note="Admin updated system settings",
+                    payment_method="system"
+                )
+            except Exception as e:
+                print("❌ Activity log error:", e)
+
+            if request.is_json:
+                return jsonify({'success': True, 'message': 'Saved'}), 200
+
+            flash('تم تحديث الإعدادات بنجاح', 'success')
             return redirect(url_for('admin.manage_settings'))
 
-    settings = Settings.query.first()
+        except Exception as e:
+            db.session.rollback()
+            if request.is_json:
+                return jsonify({'success': False, 'message': str(e)}), 500
+            flash(f'خطأ: {str(e)}', 'danger')
+            return redirect(url_for('admin.manage_settings'))
+
     return render_template('admin/settings.html', settings=settings)
 
 
 # ========================================
-# ===== REPORTS =====
-# ========================================
-
-@admin_bp.route('/reports')
-@login_required
-def reports():
-    """View reports and analytics"""
-    start_date = request.args.get('start_date')
-    end_date = request.args.get('end_date')
-
-    # Booking reports
-    booking_query = Booking.query.filter(Booking.status.in_(['confirmed', 'completed']))
-
-    # Order reports
-    order_query = Order.query.filter(Order.status.in_(['confirmed', 'delivered']))
-
-    if start_date:
-        start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
-        booking_query = booking_query.filter(Booking.date >= start_date_obj)
-        order_query = order_query.filter(db.func.date(Order.created_at) >= start_date_obj)
-
-    if end_date:
-        end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
-        booking_query = booking_query.filter(Booking.date <= end_date_obj)
-        order_query = order_query.filter(db.func.date(Order.created_at) <= end_date_obj)
-
-    bookings = booking_query.all()
-    orders = order_query.all()
-
-    # Booking statistics
-    booking_revenue = sum(b.final_price for b in bookings)
-    total_discount = sum(b.discount_amount for b in bookings)
-
-    # Order statistics
-    order_revenue = sum(o.total_price for o in orders)
-
-    # Total revenue
-    total_revenue = booking_revenue + order_revenue
-
-    # Stadium stats
-    stadium_stats = {}
-    for booking in bookings:
-        if booking.stadium.name not in stadium_stats:
-            stadium_stats[booking.stadium.name] = {'count': 0, 'revenue': 0}
-        stadium_stats[booking.stadium.name]['count'] += 1
-        stadium_stats[booking.stadium.name]['revenue'] += booking.final_price
-
-    return render_template('admin/reports.html',
-                           bookings=bookings,
-                           orders=orders,
-                           booking_revenue=booking_revenue,
-                           order_revenue=order_revenue,
-                           total_revenue=total_revenue,
-                           total_discount=total_discount,
-                           stadium_stats=stadium_stats,
-                           start_date=start_date,
-                           end_date=end_date
-                           )
-
-
-# ========================================
-# ===== USER MANAGEMENT (Super Admin Only) =====
+# ===== USERS MANAGEMENT (Super Admin Only) =====
 # ========================================
 
 @admin_bp.route('/users')
 @login_required
+@super_admin_required
 def manage_users():
-    """View and manage users - Super Admin only"""
-    if current_user.role != 'super_admin':
-        return redirect(url_for('admin.dashboard'))
-
     users = User.query.order_by(User.created_at.desc()).all()
     return render_template('admin/users.html', users=users)
 
 
+@admin_bp.route('/users/add', methods=['POST'])
+@login_required
+@super_admin_required
+def add_user_form():
+    """Handle form-based user creation"""
+    username = request.form.get('username')
+    password = request.form.get('password')
+    role = request.form.get('role', 'admin')
+
+    if not username or not password:
+        flash('Username and password are required', 'danger')
+        return redirect(url_for('admin.manage_users'))
+
+    if User.query.filter_by(username=username).first():
+        flash('Username already exists', 'danger')
+        return redirect(url_for('admin.manage_users'))
+
+    try:
+        user = User(
+            username=username,
+            email=f"{username}@padelhouse.local",
+            role=role,
+            is_active=True,
+            can_manage_bookings=request.form.get('can_manage_bookings') == 'on',
+            can_manage_products=request.form.get('can_manage_products') == 'on',
+            can_manage_orders=request.form.get('can_manage_orders') == 'on',
+            can_manage_stadiums=request.form.get('can_manage_stadiums') == 'on',
+            can_manage_settings=request.form.get('can_manage_settings') == 'on',
+            can_view_reports=request.form.get('can_view_reports') == 'on',
+            can_access_dashboard=request.form.get('can_access_dashboard') == 'on'
+        )
+        user.set_password(password)
+
+        db.session.add(user)
+        db.session.commit()
+
+        try:
+            log_activity(
+                action="add_user",
+                entity_type="user",
+                entity_id=user.id,
+                title="Created user",
+                note=f"Username: {user.username} | Role: {user.role}",
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        flash(f'User {username} created successfully!', 'success')
+        return redirect(url_for('admin.manage_users'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_users'))
+
+
+@admin_bp.route('/users/edit/<int:user_id>', methods=['POST'])
+@login_required
+@super_admin_required
+def edit_user(user_id):
+    """Handle form-based user editing"""
+    user = User.query.get_or_404(user_id)
+
+    username = request.form.get('username')
+    role = request.form.get('role')
+    password = request.form.get('password')
+
+    if not username:
+        flash('Username is required', 'danger')
+        return redirect(url_for('admin.manage_users'))
+
+    try:
+        if user.username != username:
+            user.email = f"{username}@padelhouse.local"
+
+        user.username = username
+
+        # Only update role if not editing yourself
+        if user.id != current_user.id and role:
+            user.role = role
+
+        # Update password if provided
+        if password:
+            user.set_password(password)
+
+        # ✅ Update permissions
+        user.can_manage_bookings = request.form.get('can_manage_bookings') == 'on'
+        user.can_manage_products = request.form.get('can_manage_products') == 'on'
+        user.can_manage_orders = request.form.get('can_manage_orders') == 'on'
+        user.can_manage_stadiums = request.form.get('can_manage_stadiums') == 'on'
+        user.can_manage_settings = request.form.get('can_manage_settings') == 'on'
+        user.can_view_reports = request.form.get('can_view_reports') == 'on'
+        user.can_access_dashboard = request.form.get('can_access_dashboard') == 'on'
+
+        db.session.commit()
+
+        try:
+            log_activity(
+                action="update_user",
+                entity_type="user",
+                entity_id=user.id,
+                title="Updated user",
+                note=f"Username: {user.username} | Role: {user.role}",
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        flash(f'User {username} updated successfully!', 'success')
+        return redirect(url_for('admin.manage_users'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_users'))
+
+
+@admin_bp.route('/users/delete/<int:user_id>', methods=['POST'])
+@login_required
+@super_admin_required
+def delete_user_form(user_id):
+    """Handle form-based user deletion"""
+    if user_id == current_user.id:
+        flash('You cannot delete yourself!', 'danger')
+        return redirect(url_for('admin.manage_users'))
+
+    user = User.query.get_or_404(user_id)
+    username = user.username
+
+    try:
+        db.session.delete(user)
+        db.session.commit()
+
+        try:
+            log_activity(
+                action="delete_user",
+                entity_type="user",
+                entity_id=user_id,
+                title="Deleted user",
+                note=f"Username: {username}",
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        flash(f'User {username} deleted successfully!', 'success')
+        return redirect(url_for('admin.manage_users'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_users'))
+
+
 @admin_bp.route('/api/user', methods=['POST'])
 @login_required
+@super_admin_required
 def add_user():
-    """Add new admin user - Super Admin only"""
-    if current_user.role != 'super_admin':
-        return jsonify({'success': False, 'message': 'غير مصرح لك بهذا الإجراء'}), 403
+    """API endpoint for adding users via AJAX"""
+    data = request.json or {}
 
-    data = request.json
+    if not data.get('username') or not data.get('password'):
+        return jsonify({'success': False, 'message': 'Username and password required'}), 400
 
-    # Validate
-    if not data.get('username') or not data.get('email') or not data.get('password'):
-        return jsonify({'success': False, 'message': 'جميع الحقول مطلوبة'}), 400
-
-    # Check if exists
     if User.query.filter_by(username=data['username']).first():
-        return jsonify({'success': False, 'message': 'اسم المستخدم موجود مسبقاً'}), 409
-
-    if User.query.filter_by(email=data['email']).first():
-        return jsonify({'success': False, 'message': 'البريد الإلكتروني موجود مسبقاً'}), 409
+        return jsonify({'success': False, 'message': 'Username already exists'}), 409
 
     try:
         user = User(
             username=data['username'],
-            email=data['email'],
-            role='admin',
+            email=f"{data['username']}@padelhouse.local",
+            role=data.get('role', 'admin'),
             is_active=True,
-            can_manage_bookings=data.get('can_manage_bookings', True),
-            can_manage_products=data.get('can_manage_products', True),
-            can_manage_orders=data.get('can_manage_orders', True),
+            can_manage_bookings=data.get('can_manage_bookings', False),
+            can_manage_products=data.get('can_manage_products', False),
+            can_manage_orders=data.get('can_manage_orders', False),
             can_manage_stadiums=data.get('can_manage_stadiums', False),
             can_manage_settings=data.get('can_manage_settings', False),
-            can_view_reports=data.get('can_view_reports', False)
+            can_view_reports=data.get('can_view_reports', False),
+            can_access_dashboard=data.get('can_access_dashboard', False)
         )
         user.set_password(data['password'])
 
         db.session.add(user)
         db.session.commit()
 
-        return jsonify({'success': True, 'message': 'تم إنشاء المشرف بنجاح'})
+        try:
+            log_activity(
+                action="add_user",
+                entity_type="user",
+                entity_id=user.id,
+                title="Created user",
+                note=f"Username: {user.username} | Role: {user.role}",
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'User created successfully'})
 
     except Exception as e:
         db.session.rollback()
@@ -1009,37 +1648,62 @@ def add_user():
 
 @admin_bp.route('/api/user/<int:user_id>', methods=['PUT'])
 @login_required
+@super_admin_required
 def update_user(user_id):
-    """Update admin user - Super Admin only"""
-    if current_user.role != 'super_admin':
-        return jsonify({'success': False, 'message': 'غير مصرح لك بهذا الإجراء'}), 403
-
+    """API endpoint for updating users"""
     user = User.query.get(user_id)
     if not user:
-        return jsonify({'success': False, 'message': 'المستخدم غير موجود'}), 404
+        return jsonify({'success': False, 'message': 'User not found'}), 404
 
-    if user.role == 'super_admin':
-        return jsonify({'success': False, 'message': 'لا يمكن تعديل Super Admin'}), 403
-
-    data = request.json
+    data = request.json or {}
 
     try:
-        if data.get('email'):
-            user.email = data['email']
+        if data.get('username'):
+            if user.username != data['username']:
+                user.email = f"{data['username']}@padelhouse.local"
+            user.username = data['username']
+
         if data.get('password'):
             user.set_password(data['password'])
 
-        user.is_active = data.get('is_active', user.is_active)
-        user.can_manage_bookings = data.get('can_manage_bookings', user.can_manage_bookings)
-        user.can_manage_products = data.get('can_manage_products', user.can_manage_products)
-        user.can_manage_orders = data.get('can_manage_orders', user.can_manage_orders)
-        user.can_manage_stadiums = data.get('can_manage_stadiums', user.can_manage_stadiums)
-        user.can_manage_settings = data.get('can_manage_settings', user.can_manage_settings)
-        user.can_view_reports = data.get('can_view_reports', user.can_view_reports)
+        # Update role only if not editing yourself
+        if user.id != current_user.id and 'role' in data:
+            user.role = data['role']
+
+        if 'is_active' in data:
+            user.is_active = bool(data['is_active'])
+
+        # ✅ Update permissions from API
+        if 'can_manage_bookings' in data:
+            user.can_manage_bookings = bool(data['can_manage_bookings'])
+        if 'can_manage_products' in data:
+            user.can_manage_products = bool(data['can_manage_products'])
+        if 'can_manage_orders' in data:
+            user.can_manage_orders = bool(data['can_manage_orders'])
+        if 'can_manage_stadiums' in data:
+            user.can_manage_stadiums = bool(data['can_manage_stadiums'])
+        if 'can_manage_settings' in data:
+            user.can_manage_settings = bool(data['can_manage_settings'])
+        if 'can_view_reports' in data:
+            user.can_view_reports = bool(data['can_view_reports'])
+        if 'can_access_dashboard' in data:
+            user.can_access_dashboard = bool(data['can_access_dashboard'])
 
         db.session.commit()
 
-        return jsonify({'success': True, 'message': 'تم تحديث المشرف بنجاح'})
+        try:
+            log_activity(
+                action="update_user",
+                entity_type="user",
+                entity_id=user.id,
+                title="Updated user",
+                note=f"Username: {user.username} | Active: {user.is_active} | Role: {user.role}",
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'User updated successfully'})
 
     except Exception as e:
         db.session.rollback()
@@ -1048,46 +1712,710 @@ def update_user(user_id):
 
 @admin_bp.route('/api/user/<int:user_id>/toggle', methods=['POST'])
 @login_required
+@super_admin_required
 def toggle_user(user_id):
-    """Toggle user active status - Super Admin only"""
-    if current_user.role != 'super_admin':
-        return jsonify({'success': False, 'message': 'غير مصرح لك بهذا الإجراء'}), 403
-
+    """Toggle user active status"""
     user = User.query.get(user_id)
     if not user:
-        return jsonify({'success': False, 'message': 'المستخدم غير موجود'}), 404
+        return jsonify({'success': False, 'message': 'User not found'}), 404
 
-    if user.role == 'super_admin':
-        return jsonify({'success': False, 'message': 'لا يمكن تعطيل Super Admin'}), 403
+    if user.id == current_user.id:
+        return jsonify({'success': False, 'message': 'Cannot deactivate yourself'}), 403
 
-    user.is_active = not user.is_active
-    db.session.commit()
+    try:
+        user.is_active = not user.is_active
+        db.session.commit()
 
-    status = 'نشط' if user.is_active else 'معطل'
-    return jsonify({'success': True, 'message': f'تم تحديث الحالة: {status}'})
+        try:
+            log_activity(
+                action="toggle_user",
+                entity_type="user",
+                entity_id=user.id,
+                title="Toggled user status",
+                note=f"Username: {user.username} | Active: {user.is_active}",
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'User status updated', 'is_active': user.is_active})
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
 
 
 @admin_bp.route('/api/user/<int:user_id>', methods=['DELETE'])
 @login_required
+@super_admin_required
 def delete_user(user_id):
-    """Delete admin user - Super Admin only"""
-    if current_user.role != 'super_admin':
-        return jsonify({'success': False, 'message': 'غير مصرح لك بهذا الإجراء'}), 403
+    """API endpoint for deleting users"""
+    if user_id == current_user.id:
+        return jsonify({'success': False, 'message': 'Cannot delete yourself'}), 403
 
     user = User.query.get(user_id)
     if not user:
-        return jsonify({'success': False, 'message': 'المستخدم غير موجود'}), 404
+        return jsonify({'success': False, 'message': 'User not found'}), 404
 
-    if user.role == 'super_admin':
-        return jsonify({'success': False, 'message': 'لا يمكن حذف Super Admin'}), 403
-
-    if user.id == current_user.id:
-        return jsonify({'success': False, 'message': 'لا يمكنك حذف حسابك'}), 403
+    uname = user.username
+    uid = user.id
 
     try:
         db.session.delete(user)
         db.session.commit()
-        return jsonify({'success': True, 'message': 'تم حذف المشرف بنجاح'})
+
+        try:
+            log_activity(
+                action="delete_user",
+                entity_type="user",
+                entity_id=uid,
+                title="Deleted user",
+                note=f"Username: {uname}",
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'User deleted successfully'})
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/api/settings', methods=['POST'])
+@login_required
+def api_settings_alias():
+    settings = Settings.query.first()
+    if not settings:
+        settings = Settings()
+        db.session.add(settings)
+        db.session.commit()
+
+    try:
+        data = request.get_json(silent=True) or {}
+
+        if data.get('opening_hour') is not None:
+            try:
+                settings.opening_hour = int(data['opening_hour'])
+            except (ValueError, TypeError):
+                pass
+        if data.get('closing_hour') is not None:
+            try:
+                settings.closing_hour = int(data['closing_hour'])
+            except (ValueError, TypeError):
+                pass
+        if data.get('price_per_hour') is not None:
+            try:
+                settings.price_per_hour = float(data['price_per_hour'])
+            except (ValueError, TypeError):
+                pass
+
+        if data.get('discount_percentage') is not None:
+            try:
+                settings.discount_percentage = int(data['discount_percentage'])
+            except (ValueError, TypeError):
+                pass
+        if data.get('discount_start_hour') is not None:
+            try:
+                settings.discount_start_hour = int(data['discount_start_hour'])
+            except (ValueError, TypeError):
+                pass
+        if data.get('discount_end_hour') is not None:
+            try:
+                settings.discount_end_hour = int(data['discount_end_hour'])
+            except (ValueError, TypeError):
+                pass
+
+        if data.get('site_name') is not None:
+            settings.site_name = str(data['site_name']).strip()
+        if data.get('phone') is not None:
+            settings.phone = str(data['phone']).strip()
+        if data.get('email') is not None:
+            settings.email = str(data['email']).strip()
+        if data.get('address') is not None:
+            settings.address = str(data['address']).strip()
+
+        if data.get('facebook') is not None:
+            settings.facebook = str(data['facebook']).strip() or None
+        if data.get('instagram') is not None:
+            settings.instagram = str(data['instagram']).strip() or None
+        if data.get('whatsapp') is not None:
+            settings.whatsapp = str(data['whatsapp']).strip() or None
+
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Saved'}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+@admin_bp.route('/api/pending-count', methods=['GET'])
+@login_required
+def admin_pending_count_api():
+    count = Booking.query.filter_by(status='pending').count()
+    return jsonify({'pending': count}), 200
+
+
+# ========================================
+# ===== NOTIFICATIONS API =====
+# ========================================
+
+@admin_bp.route('/api/notifications', methods=['GET'])
+@login_required
+def api_notifications():
+    items = Notification.query.filter(
+        (Notification.user_id == None) | (Notification.user_id == current_user.id)
+    ).order_by(Notification.created_at.desc()).limit(20).all()
+
+    return jsonify({
+        "success": True,
+        "items": [
+            {
+                "id": n.id,
+                "title": n.title,
+                "message": n.message,
+                "url": n.url,
+                "type": n.type,
+                "is_read": n.is_read,
+                "created_at": n.created_at.isoformat() if n.created_at else None
+            } for n in items
+        ]
+    })
+
+
+@admin_bp.route('/api/notifications/unread-count', methods=['GET'])
+@login_required
+def api_notifications_unread_count():
+    count = Notification.query.filter(
+        ((Notification.user_id == None) | (Notification.user_id == current_user.id)),
+        Notification.is_read == False
+    ).count()
+    return jsonify({"success": True, "count": count})
+
+
+@admin_bp.route('/api/notifications/<int:notif_id>/read', methods=['POST'])
+@login_required
+def api_notifications_mark_read(notif_id):
+    n = Notification.query.get_or_404(notif_id)
+
+    if n.user_id is not None and n.user_id != current_user.id:
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+
+    n.is_read = True
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+# ========================================
+# ===== UNIFIED REPORTS (Website + POS) =====
+# ========================================
+
+# ========================================
+# ===== UPDATED REPORTS WITH EXPENSES =====
+# ========================================
+# Replace your existing reports() function in admin.py with this:
+
+# ========================================
+# ===== UPDATED REPORTS WITH EXPENSES =====
+# ========================================
+# Replace your existing reports() function in admin.py with this:
+
+@admin_bp.route('/reports')
+@login_required
+@permission_required('can_view_reports')
+def reports():
+    """Unified reports page showing website bookings, store orders, POS sessions, Manual Debts + EXPENSES"""
+
+    # Get date range
+    from_date_str = request.args.get('from')
+    to_date_str = request.args.get('to')
+
+    try:
+        from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date() if from_date_str else date.today()
+        to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date() if to_date_str else date.today()
+    except (ValueError, TypeError):
+        from_date = date.today()
+        to_date = date.today()
+
+    if from_date > to_date:
+        from_date, to_date = to_date, from_date
+
+    start_datetime = datetime.combine(from_date, datetime.min.time())
+    end_datetime = datetime.combine(to_date, datetime.max.time())
+
+    # ===== WEBSITE BOOKINGS =====
+    bookings = Booking.query.filter(
+        Booking.date >= from_date,
+        Booking.date <= to_date,
+        Booking.status.in_(['confirmed', 'completed'])
+    ).all()
+    total_bookings = len(bookings)
+    booking_revenue = sum(b.final_price or 0 for b in bookings)
+
+    # ===== WEBSITE STORE ORDERS =====
+    orders = Order.query.filter(
+        Order.created_at >= start_datetime,
+        Order.created_at <= end_datetime,
+        Order.status.in_(['confirmed', 'completed', 'delivered'])
+    ).all()
+    total_orders = len(orders)
+    order_revenue = sum(o.total_price or 0 for o in orders)
+
+    # ===== POS SESSIONS =====
+    pos_revenue = 0
+    pos_cash = 0
+    pos_card = 0
+    total_pos_sessions = 0
+    active_pos_sessions = 0
+
+    if POSSession:
+        pos_sessions = POSSession.query.filter(
+            POSSession.created_at >= start_datetime,
+            POSSession.created_at <= end_datetime,
+            POSSession.status == 'paid'
+        ).all()
+
+        total_pos_sessions = len(pos_sessions)
+        pos_revenue = sum(s.total_amount or 0 for s in pos_sessions)
+        pos_cash = sum(s.total_amount or 0 for s in pos_sessions if s.payment_method == 'cash')
+        pos_card = sum(s.total_amount or 0 for s in pos_sessions if s.payment_method == 'card')
+
+        active_pos_sessions = POSSession.query.filter_by(status='active').count()
+
+    # ===== TOTAL REVENUE =====
+    total_revenue = booking_revenue + order_revenue + pos_revenue
+
+    # ===== MANUAL DEBTS =====
+    manual_debts = ManualDebt.query.filter(
+        ManualDebt.date >= from_date,
+        ManualDebt.date <= to_date
+    ).order_by(ManualDebt.date.desc(), ManualDebt.id.desc()).all()
+
+    manual_debt_count = len(manual_debts)
+    manual_debt_total = sum((d.amount or 0) for d in manual_debts)
+    manual_debt_paid_total = sum((d.paid_amount or 0) for d in manual_debts)
+    manual_debt_remaining_total = sum(
+        max(0, (d.amount or 0) - (d.paid_amount or 0)) for d in manual_debts
+    )
+
+    # ✅ ===== EXPENSES (NEW) =====
+    expenses = Expense.query.filter(
+        Expense.date >= from_date,
+        Expense.date <= to_date
+    ).order_by(Expense.date.desc(), Expense.id.desc()).all()
+
+    expense_count = len(expenses)
+    total_expenses = sum((e.amount or 0) for e in expenses)
+
+    # Expenses by category
+    expense_by_category = {}
+    for exp in expenses:
+        cat = exp.get_category_name()
+        if cat not in expense_by_category:
+            expense_by_category[cat] = 0
+        expense_by_category[cat] += exp.amount
+
+    # Expenses by payment method
+    expense_cash = sum((e.amount or 0) for e in expenses if e.payment_method == 'cash')
+    expense_card = sum((e.amount or 0) for e in expenses if e.payment_method == 'card')
+
+    # ✅ ===== NET PROFIT (NEW) =====
+    net_profit = total_revenue - total_expenses
+
+    # ===== TODAY'S ACTIVITY LOG =====
+    today_start = datetime.combine(date.today(), datetime.min.time())
+    today_end = datetime.combine(date.today(), datetime.max.time())
+
+    activities = ActivityLog.query.filter(
+        ActivityLog.created_at >= today_start,
+        ActivityLog.created_at <= today_end
+    ).order_by(ActivityLog.created_at.desc()).limit(50).all()
+
+    return render_template(
+        'admin/reports.html',
+        from_date=from_date.strftime('%Y-%m-%d'),
+        to_date=to_date.strftime('%Y-%m-%d'),
+
+        # Bookings
+        total_bookings=total_bookings,
+        booking_revenue=booking_revenue,
+
+        # Store Orders
+        total_orders=total_orders,
+        order_revenue=order_revenue,
+
+        # POS
+        total_pos_sessions=total_pos_sessions,
+        active_pos_sessions=active_pos_sessions,
+        pos_revenue=pos_revenue,
+        pos_cash=pos_cash,
+        pos_card=pos_card,
+
+        # Total Revenue
+        total_revenue=total_revenue,
+
+        # Activity Log
+        activities=activities,
+
+        # Debts
+        manual_debts=manual_debts,
+        manual_debt_count=manual_debt_count,
+        manual_debt_total=manual_debt_total,
+        manual_debt_paid_total=manual_debt_paid_total,
+        manual_debt_remaining_total=manual_debt_remaining_total,
+
+        # ✅ Expenses (NEW)
+        expenses=expenses,
+        expense_count=expense_count,
+        total_expenses=total_expenses,
+        expense_by_category=expense_by_category,
+        expense_cash=expense_cash,
+        expense_card=expense_card,
+
+        # ✅ Net Profit (NEW)
+        net_profit=net_profit
+    )
+
+# ========================================
+# ===== MANUAL DEBTS (ديون يدوية) =====
+# ========================================
+
+@admin_bp.route("/manual-debts/add", methods=["POST"])
+@login_required
+@permission_required('can_view_reports')
+def add_manual_debt():
+    try:
+        name = (request.form.get("name") or "").strip()
+        phone = (request.form.get("phone") or "").strip() or None
+        note = (request.form.get("note") or "").strip() or None
+
+        try:
+            amount = int(request.form.get("amount") or 0)
+        except (ValueError, TypeError):
+            amount = 0
+
+        if not name:
+            flash("الاسم مطلوب", "danger")
+            return redirect(url_for("admin.reports"))
+        if amount <= 0:
+            flash("المبلغ يجب أن يكون أكبر من صفر", "danger")
+            return redirect(url_for("admin.reports"))
+
+        # date
+        date_str = request.form.get("date")
+        try:
+            debt_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            debt_date = date.today()
+
+        # keep filter dates after add
+        from_date = request.form.get("from")
+        to_date = request.form.get("to")
+
+        d = ManualDebt(
+            name=name,
+            phone=phone,
+            amount=amount,
+            paid_amount=0,
+            note=note,
+            date=debt_date,
+            status="open"
+        )
+
+        db.session.add(d)
+        db.session.commit()
+
+        flash("تمت إضافة الدين بنجاح ✅", "success")
+        return redirect(url_for("admin.reports", **{'from': from_date, 'to': to_date} if from_date and to_date else {}))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"خطأ: {str(e)}", "danger")
+        return redirect(url_for("admin.reports"))
+# ========================================
+# ===== EXPENSES MANAGEMENT =====
+# ========================================
+# Add this to your admin.py file after the manual_debts routes
+
+from app.models.expense import Expense
+
+
+@admin_bp.route('/expenses')
+@login_required
+@permission_required('can_view_reports')
+def manage_expenses():
+    """صفحة إدارة المصاريف"""
+
+    # Get filters
+    from_date_str = request.args.get('from')
+    to_date_str = request.args.get('to')
+    category_filter = request.args.get('category', 'all')
+
+    try:
+        from_date = datetime.strptime(from_date_str, '%Y-%m-%d').date() if from_date_str else date.today()
+        to_date = datetime.strptime(to_date_str, '%Y-%m-%d').date() if to_date_str else date.today()
+    except (ValueError, TypeError):
+        from_date = date.today()
+        to_date = date.today()
+
+    if from_date > to_date:
+        from_date, to_date = to_date, from_date
+
+    # Build query
+    query = Expense.query.filter(
+        Expense.date >= from_date,
+        Expense.date <= to_date
+    )
+
+    if category_filter != 'all':
+        query = query.filter_by(category=category_filter)
+
+    expenses = query.order_by(Expense.date.desc(), Expense.id.desc()).all()
+
+    # Calculate totals by category
+    category_totals = {}
+    total_amount = 0
+
+    for exp in expenses:
+        cat = exp.category
+        if cat not in category_totals:
+            category_totals[cat] = 0
+        category_totals[cat] += exp.amount
+        total_amount += exp.amount
+
+    # Get categories
+    categories = Expense.get_categories()
+
+    return render_template(
+        'admin/expenses.html',
+        expenses=expenses,
+        categories=categories,
+        category_totals=category_totals,
+        total_amount=total_amount,
+        from_date=from_date.strftime('%Y-%m-%d'),
+        to_date=to_date.strftime('%Y-%m-%d'),
+        current_category=category_filter
+    )
+
+
+# ========================================
+# ===== EXPENSES MANAGEMENT =====
+# ========================================
+
+@admin_bp.route('/expenses/add', methods=['POST'])
+@login_required
+@permission_required('can_view_reports')
+def add_expense():
+    """إضافة مصروف جديد"""
+    try:
+        date_str = request.form.get('date')
+        category = (request.form.get('category') or '').strip()
+        amount_str = request.form.get('amount', '0')
+        description = (request.form.get('description') or '').strip()
+        payment_method = request.form.get('payment_method', 'cash')
+
+        if not category:
+            flash('الرجاء اختيار فئة المصروف', 'danger')
+            return redirect(url_for('admin.reports'))
+
+        try:
+            amount = int(amount_str)
+        except (ValueError, TypeError):
+            amount = 0
+
+        if amount <= 0:
+            flash('المبلغ يجب أن يكون أكبر من صفر', 'danger')
+            return redirect(url_for('admin.reports'))
+
+        try:
+            expense_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            expense_date = date.today()
+
+        expense = Expense(
+            date=expense_date,
+            category=category,
+            amount=amount,
+            description=description,
+            payment_method=payment_method,
+            created_by=current_user.id
+        )
+
+        db.session.add(expense)
+        db.session.commit()
+
+        try:
+            log_activity(
+                action="add_expense",
+                entity_type="expense",
+                entity_id=expense.id,
+                title="Added expense",
+                note=f"{expense.get_category_name()} | {description or '-'}",
+                amount=amount,
+                payment_method="expense"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        flash(f'تمت إضافة المصروف بنجاح ✅ | المبلغ: {amount:,} IQD', 'success')
+
+        from_date = request.form.get('from')
+        to_date = request.form.get('to')
+
+        return redirect(url_for('admin.reports',
+                                **{'from': from_date, 'to': to_date}
+                                if from_date and to_date else {}))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'خطأ: {str(e)}', 'danger')
+        return redirect(url_for('admin.reports'))
+
+
+
+
+@admin_bp.route('/expenses/<int:expense_id>/edit', methods=['POST'])
+@login_required
+@permission_required('can_view_reports')
+def edit_expense(expense_id):
+    """تعديل مصروف"""
+    expense = Expense.query.get_or_404(expense_id)
+
+    try:
+        # Get form data
+        date_str = request.form.get('date')
+        category = (request.form.get('category') or '').strip()
+        amount_str = request.form.get('amount', '0')
+        description = (request.form.get('description') or '').strip()
+        payment_method = request.form.get('payment_method', 'cash')
+        reference_number = (request.form.get('reference_number') or '').strip() or None
+
+        # Validate
+        if not category:
+            flash('الرجاء اختيار فئة المصروف', 'danger')
+            return redirect(url_for('admin.manage_expenses'))
+
+        try:
+            amount = int(amount_str)
+        except (ValueError, TypeError):
+            amount = 0
+
+        if amount <= 0:
+            flash('المبلغ يجب أن يكون أكبر من صفر', 'danger')
+            return redirect(url_for('admin.manage_expenses'))
+
+        # Parse date
+        try:
+            expense_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        except (ValueError, TypeError):
+            expense_date = expense.date
+
+        # Update expense
+        expense.date = expense_date
+        expense.category = category
+        expense.amount = amount
+        expense.description = description
+        expense.payment_method = payment_method
+        expense.reference_number = reference_number
+        expense.updated_at = datetime.utcnow()
+
+        db.session.commit()
+
+        # ✅ LOG IT
+        try:
+            log_activity(
+                action="edit_expense",
+                entity_type="expense",
+                entity_id=expense.id,
+                title="Updated expense",
+                note=f"{expense.get_category_name()} | {description or '-'}",
+                amount=amount,
+                payment_method="expense"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        flash('تم تحديث المصروف بنجاح ✅', 'success')
+
+        # Keep filters
+        from_date = request.form.get('from')
+        to_date = request.form.get('to')
+        category_filter = request.form.get('category_filter', 'all')
+
+        return redirect(url_for('admin.manage_expenses',
+                                **{'from': from_date, 'to': to_date, 'category': category_filter}
+                                if from_date and to_date else {}))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'خطأ: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_expenses'))
+
+
+@admin_bp.route('/expenses/<int:expense_id>/delete', methods=['POST', 'GET'])
+@login_required
+@permission_required('can_view_reports')
+def delete_expense(expense_id):
+    """حذف مصروف"""
+    expense = Expense.query.get_or_404(expense_id)
+
+    try:
+        eid = expense.id
+        eamount = expense.amount
+        ecat = expense.get_category_name()
+
+        db.session.delete(expense)
+        db.session.commit()
+
+        # ✅ LOG IT
+        try:
+            log_activity(
+                action="delete_expense",
+                entity_type="expense",
+                entity_id=eid,
+                title="Deleted expense",
+                note=f"{ecat} | Amount: {eamount:,} IQD",
+                amount=eamount,
+                payment_method="expense"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        flash('تم حذف المصروف بنجاح ✅', 'success')
+
+        # Keep filters
+        from_date = request.args.get('from')
+        to_date = request.args.get('to')
+        category_filter = request.args.get('category', 'all')
+
+        return redirect(url_for('admin.manage_expenses',
+                                **{'from': from_date, 'to': to_date, 'category': category_filter}
+                                if from_date and to_date else {}))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'خطأ: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_expenses'))
+
+@admin_bp.route("/manual-debts/<int:debt_id>/mark-paid", methods=["GET"])
+@login_required
+@permission_required('can_view_reports')
+def mark_manual_debt_paid(debt_id):
+    try:
+        from_date = request.args.get("from")
+        to_date = request.args.get("to")
+
+        d = ManualDebt.query.get_or_404(debt_id)
+        d.paid_amount = int(d.amount or 0)
+        d.status = "paid"
+        db.session.commit()
+
+        flash("تم تسديد الدين ✅", "success")
+        return redirect(url_for("admin.reports", **{'from': from_date, 'to': to_date} if from_date and to_date else {}))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"خطأ: {str(e)}", "danger")
+        return redirect(url_for("admin.reports"))

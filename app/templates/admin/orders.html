@@ -61,13 +61,13 @@
                         </td>
                         <td>
                             {% if order.delivery_method == 'pickup' %}
-                            <span class="badge bg-secondary">{{ t('pickup') }}</span>
+                            <span class="badge bg-success">{{ t('pickup') }}</span>
                             {% else %}
-                            <span class="badge bg-info">{{ t('delivery') }}</span>
+                            <span class="badge bg-warning text-dark">{{ t('delivery') }}</span>
                             {% endif %}
                         </td>
                         <td>{{ order.items|length if order.items else 0 }} {% if current_lang == 'ku' %}بەرهەم{% elif current_lang == 'ar' %}منتج{% else %}items{% endif %}</td>
-                        <td>{{ "{:,.0f}".format(order.total|default(0)) }} {{ t('iqd') }}</td>
+                        <td>{{ "{:,.0f}".format(order.total_price|default(0)) }} {{ t('iqd') }}</td>
                         <td>
                             {% if order.status == 'pending' %}
                             <span class="badge badge-pending">{{ t('pending') }}</span>
@@ -138,7 +138,8 @@ document.querySelectorAll('.btn-view').forEach(btn => {
         const id = this.dataset.id;
         const modal = new bootstrap.Modal(document.getElementById('orderModal'));
 
-        document.getElementById('order-details').innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
+        document.getElementById('order-details').innerHTML =
+          '<div class="text-center py-4"><i class="fas fa-spinner fa-spin fa-2x"></i></div>';
         modal.show();
 
         const response = await fetch(`/admin/api/order/${id}`);
@@ -156,6 +157,39 @@ document.querySelectorAll('.btn-view').forEach(btn => {
             `).join('');
         }
 
+        const method = (order.delivery_method || '').toLowerCase();
+        const isDelivery = method === 'delivery';
+
+        // ✅ handle totals from API (some endpoints use total_price, some use total)
+        const totalValue = (order.total_price ?? order.total ?? 0);
+
+        // ✅ Address UI:
+        // - delivery: show area + address (even if one missing)
+        // - pickup: show "استلام من المتجر" clearly
+        let addressBlock = '';
+        if (isDelivery) {
+            const area = order.area || '';
+            const address = order.address || '';
+            addressBlock = `
+                <div class="col-md-6">
+                    <p class="text-muted mb-1">{{ t('address') }}</p>
+                    <h6>${(area && address) ? `${area} - ${address}` : (address || area || '-')}</h6>
+                </div>
+            `;
+        } else {
+            addressBlock = `
+                <div class="col-md-6">
+                    <p class="text-muted mb-1">{{ t('address') }}</p>
+                    <h6 style="color: green; font-weight: 700;">
+                        {% if current_lang == 'ku' %}وەرگرتن لە فرۆشگاکە{% elif current_lang == 'ar' %}استلام من المتجر{% else %}Pickup from store{% endif %}
+                    </h6>
+                    <small class="text-muted">
+                        {% if current_lang == 'ku' %}کڕیار دێت بۆ وەرگرتنی داواکاری{% elif current_lang == 'ar' %}الزبون سيأتي لاستلام الطلب{% else %}Customer will come to pick up the order{% endif %}
+                    </small>
+                </div>
+            `;
+        }
+
         document.getElementById('order-details').innerHTML = `
             <div class="row g-3 mb-4">
                 <div class="col-md-6">
@@ -166,16 +200,18 @@ document.querySelectorAll('.btn-view').forEach(btn => {
                     <p class="text-muted mb-1">{{ t('customer_phone') }}</p>
                     <h6><a href="tel:${order.customer_phone}">${order.customer_phone || '-'}</a></h6>
                 </div>
+
                 <div class="col-md-6">
                     <p class="text-muted mb-1">{{ t('delivery_method') }}</p>
-                    <h6>${order.delivery_method === 'pickup' ? '{{ t("pickup") }}' : '{{ t("delivery") }}'}</h6>
+                    <h6>
+                        ${method === 'pickup'
+                            ? '{% if current_lang == "ku" %}وەرگرتن{% elif current_lang == "ar" %}استلام{% else %}Pickup{% endif %}'
+                            : '{% if current_lang == "ku" %}گەیاندن{% elif current_lang == "ar" %}توصيل{% else %}Delivery{% endif %}'
+                        }
+                    </h6>
                 </div>
-                ${order.address ? `
-                <div class="col-md-6">
-                    <p class="text-muted mb-1">{{ t('address') }}</p>
-                    <h6>${order.area || ''} - ${order.address}</h6>
-                </div>
-                ` : ''}
+
+                ${addressBlock}
             </div>
 
             <h6 class="mb-3">{{ t('products') }}</h6>
@@ -192,7 +228,7 @@ document.querySelectorAll('.btn-view').forEach(btn => {
                 <tfoot>
                     <tr>
                         <th colspan="3">{{ t('total') }}</th>
-                        <th style="color: #E57625;">${(order.total || 0).toLocaleString()} {{ t('iqd') }}</th>
+                        <th style="color: #E57625;">${Number(totalValue || 0).toLocaleString()} {{ t('iqd') }}</th>
                     </tr>
                 </tfoot>
             </table>

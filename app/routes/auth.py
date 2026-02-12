@@ -11,7 +11,13 @@ auth_bp = Blueprint('auth', __name__)
 def login():
     """User login page"""
     if current_user.is_authenticated:
-        return redirect(url_for('admin.dashboard'))
+        # ✅ FIX: Check if they can access dashboard first
+        if current_user.role == 'super_admin' or getattr(current_user, 'can_access_dashboard', False):
+            return redirect(url_for('admin.dashboard'))
+        elif getattr(current_user, 'can_manage_bookings', False):
+            return redirect(url_for('admin.manage_bookings'))
+        else:
+            return redirect(url_for('admin.manage_products'))
 
     if request.method == 'POST':
         username = request.form.get('username')
@@ -22,8 +28,37 @@ def login():
 
         if user and user.check_password(password):
             login_user(user, remember=bool(remember))
+
+            # Check if there's a 'next' page requested
             next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('admin.dashboard'))
+            if next_page:
+                return redirect(next_page)
+
+            # ✅ SMART REDIRECT: Send user to first page they have access to
+            # Super admin always goes to dashboard
+            if user.role == 'super_admin':
+                return redirect(url_for('admin.dashboard'))
+
+            # Regular admin: redirect based on permissions
+            if getattr(user, 'can_access_dashboard', False):
+                return redirect(url_for('admin.dashboard'))
+            elif getattr(user, 'can_manage_bookings', False):
+                return redirect(url_for('admin.manage_bookings'))
+            elif getattr(user, 'can_manage_products', False):
+                return redirect(url_for('admin.manage_products'))
+            elif getattr(user, 'can_manage_orders', False):
+                return redirect(url_for('admin.manage_orders'))
+            elif getattr(user, 'can_manage_stadiums', False):
+                return redirect(url_for('admin.manage_stadiums'))
+            elif getattr(user, 'can_view_reports', False):
+                return redirect(url_for('admin.reports'))
+            elif getattr(user, 'can_manage_settings', False):
+                return redirect(url_for('admin.manage_settings'))
+            else:
+                # User has no permissions at all - logout and show error
+                logout_user()
+                flash('ليس لديك أي صلاحيات للوصول إلى لوحة التحكم', 'danger')
+                return redirect(url_for('auth.login'))
         else:
             flash('اسم المستخدم أو كلمة المرور غير صحيحة', 'danger')
 

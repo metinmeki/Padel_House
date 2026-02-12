@@ -1,32 +1,27 @@
+# run.py - Production Ready
 from app import create_app
+import os
 
+# ✅ Create app instance
 app = create_app()
 
-
-# Create Super Admin
-def create_super_admin():
-    with app.app_context():
-        from app import db
-        from app.models.user import User
-
-        # Check if super admin exists
-        admin = User.query.filter_by(username='admin').first()
-        if not admin:
-            admin = User(
-                username='admin',
-                email='admin@padelhouse.iq',
-                role='super_admin'
-            )
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            print('✅ Super Admin created!')
-            print('   Username: admin')
-            print('   Password: admin123')
-        else:
-            print('ℹ️ Super Admin already exists')
-
-
 if __name__ == '__main__':
-    create_super_admin()
-    app.run(debug=True, port=5000)
+    # ✅ PRODUCTION SETTINGS
+    # Set DEBUG=False for production deployment
+    # Set DEBUG=True only for local development
+
+    # Get debug mode from environment variable (defaults to False for safety)
+    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+
+    print("🚀 Starting Padel House Server...")
+    print(f"📍 Mode: {'Development (DEBUG ON)' if debug_mode else 'Production (DEBUG OFF)'}")
+    print(f"🌐 Server: http://0.0.0.0:5000")
+    print("=" * 60)
+
+    # ✅ For production: debug=False
+    # ✅ For development: set FLASK_DEBUG=True in .env file
+    app.run(
+        host='0.0.0.0',
+        port=5000,
+        debug=debug_mode  # ✅ Safe default: False
+    )

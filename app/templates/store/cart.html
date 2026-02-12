@@ -3,150 +3,317 @@
 {% block title %}{{ t('site_name') }} - {{ t('cart') }}{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <h1 class="text-center mb-5" style="color: #1a1a2e;">
-        <i class="fas fa-shopping-cart me-2" style="color: #E57625;"></i>{{ t('cart') }}
-    </h1>
+<div class="container py-4 py-lg-5">
+  <h1 class="text-center mb-4 mb-lg-5" style="color:#1a1a2e;">
+    <i class="fas fa-shopping-cart me-2" style="color:#E57625;"></i>{{ t('cart') }}
+  </h1>
 
-    <div class="row g-4">
-        <!-- Cart Items -->
-        <div class="col-lg-8">
-            <div class="card">
-                <div class="card-body">
-                    <div id="cart-items">
-                        <!-- Cart items will be loaded here by JavaScript -->
-                    </div>
+  <div class="row g-4">
+    <!-- Cart Items -->
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-body">
 
-                    <div id="empty-cart" class="text-center py-5" style="display: none;">
-                        <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
-                        <h4 class="text-muted">{{ t('empty_cart') }}</h4>
-                        <a href="{{ url_for('store.products') }}" class="btn btn-warning mt-3">
-                            <i class="fas fa-store me-2"></i>{{ t('continue_shopping') }}
-                        </a>
-                    </div>
-                </div>
-            </div>
+          <div id="cart-items"></div>
+
+          <div id="empty-cart" class="text-center py-5" style="display:none;">
+            <i class="fas fa-shopping-cart fa-4x text-muted mb-3"></i>
+            <h4 class="text-muted">{{ t('empty_cart') }}</h4>
+            <a href="{{ url_for('store.products') }}" class="btn btn-warning mt-3">
+              <i class="fas fa-store me-2"></i>{{ t('continue_shopping') }}
+            </a>
+          </div>
+
         </div>
-
-        <!-- Order Summary -->
-        <div class="col-lg-4">
-            <div class="card sticky-top" style="top: 100px;">
-                <div class="card-header bg-warning text-white">
-                    <h5 class="mb-0">
-                        <i class="fas fa-receipt me-2"></i>
-                        {% if current_lang == 'ku' %}کۆی گشتی{% elif current_lang == 'ar' %}ملخص الطلب{% else %}Order Summary{% endif %}
-                    </h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>{{ t('products') }}</span>
-                        <span id="items-count">0</span>
-                    </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>{{ t('total') }}</span>
-                        <span id="subtotal">0 {{ t('iqd') }}</span>
-                    </div>
-
-                    <hr>
-
-                    <div class="d-flex justify-content-between fw-bold fs-5">
-                        <span>{{ t('total') }}</span>
-                        <span id="total" style="color: #E57625;">0 {{ t('iqd') }}</span>
-                    </div>
-
-                    <a href="{{ url_for('store.checkout') }}" id="checkout-btn" class="btn btn-warning w-100 mt-4 btn-lg">
-                        <i class="fas fa-credit-card me-2"></i>{{ t('checkout') }}
-                    </a>
-
-                    <a href="{{ url_for('store.products') }}" class="btn btn-outline-secondary w-100 mt-2">
-                        <i class="fas fa-arrow-left me-2"></i>{{ t('continue_shopping') }}
-                    </a>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+
+    <!-- Order Summary (Desktop) -->
+    <div class="col-lg-4">
+      <div class="card sticky-top d-none d-lg-block" style="top:100px;">
+        <div class="card-header bg-warning text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-receipt me-2"></i>
+            {% if current_lang == 'ku' %}کۆی گشتی{% elif current_lang == 'ar' %}ملخص الطلب{% else %}Order Summary{% endif %}
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-2">
+            <span>{{ t('products') }}</span>
+            <span id="items-count-desktop">0</span>
+          </div>
+
+          <div class="d-flex justify-content-between mb-2">
+            <span>{{ t('total') }}</span>
+            <span id="subtotal-desktop">0 {{ t('iqd') }}</span>
+          </div>
+
+          <hr>
+
+          <div class="d-flex justify-content-between fw-bold fs-5">
+            <span>{{ t('total') }}</span>
+            <span id="total-desktop" style="color:#E57625;">0 {{ t('iqd') }}</span>
+          </div>
+
+          <a href="{{ url_for('store.checkout') }}" id="checkout-btn-desktop" class="btn btn-warning w-100 mt-4 btn-lg">
+            <i class="fas fa-credit-card me-2"></i>{{ t('checkout') }}
+          </a>
+
+          <a href="{{ url_for('store.products') }}" class="btn btn-outline-secondary w-100 mt-2">
+            <i class="fas fa-arrow-left me-2"></i>{{ t('continue_shopping') }}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- ✅ Mobile Sticky Checkout Bar -->
+<div class="mobile-checkout-bar d-lg-none">
+  <div class="d-flex align-items-center justify-content-between">
+    <div>
+      <div class="small text-muted">
+        <span id="items-count-mobile">0</span> {{ t('products') }}
+      </div>
+      <div class="fw-bold" style="color:#1a1a2e;">
+        <span id="total-mobile">0</span> <span class="small">{{ t('iqd') }}</span>
+      </div>
+    </div>
+
+    <a href="{{ url_for('store.checkout') }}" id="checkout-btn-mobile" class="btn btn-warning btn-lg">
+      <i class="fas fa-credit-card me-2"></i>{{ t('checkout') }}
+    </a>
+  </div>
+</div>
+
+<style>
+  /* Cart item card */
+  .cart-item{
+    display:flex;
+    gap:12px;
+    padding:14px 0;
+    border-bottom:1px solid rgba(0,0,0,.08);
+  }
+
+  .cart-img{
+    width:72px;
+    height:72px;
+    border-radius:14px;
+    object-fit:cover;
+    background:#f2f2f2;
+    flex: 0 0 72px;
+  }
+
+  .cart-info{
+    flex:1;
+    min-width: 0;
+  }
+
+  .cart-title{
+    font-weight:800;
+    margin:0;
+    color:#1a1a2e;
+    line-height:1.2;
+    font-size:1rem;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .cart-price{
+    margin:6px 0 0 0;
+    color:#6b7280;
+    font-size:.95rem;
+  }
+
+  .cart-actions{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:10px;
+    flex-wrap: wrap;
+  }
+
+  .qty-control{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:#f8f9fa;
+    border:1px solid rgba(0,0,0,.08);
+    border-radius:14px;
+    padding:6px 10px;
+  }
+
+  .qty-btn{
+    width:38px;
+    height:38px;
+    border-radius:12px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  .qty-number{
+    min-width: 24px;
+    text-align:center;
+    font-weight:800;
+    color:#1a1a2e;
+  }
+
+  .line-total{
+    font-weight:900;
+    color:#E57625;
+    white-space:nowrap;
+    margin-left:auto;
+    font-size:1rem;
+  }
+
+  /* Sticky bar */
+  .mobile-checkout-bar{
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1040;
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(0,0,0,.08);
+    padding: 12px 14px;
+  }
+
+  /* Add space so content not hidden behind sticky bar */
+  @media (max-width: 991px){
+    body{ padding-bottom: 90px; }
+  }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 const TRANS = {
-    iqd: "{{ t('iqd') }}",
-    remove: "{{ t('remove') }}",
-    quantity: "{{ t('quantity') }}"
+  iqd: "{{ t('iqd') }}",
+  remove: "{{ t('remove') }}",
+  quantity: "{{ t('quantity') }}"
 };
 
 let cart = JSON.parse(localStorage.getItem('padelCart')) || [];
 
-function renderCart() {
-    const container = document.getElementById('cart-items');
-    const emptyCart = document.getElementById('empty-cart');
-    const checkoutBtn = document.getElementById('checkout-btn');
+function formatNumber(num){
+  return (num || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
 
-    if (cart.length === 0) {
-        container.style.display = 'none';
-        emptyCart.style.display = 'block';
-        checkoutBtn.classList.add('disabled');
-        updateSummary();
-        return;
-    }
+function renderCart(){
+  const container = document.getElementById('cart-items');
+  const emptyCart = document.getElementById('empty-cart');
 
-    container.style.display = 'block';
-    emptyCart.style.display = 'none';
-    checkoutBtn.classList.remove('disabled');
+  const checkoutBtnDesktop = document.getElementById('checkout-btn-desktop');
+  const checkoutBtnMobile = document.getElementById('checkout-btn-mobile');
 
-    container.innerHTML = cart.map((item, index) => `
-        <div class="d-flex align-items-center border-bottom py-3">
-            <div class="flex-grow-1">
-                <h6 class="mb-1">${item.name}</h6>
-                <p class="text-muted mb-0">${item.price.toLocaleString()} ${TRANS.iqd}</p>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(${index}, -1)">
-                    <i class="fas fa-minus"></i>
-                </button>
-                <span class="px-3 fw-bold">${item.quantity}</span>
-                <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(${index}, 1)">
-                    <i class="fas fa-plus"></i>
-                </button>
-                <button class="btn btn-sm btn-outline-danger ms-2" onclick="removeItem(${index})">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </div>
-            <div class="ms-4 text-end" style="min-width: 100px;">
-                <strong style="color: #E57625;">${(item.price * item.quantity).toLocaleString()} ${TRANS.iqd}</strong>
-            </div>
-        </div>
-    `).join('');
+  if (!container) return;
+
+  if (cart.length === 0){
+    container.innerHTML = '';
+    emptyCart.style.display = 'block';
+
+    if (checkoutBtnDesktop) checkoutBtnDesktop.classList.add('disabled');
+    if (checkoutBtnMobile) checkoutBtnMobile.classList.add('disabled');
 
     updateSummary();
+    window.dispatchEvent(new Event('cartUpdated'));
+    return;
+  }
+
+  emptyCart.style.display = 'none';
+  if (checkoutBtnDesktop) checkoutBtnDesktop.classList.remove('disabled');
+  if (checkoutBtnMobile) checkoutBtnMobile.classList.remove('disabled');
+
+  container.innerHTML = cart.map((item, index) => {
+    const img = item.image || item.img || item.photo || '';
+    const qty = Number(item.quantity || 1);
+    const price = Number(item.price || 0);
+    const lineTotal = price * qty;
+
+    return `
+      <div class="cart-item">
+        <img class="cart-img"
+             src="${img || '{{ url_for('static', filename='images/placeholder.png') }}'}"
+             onerror="this.src='{{ url_for('static', filename='images/placeholder.png') }}'"
+             alt="product">
+
+        <div class="cart-info">
+          <p class="cart-title">${item.name || 'Item'}</p>
+          <p class="cart-price">${formatNumber(price)} ${TRANS.iqd}</p>
+
+          <div class="cart-actions">
+            <div class="qty-control">
+              <button class="btn btn-outline-secondary qty-btn" onclick="updateQuantity(${index}, -1)" aria-label="minus">
+                <i class="fas fa-minus"></i>
+              </button>
+
+              <span class="qty-number">${qty}</span>
+
+              <button class="btn btn-outline-secondary qty-btn" onclick="updateQuantity(${index}, 1)" aria-label="plus">
+                <i class="fas fa-plus"></i>
+              </button>
+            </div>
+
+            <button class="btn btn-outline-danger qty-btn" onclick="removeItem(${index})" aria-label="remove">
+              <i class="fas fa-trash"></i>
+            </button>
+
+            <div class="line-total">${formatNumber(lineTotal)} ${TRANS.iqd}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  updateSummary();
+  window.dispatchEvent(new Event('cartUpdated'));
 }
 
-function updateQuantity(index, change) {
-    cart[index].quantity += change;
-    if (cart[index].quantity <= 0) {
-        cart.splice(index, 1);
-    }
-    localStorage.setItem('padelCart', JSON.stringify(cart));
-    renderCart();
-}
+function updateQuantity(index, change){
+  cart[index].quantity = Number(cart[index].quantity || 1) + change;
 
-function removeItem(index) {
+  if (cart[index].quantity <= 0){
     cart.splice(index, 1);
-    localStorage.setItem('padelCart', JSON.stringify(cart));
-    renderCart();
+  }
+
+  localStorage.setItem('padelCart', JSON.stringify(cart));
+  renderCart();
 }
 
-function updateSummary() {
-    const itemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-
-    document.getElementById('items-count').textContent = itemsCount;
-    document.getElementById('subtotal').textContent = `${total.toLocaleString()} ${TRANS.iqd}`;
-    document.getElementById('total').textContent = `${total.toLocaleString()} ${TRANS.iqd}`;
+function removeItem(index){
+  cart.splice(index, 1);
+  localStorage.setItem('padelCart', JSON.stringify(cart));
+  renderCart();
 }
 
-// Initialize
-renderCart();
+function updateSummary(){
+  const itemsCount = cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
+  const total = cart.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 1)), 0);
+
+  // desktop
+  const itemsCountDesktop = document.getElementById('items-count-desktop');
+  const subtotalDesktop = document.getElementById('subtotal-desktop');
+  const totalDesktop = document.getElementById('total-desktop');
+
+  if (itemsCountDesktop) itemsCountDesktop.textContent = itemsCount;
+  if (subtotalDesktop) subtotalDesktop.textContent = `${formatNumber(total)} ${TRANS.iqd}`;
+  if (totalDesktop) totalDesktop.textContent = `${formatNumber(total)} ${TRANS.iqd}`;
+
+  // mobile bar
+  const itemsCountMobile = document.getElementById('items-count-mobile');
+  const totalMobile = document.getElementById('total-mobile');
+
+  if (itemsCountMobile) itemsCountMobile.textContent = itemsCount;
+  if (totalMobile) totalMobile.textContent = formatNumber(total);
+}
+
+// Init
+document.addEventListener('DOMContentLoaded', () => {
+  cart = JSON.parse(localStorage.getItem('padelCart')) || [];
+  renderCart();
+});
 </script>
 {% endblock %}

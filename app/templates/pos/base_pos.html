@@ -3,319 +3,319 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}POS{% endblock %} - Padel House</title>
+    <title>{% block title %}POS System{% endblock %}</title>
 
     <!-- Bootstrap RTL -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+
     <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 
     <style>
+        :root {
+            --primary-color: #E57625;
+            --primary-dark: #d4691f;
+            --secondary-color: #2c3e50;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+        }
+
         * {
             font-family: 'Cairo', sans-serif;
         }
 
         body {
-            background-color: #1a1a2e;
-            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
+            padding-bottom: 2rem;
         }
 
         /* Navbar */
-        .pos-navbar {
-            background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);
-            padding: 15px 0;
-            border-bottom: 2px solid #0f3460;
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1rem 0;
         }
 
-        .pos-navbar .brand {
-            font-size: 1.5rem;
+        .navbar-brand {
+            color: white !important;
             font-weight: 700;
-            color: #00d9ff;
+            font-size: 1.5rem;
         }
 
-        .pos-navbar .nav-link {
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 10px;
-            transition: all 0.3s;
+        .navbar-brand i {
+            margin-left: 10px;
         }
 
-        .pos-navbar .nav-link:hover,
-        .pos-navbar .nav-link.active {
-            background: #0f3460;
-            color: #00d9ff;
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+            font-weight: 600;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: white !important;
         }
 
         /* Cards */
-        .pos-card {
-            background: linear-gradient(145deg, #16213e, #1a1a2e);
-            border: 1px solid #0f3460;
+        .stat-card, .table-card {
+            background: white;
             border-radius: 15px;
-            transition: all 0.3s;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: none;
         }
 
-        .pos-card:hover {
+        .stat-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 217, 255, 0.2);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
         }
 
-        /* Stadium/Table Cards */
-        .location-card {
-            cursor: pointer;
-            padding: 20px;
-            text-align: center;
-        }
-
-        .location-card.available {
-            border-color: #00d9ff;
-        }
-
-        .location-card.occupied {
-            border-color: #ff6b6b;
-            background: linear-gradient(145deg, #2d1f1f, #1a1a2e);
-        }
-
-        .location-card .icon {
-            font-size: 3rem;
-            margin-bottom: 10px;
-        }
-
-        .location-card.available .icon {
-            color: #00d9ff;
-        }
-
-        .location-card.occupied .icon {
-            color: #ff6b6b;
-        }
-
-        /* Product Grid */
-        .product-card {
-            cursor: pointer;
-            padding: 15px;
-            text-align: center;
-            height: 100%;
-        }
-
-        .product-card:hover {
-            border-color: #00d9ff;
-        }
-
-        .product-card img {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 10px;
-            margin-bottom: 10px;
-        }
-
-        .product-card .price {
-            color: #00d9ff;
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-
-        /* Cart */
-        .cart-container {
-            background: #16213e;
-            border-radius: 15px;
-            padding: 20px;
-            height: calc(100vh - 200px);
+        .icon {
+            width: 60px;
+            height: 60px;
             display: flex;
-            flex-direction: column;
-        }
-
-        .cart-items {
-            flex: 1;
-            overflow-y: auto;
-        }
-
-        .cart-item {
-            background: #1a1a2e;
-            border-radius: 10px;
-            padding: 10px 15px;
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
             align-items: center;
-        }
-
-        .cart-total {
-            background: #0f3460;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 15px;
-        }
-
-        .cart-total .total-amount {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #00d9ff;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 1.5rem;
         }
 
         /* Buttons */
-        .btn-pos {
-            background: linear-gradient(135deg, #00d9ff 0%, #0f3460 100%);
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
             border: none;
-            color: #fff;
-            padding: 12px 30px;
-            border-radius: 10px;
+            padding: 0.6rem 1.5rem;
             font-weight: 600;
-            transition: all 0.3s;
+            border-radius: 8px;
+            transition: all 0.3s ease;
         }
 
-        .btn-pos:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 20px rgba(0, 217, 255, 0.4);
-            color: #fff;
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(229, 118, 37, 0.3);
         }
 
-        .btn-pos-danger {
-            background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%);
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+            border: none;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            border-radius: 8px;
         }
 
-        .btn-pos-success {
-            background: linear-gradient(135deg, #51cf66 0%, #2f9e44 100%);
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            border: none;
+            padding: 0.6rem 1.5rem;
+            font-weight: 600;
+            border-radius: 8px;
         }
 
-        /* Category Tabs */
-        .category-tabs {
-            display: flex;
-            gap: 10px;
-            overflow-x: auto;
-            padding: 10px 0;
-            margin-bottom: 20px;
-        }
-
-        .category-tab {
-            background: #16213e;
-            border: 1px solid #0f3460;
-            color: #fff;
-            padding: 10px 25px;
-            border-radius: 25px;
-            white-space: nowrap;
+        /* Stadium/Table Cards */
+        .stadium-card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 3px solid transparent;
             cursor: pointer;
-            transition: all 0.3s;
         }
 
-        .category-tab:hover,
-        .category-tab.active {
-            background: #00d9ff;
-            color: #1a1a2e;
+        .stadium-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+            border-color: var(--primary-color);
         }
 
-        /* Quantity Controls */
-        .qty-control {
+        .stadium-card.available {
+            border-color: var(--success-color);
+        }
+
+        .stadium-card.occupied {
+            border-color: var(--danger-color);
+            opacity: 0.8;
+        }
+
+        .stadium-number {
+            width: 50px;
+            height: 50px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
             display: flex;
             align-items: center;
-            gap: 10px;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
         }
 
-        .qty-btn {
-            width: 35px;
-            height: 35px;
-            border-radius: 50%;
-            border: none;
-            background: #0f3460;
-            color: #fff;
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: all 0.3s;
+        .status-badge {
+            padding: 0.4rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
         }
 
-        .qty-btn:hover {
-            background: #00d9ff;
-            color: #1a1a2e;
+        .status-available {
+            background: #d4edda;
+            color: #155724;
         }
 
-        /* Barcode Scanner */
-        .barcode-input {
-            background: #16213e;
-            border: 2px solid #0f3460;
-            color: #fff;
-            padding: 15px 20px;
+        .status-occupied {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Tables */
+        .table {
+            background: white;
             border-radius: 10px;
-            font-size: 1.2rem;
-            width: 100%;
+            overflow: hidden;
         }
 
-        .barcode-input:focus {
-            border-color: #00d9ff;
-            outline: none;
-            box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
+        .table thead th {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: white;
+            font-weight: 600;
+            border: none;
+            padding: 1rem;
+        }
+
+        .table tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .table tbody tr:hover {
+            background: #f8f9fa;
+        }
+
+        /* Form Controls */
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 2px solid #e9ecef;
+            padding: 0.6rem 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(229, 118, 37, 0.25);
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 0.5rem;
         }
 
         /* Alerts */
-        .alert-pos {
+        .alert {
             border-radius: 10px;
             border: none;
+            padding: 1rem 1.5rem;
+            font-weight: 600;
         }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
+        /* Page Title */
+        .page-header {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
 
-        ::-webkit-scrollbar-track {
-            background: #1a1a2e;
+        .page-header h2 {
+            color: var(--primary-color);
+            font-weight: 700;
+            margin: 0;
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: #0f3460;
-            border-radius: 10px;
+        /* Barcode Scanner */
+        .barcode-scanner {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 2rem;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #00d9ff;
+        .barcode-input {
+            font-size: 1.2rem;
+            padding: 1rem;
+            border: 3px solid var(--primary-color);
         }
+
+        {% block extra_css %}{% endblock %}
     </style>
-
-    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="pos-navbar">
-        <div class="container-fluid px-4">
-            <div class="d-flex justify-content-between align-items-center">
-                <a href="{{ url_for('pos.index') }}" class="brand text-decoration-none">
-                    <i class="fas fa-cash-register me-2"></i>Padel House POS
-                </a>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('pos.index') }}">
+                <i class="fas fa-cash-register"></i>
+                Padel House POS
+            </a>
 
-                <div class="d-flex gap-2">
-                    <a href="{{ url_for('pos.index') }}" class="nav-link {{ 'active' if request.endpoint == 'pos.index' }}">
-                        <i class="fas fa-home me-1"></i> الرئيسية
-                    </a>
-                    <a href="{{ url_for('pos.quick_sale') }}" class="nav-link {{ 'active' if request.endpoint == 'pos.quick_sale' }}">
-                        <i class="fas fa-bolt me-1"></i> بيع سريع
-                    </a>
-                    <a href="{{ url_for('pos.reports') }}" class="nav-link {{ 'active' if request.endpoint == 'pos.reports' }}">
-                        <i class="fas fa-chart-bar me-1"></i> التقارير
-                    </a>
-                    <a href="{{ url_for('admin.dashboard') }}" class="nav-link">
-                        <i class="fas fa-cog me-1"></i> الإدارة
-                    </a>
-                </div>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-                <div class="d-flex align-items-center gap-3">
-                    <span class="text-muted">
-                        <i class="fas fa-user me-1"></i>{{ current_user.username }}
-                    </span>
-                    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-danger btn-sm">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </a>
-                </div>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('pos.index') }}">
+                            <i class="fas fa-home me-2"></i>الرئيسية
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('pos.quick_sale') }}">
+                            <i class="fas fa-shopping-cart me-2"></i>بيع سريع
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin.reports') }}">
+                            <i class="fas fa-chart-line me-2"></i>التقارير
+                        </a>
+                    </li>
+                </ul>
+
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
+                            <i class="fas fa-cog me-2"></i>الإدارة
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('auth.logout') }}">
+                            <i class="fas fa-sign-out-alt me-2"></i>خروج
+                        </a>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
 
     <!-- Flash Messages -->
-    <div class="container-fluid px-4 mt-3">
+    <div class="container-fluid mt-3">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-pos alert-dismissible fade show">
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' if category == 'error' else 'info' }} alert-dismissible fade show" role="alert">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'error' else 'info-circle' }} me-2"></i>
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
@@ -325,25 +325,12 @@
     </div>
 
     <!-- Main Content -->
-    <main class="container-fluid px-4 py-3">
+    <div class="container-fluid mt-4">
         {% block content %}{% endblock %}
-    </main>
+    </div>
 
-    <!-- Scripts -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-    <script>
-        // Format number with commas
-        function formatNumber(num) {
-            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-        }
-
-        // Format price
-        function formatPrice(price) {
-            return formatNumber(price) + ' IQD';
-        }
-    </script>
 
     {% block extra_js %}{% endblock %}
 </body>

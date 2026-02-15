@@ -31,7 +31,17 @@ from app.services.barcode_service import BarcodeService, XPrinterService
 # ✅ Activity log
 from app.models.activity_log import ActivityLog
 from app.services.activity_service import log_activity
-
+def to_bool(value, default=False):
+    """
+    Convert different checkbox/form values to boolean.
+    Accepts: on/true/1/yes/y
+    """
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    v = str(value).strip().lower()
+    return v in ("1", "true", "yes", "y", "on")
 # POS
 try:
     from app.models.pos_session import POSSession
@@ -63,7 +73,10 @@ def generate_product_barcode():
 
 
 admin_bp = Blueprint('admin', __name__)
-
+@admin_bp.route('/api/debug/ping', methods=['GET'])
+@login_required
+def debug_ping():
+    return jsonify({"ok": True, "msg": "admin blueprint works"}), 200
 UPLOAD_FOLDER = 'app/static/images/products'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 
@@ -119,6 +132,14 @@ def save_product_image(file):
         fallback_name = temp_name
     return fallback_name
 
+def to_bool(v, default=False):
+    """Convert common HTML/JS truthy values to bool safely."""
+    if v is None:
+        return default
+    if isinstance(v, bool):
+        return v
+    s = str(v).strip().lower()
+    return s in ("1", "true", "on", "yes", "y")
 
 def super_admin_required(f):
     @wraps(f)
@@ -414,21 +435,47 @@ def reject_booking(booking_id):
 
 
 # ===== MANAGE BOOKINGS =====
+from sqlalchemy import or_
+
 @admin_bp.route('/bookings')
 @login_required
 @permission_required('can_manage_bookings')
 def manage_bookings():
     status_filter = request.args.get('status', 'all')
     stadium_filter = request.args.get('stadium', 'all')
+    date_filter = request.args.get('date', '').strip()
+    search_q = request.args.get('q', '').strip()
 
     query = Booking.query
-    if status_filter != 'all':
-        query = query.filter_by(status=status_filter)
-    if stadium_filter != 'all':
+
+    # status
+    if status_filter and status_filter != 'all':
+        query = query.filter(Booking.status == status_filter)
+
+    # stadium
+    if stadium_filter and stadium_filter != 'all':
         try:
-            query = query.filter_by(stadium_id=int(stadium_filter))
+            query = query.filter(Booking.stadium_id == int(stadium_filter))
         except (ValueError, TypeError):
             pass
+
+    # date (YYYY-MM-DD)
+    if date_filter:
+        try:
+            d = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            query = query.filter(Booking.date == d)
+        except ValueError:
+            pass
+
+    # search (name OR phone)
+    if search_q:
+        like = f"%{search_q}%"
+        query = query.filter(
+            or_(
+                Booking.customer_name.ilike(like),
+                Booking.customer_phone.ilike(like)
+            )
+        )
 
     bookings = query.order_by(Booking.date.desc(), Booking.created_at.desc()).all()
     stadiums = Stadium.query.all()
@@ -438,7 +485,9 @@ def manage_bookings():
         bookings=bookings,
         stadiums=stadiums,
         current_status=status_filter,
-        current_stadium=stadium_filter
+        current_stadium=stadium_filter,
+        current_date=date_filter,
+        current_q=search_q
     )
 
 
@@ -457,7 +506,8 @@ def update_booking_status(booking_id):
         return jsonify({'success': False, 'message': 'Booking not found'}), 404
 
     data = request.json or {}
-    new_status = data.get('status')
+    new_status = (data.get('status') or '').strip().lower()
+    reason = (data.get('reason') or '').strip()  # optional
 
     if new_status not in ['pending', 'confirmed', 'completed', 'cancelled']:
         return jsonify({'success': False, 'message': 'Invalid status'}), 400
@@ -465,13 +515,33 @@ def update_booking_status(booking_id):
     old_status = booking.status
     booking.status = new_status
 
+    # ✅ If confirm from pending
     if new_status == 'confirmed' and old_status == 'pending':
         booking.confirmed_at = datetime.utcnow()
         if hasattr(booking, 'confirmed_by'):
             booking.confirmed_by = current_user.id
 
+    # ✅ If cancelled (important: free slot again + keep phone/name)
+    if new_status == 'cancelled':
+        # clear approval info so it's not treated as approved anymore
+        booking.confirmed_at = None
+        if hasattr(booking, 'confirmed_by'):
+            booking.confirmed_by = None
+
+        # save reason in notes (optional)
+        if reason:
+            existing_notes = booking.notes or ''
+            booking.notes = f"{existing_notes}\n[إلغاء بعد التأكيد] السبب: {reason}".strip()
+
     db.session.commit()
-    return jsonify({'success': True, 'message': f'تم تحديث الحجز إلى {new_status}'})
+
+    return jsonify({
+        'success': True,
+        'message': f'تم تحديث الحجز إلى {new_status}',
+        'booking_id': booking.id,
+        'old_status': old_status,
+        'new_status': new_status
+    })
 
 
 @admin_bp.route('/api/booking/<int:booking_id>', methods=['DELETE'])
@@ -494,10 +564,15 @@ def delete_booking(booking_id):
 # ===== PRODUCTS MANAGEMENT =====
 # ========================================
 
+# ========================================
+# ===== PRODUCTS MANAGEMENT =====
+# ========================================
+
 @admin_bp.route('/products')
 @login_required
 @permission_required('can_manage_products')
 def manage_products():
+    # ✅ Admin should show ALL products (even hidden), just show badges in UI
     products = Product.query.order_by(Product.created_at.desc()).all()
     categories = Category.query.filter_by(is_active=True).all()
     return render_template('admin/products.html', products=products, categories=categories)
@@ -506,22 +581,37 @@ def manage_products():
 @admin_bp.route('/api/product', methods=['POST'])
 @login_required
 def add_product_api():
-    """API endpoint for adding products via AJAX"""
+    """API endpoint for adding products via AJAX (FormData)"""
     try:
-        name_ku = request.form.get('name_ku')
-        name_ar = request.form.get('name_ar')
-        name_en = request.form.get('name_en')
-        description_ku = request.form.get('description_ku')
-        description_ar = request.form.get('description_ar')
-        description_en = request.form.get('description_en')
+        name_ku = (request.form.get('name_ku') or '').strip()
+        name_ar = (request.form.get('name_ar') or '').strip() or None
+        name_en = (request.form.get('name_en') or '').strip() or None
+
+        description_ku = (request.form.get('description_ku') or '').strip() or None
+        description_ar = (request.form.get('description_ar') or '').strip() or None
+        description_en = (request.form.get('description_en') or '').strip() or None
+
         price = request.form.get('price')
         stock = request.form.get('stock', 0)
         category_id = request.form.get('category_id')
-        show_in_website = request.form.get('show_in_website') == 'true'
-        show_in_pos = request.form.get('show_in_pos') == 'true'
+
+        # ✅ IMPORTANT: these are your DB columns
+        # ✅ FormData must send 1/0 (we will fix JS below)
+        show_in_website = to_bool(request.form.get('show_in_website'), default=False)
+        show_in_pos = to_bool(request.form.get('show_in_pos'), default=False)
 
         if not name_ku or not price:
             return jsonify({'success': False, 'message': 'ناو و نرخ پێویستن / الاسم والسعر مطلوبان'}), 400
+
+        try:
+            price_int = int(price)
+        except (ValueError, TypeError):
+            price_int = 0
+
+        try:
+            stock_int = int(stock or 0)
+        except (ValueError, TypeError):
+            stock_int = 0
 
         product = Product(
             name_ku=name_ku,
@@ -530,11 +620,14 @@ def add_product_api():
             description_ku=description_ku,
             description_ar=description_ar,
             description_en=description_en,
-            price=int(price),
-            stock=int(stock),
+            price=price_int,
+            stock=stock_int,
             category_id=int(category_id) if category_id else None,
+
+            # ✅ correct
             show_in_website=show_in_website,
             show_in_pos=show_in_pos,
+
             is_active=True
         )
 
@@ -554,7 +647,7 @@ def add_product_api():
 
         db.session.commit()
 
-        # ✅ LOG IT
+        # ✅ LOG
         try:
             log_activity(
                 action="add_product",
@@ -568,7 +661,8 @@ def add_product_api():
         except Exception as e:
             print("❌ Activity log error:", e)
 
-        if request.form.get('print_label') == 'true':
+        # ✅ Optional print
+        if to_bool(request.form.get('print_label'), default=False):
             try:
                 XPrinterService.print_barcode_label(
                     product.id,
@@ -591,7 +685,9 @@ def add_product_api():
                 'price': product.price,
                 'stock': product.stock,
                 'category_id': product.category_id,
-                'image': product.image
+                'image': product.image,
+                'show_in_website': product.show_in_website,
+                'show_in_pos': product.show_in_pos,
             }
         }), 201
 
@@ -618,8 +714,10 @@ def add_product():
             price=int(request.form.get('price', 0)),
             stock=int(request.form.get('stock', 0)),
             category_id=request.form.get('category_id') or None,
-            show_in_website=request.form.get('show_in_website') == 'on',
-            show_in_pos=request.form.get('show_in_pos') == 'on'
+
+            # ✅ FIX: accept on/true/1/yes (default False if missing)
+            show_in_website=to_bool(request.form.get('show_in_website'), default=False),
+            show_in_pos=to_bool(request.form.get('show_in_pos'), default=False),
         )
 
         if 'image' in request.files:
@@ -649,7 +747,7 @@ def add_product():
         except Exception as e:
             print("❌ Activity log error:", e)
 
-        if request.form.get('print_label') == 'on':
+        if to_bool(request.form.get('print_label'), default=False):
             try:
                 success, message = XPrinterService.print_barcode_label(
                     product.id, product.name_ku or 'Product', product.price, barcode_value
@@ -811,18 +909,27 @@ def update_product(product_id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-@admin_bp.route('/api/product/<int:product_id>', methods=['DELETE'])
+from sqlalchemy import text
+
+@admin_bp.route('/api/product/<int:product_id>', methods=['DELETE', 'POST'])
 @login_required
 def delete_product(product_id):
+    print("🔥 DELETE/POST HIT product_id =", product_id)
+
     product = Product.query.get(product_id)
     if not product:
         return jsonify({'success': False, 'message': 'المنتج غير موجود'}), 404
 
     try:
-        # Delete related order items
-        db.session.execute(db.text('DELETE FROM order_item WHERE product_id = :pid'), {'pid': product_id})
-        db.session.execute(db.text('DELETE FROM pos_order_item WHERE product_id = :pid'), {'pid': product_id})
+        # delete related items (safe)
+        db.session.execute(text('DELETE FROM order_item WHERE product_id = :pid'), {'pid': product_id})
 
+        try:
+            db.session.execute(text('DELETE FROM pos_order_item WHERE product_id = :pid'), {'pid': product_id})
+        except Exception as e:
+            print("⚠️ pos_order_item skip:", e)
+
+        # delete image file
         if product.image:
             image_path = os.path.join(UPLOAD_FOLDER, product.image)
             if os.path.exists(image_path):
@@ -831,15 +938,16 @@ def delete_product(product_id):
                 except Exception:
                     pass
 
-        db.session.execute(db.text('DELETE FROM product WHERE id = :pid'), {'pid': product_id})
+        # delete product row
+        db.session.delete(product)
         db.session.commit()
 
-        return jsonify({'success': True, 'message': 'بەرهەمەکە بە سەرکەوتوویی سڕایەوە'})
+        return jsonify({'success': True, 'message': 'Deleted ✅'})
 
     except Exception as e:
         db.session.rollback()
+        print("❌ delete error:", e)
         return jsonify({'success': False, 'message': str(e)}), 500
-
 
 @admin_bp.route('/api/order/<int:order_id>', methods=['GET'])
 @login_required
@@ -898,6 +1006,10 @@ def regenerate_barcode(product_id):
 # ===== CATEGORIES MANAGEMENT =====
 # ========================================
 
+# ========================================
+# ===== CATEGORIES MANAGEMENT =====
+# ========================================
+
 @admin_bp.route('/categories')
 @login_required
 def manage_categories():
@@ -908,23 +1020,32 @@ def manage_categories():
 @admin_bp.route('/api/category', methods=['POST'])
 @login_required
 def add_category():
-    data = request.get_json()
+    data = request.get_json() or {}
 
-    if not data or not data.get('name_ku'):
+    name_ku = (data.get('name_ku') or '').strip()
+    if not name_ku:
         return jsonify({'success': False, 'message': 'ناوی پۆل (کوردی) پێویستە'}), 400
 
-    if Category.query.filter_by(name_ku=data['name_ku']).first():
+    existing = Category.query.filter(
+        func.lower(func.trim(Category.name_ku)) == name_ku.lower()
+    ).first()
+
+    if existing:
         return jsonify({'success': False, 'message': 'ئەم پۆلە پێشتر تۆمارکراوە'}), 409
 
     try:
         category = Category(
-            name_ku=data['name_ku'],
-            name_ar=data.get('name_ar'),
-            name_en=data.get('name_en'),
-            description_ku=data.get('description_ku'),
-            description_ar=data.get('description_ar'),
-            description_en=data.get('description_en'),
-            is_active=True
+            name_ku=data.get('name_ku'),
+            name_ar=data.get('name_ar') or None,
+            name_en=data.get('name_en') or None,
+            description_ku=data.get('description_ku') or None,
+            description_ar=data.get('description_ar') or None,
+            description_en=data.get('description_en') or None,
+            is_active=True,
+
+            # ✅ NEW (defaults to True if not sent)
+            show_on_website=bool(data.get('show_on_website', True)),
+            show_on_pos=bool(data.get('show_on_pos', True)),
         )
 
         db.session.add(category)
@@ -943,7 +1064,12 @@ def add_category():
         except Exception as e:
             print("❌ Activity log error:", e)
 
-        return jsonify({'success': True, 'message': 'پۆل بە سەرکەوتوویی زیاد کرا', 'category_id': category.id}), 201
+        return jsonify({
+            'success': True,
+            'message': 'پۆل بە سەرکەوتوویی زیاد کرا',
+            'category_id': category.id,
+            'category': category.to_dict()
+        }), 201
 
     except Exception as e:
         db.session.rollback()
@@ -957,17 +1083,34 @@ def update_category(category_id):
     if not category:
         return jsonify({'success': False, 'message': 'التصنيف غير موجود'}), 404
 
-    data = request.json or {}
+    data = request.get_json() or {}
 
     try:
+        # Names
         if 'name_ku' in data:
             category.name_ku = data['name_ku']
         if 'name_ar' in data:
-            category.name_ar = data['name_ar']
+            category.name_ar = data['name_ar'] or None
         if 'name_en' in data:
-            category.name_en = data['name_en']
+            category.name_en = data['name_en'] or None
+
+        # Descriptions ✅ (your old PUT didn’t update these)
+        if 'description_ku' in data:
+            category.description_ku = data['description_ku'] or None
+        if 'description_ar' in data:
+            category.description_ar = data['description_ar'] or None
+        if 'description_en' in data:
+            category.description_en = data['description_en'] or None
+
+        # Active
         if 'is_active' in data:
             category.is_active = bool(data['is_active'])
+
+        # ✅ NEW visibility flags
+        if 'show_on_website' in data:
+            category.show_on_website = bool(data['show_on_website'])
+        if 'show_on_pos' in data:
+            category.show_on_pos = bool(data['show_on_pos'])
 
         db.session.commit()
 
@@ -984,7 +1127,11 @@ def update_category(category_id):
         except Exception as e:
             print("❌ Activity log error:", e)
 
-        return jsonify({'success': True, 'message': 'تم تحديث التصنيف بنجاح'})
+        return jsonify({
+            'success': True,
+            'message': 'تم تحديث التصنيف بنجاح',
+            'category': category.to_dict()
+        })
 
     except Exception as e:
         db.session.rollback()
@@ -1036,13 +1183,48 @@ def delete_category(category_id):
 @login_required
 def manage_orders():
     status_filter = request.args.get('status', 'all')
+    delivery_filter = request.args.get('delivery', 'all')
+    date_filter = (request.args.get('date') or '').strip()   # YYYY-MM-DD
+    q = (request.args.get('q') or '').strip()                # name or phone
 
     query = Order.query
-    if status_filter != 'all':
-        query = query.filter_by(status=status_filter)
+
+    # ✅ Status filter
+    if status_filter and status_filter != 'all':
+        query = query.filter(Order.status == status_filter)
+
+    # ✅ Delivery method filter
+    if delivery_filter and delivery_filter != 'all':
+        query = query.filter(Order.delivery_method == delivery_filter)
+
+    # ✅ Date filter (by created_at DAY)
+    if date_filter:
+        try:
+            d = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            start_dt = datetime.combine(d, datetime.min.time())
+            end_dt = start_dt + timedelta(days=1)
+            query = query.filter(Order.created_at >= start_dt, Order.created_at < end_dt)
+        except ValueError:
+            pass
+
+    # ✅ Search filter (name OR phone)
+    if q:
+        like = f"%{q}%"
+        query = query.filter(or_(
+            Order.customer_name.ilike(like),
+            Order.customer_phone.ilike(like)
+        ))
 
     orders = query.order_by(Order.created_at.desc()).all()
-    return render_template('admin/orders.html', orders=orders, current_status=status_filter)
+
+    return render_template(
+        'admin/orders.html',
+        orders=orders,
+        current_status=status_filter,
+        current_delivery=delivery_filter,
+        current_date=date_filter,
+        current_q=q
+    )
 
 
 @admin_bp.route('/order/<int:order_id>')

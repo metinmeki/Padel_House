@@ -4,675 +4,663 @@
 
 {% block extra_css %}
 <style>
-    .stat-card {
-        border-radius: 12px;
-        transition: transform 0.2s;
-    }
-    .stat-card:hover {
-        transform: translateY(-3px);
-    }
-    .filter-btn {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        color: #666;
-    }
-    .filter-btn:hover, .filter-btn.active {
-        background: #E57625;
-        border-color: #E57625;
-        color: #fff;
-    }
-    .table th {
-        font-weight: 600;
-        color: #555;
-    }
-    .nav-tabs .nav-link {
-        color: #666;
-    }
-    .nav-tabs .nav-link.active {
-        color: #E57625;
-        font-weight: 600;
-    }
-    .visibility-box {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 15px;
-        border: 1px solid #e9ecef;
-    }
-    .visibility-box .form-check {
-        margin-bottom: 0;
-    }
+  .stat-card { border-radius: 12px; transition: transform 0.2s; }
+  .stat-card:hover { transform: translateY(-3px); }
+  .filter-btn { background: #f8f9fa; border: 1px solid #dee2e6; color: #666; }
+  .filter-btn:hover, .filter-btn.active { background: #E57625; border-color: #E57625; color: #fff; }
+  .table th { font-weight: 600; color: #555; }
+  .nav-tabs .nav-link { color: #666; }
+  .nav-tabs .nav-link.active { color: #E57625; font-weight: 600; }
+  .visibility-box { background: #f8f9fa; border-radius: 8px; padding: 15px; border: 1px solid #e9ecef; }
+  .visibility-box .form-check { margin-bottom: 0; }
+  .img-ph { width:50px;height:50px;object-fit:cover; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h1 class="h3 mb-0">
-                <i class="fas fa-box me-2 text-primary"></i>
-                {% if current_lang == 'ku' %}بەڕێوەبردنی بەرهەمەکان{% elif current_lang == 'ar' %}إدارة المنتجات{% else %}Product Management{% endif %}
-            </h1>
-            <p class="text-muted mb-0">
-                {% if current_lang == 'ku' %}زیادکردن و دەستکاری و سڕینەوەی بەرهەمەکان{% elif current_lang == 'ar' %}إضافة وتعديل وحذف المنتجات{% else %}Add, edit and delete products{% endif %}
-            </p>
-        </div>
-        <div class="d-flex gap-2">
-            <a href="{{ url_for('admin.print_barcodes') }}" class="btn btn-outline-secondary btn-lg">
-                <i class="fas fa-barcode me-2"></i>
-                {% if current_lang == 'ku' %}چاپی باڕکۆد{% elif current_lang == 'ar' %}طباعة الباركود{% else %}Print Barcodes{% endif %}
-            </a>
-            <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addProductModal">
-                <i class="fas fa-plus me-2"></i>
-                {% if current_lang == 'ku' %}زیادکردنی بەرهەم{% elif current_lang == 'ar' %}إضافة منتج{% else %}Add Product{% endif %}
-            </button>
-        </div>
+  <!-- Header -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-0">
+        <i class="fas fa-box me-2 text-primary"></i>
+        {% if current_lang == 'ku' %}بەڕێوەبردنی بەرهەمەکان{% elif current_lang == 'ar' %}إدارة المنتجات{% else %}Product Management{% endif %}
+      </h1>
+      <p class="text-muted mb-0">
+        {% if current_lang == 'ku' %}زیادکردن و دەستکاری و سڕینەوەی بەرهەمەکان{% elif current_lang == 'ar' %}إضافة وتعديل وحذف المنتجات{% else %}Add, edit and delete products{% endif %}
+      </p>
     </div>
-
-    <!-- Stats -->
-    <div class="row g-3 mb-4">
-        <div class="col-md-3 col-6">
-            <div class="card border-0 shadow-sm stat-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-box fa-2x mb-2" style="color: #E57625;"></i>
-                    <h6 class="text-muted mb-0">{% if current_lang == 'ku' %}کۆی بەرهەمەکان{% elif current_lang == 'ar' %}إجمالي المنتجات{% else %}Total Products{% endif %}</h6>
-                    <h3>{{ products|length }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="card border-0 shadow-sm stat-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
-                    <h6 class="text-muted mb-0">{% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}مفعل{% else %}Active{% endif %}</h6>
-                    <h3>{{ products|selectattr('is_active')|list|length }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="card border-0 shadow-sm stat-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-tags fa-2x mb-2 text-primary"></i>
-                    <h6 class="text-muted mb-0">{% if current_lang == 'ku' %}پۆلەکان{% elif current_lang == 'ar' %}التصنيفات{% else %}Categories{% endif %}</h6>
-                    <h3>{{ categories|length }}</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3 col-6">
-            <div class="card border-0 shadow-sm stat-card">
-                <div class="card-body text-center">
-                    <i class="fas fa-exclamation-triangle fa-2x mb-2 text-warning"></i>
-                    <h6 class="text-muted mb-0">{% if current_lang == 'ku' %}کەم لە ئەنبار{% elif current_lang == 'ar' %}مخزون منخفض{% else %}Low Stock{% endif %}</h6>
-                    <h3>{{ products|selectattr('stock', 'lt', 5)|list|length }}</h3>
-                </div>
-            </div>
-        </div>
+    <div class="d-flex gap-2">
+      <a href="{{ url_for('admin.print_barcodes') }}" class="btn btn-outline-secondary btn-lg">
+        <i class="fas fa-barcode me-2"></i>
+        {% if current_lang == 'ku' %}چاپی باڕکۆد{% elif current_lang == 'ar' %}طباعة الباركود{% else %}Print Barcodes{% endif %}
+      </a>
+      <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#addProductModal">
+        <i class="fas fa-plus me-2"></i>
+        {% if current_lang == 'ku' %}زیادکردنی بەرهەم{% elif current_lang == 'ar' %}إضافة منتج{% else %}Add Product{% endif %}
+      </button>
     </div>
+  </div>
 
-    <!-- Filter -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body py-2">
-            <div class="d-flex flex-wrap gap-2 align-items-center">
-                <span class="text-muted">{% if current_lang == 'ku' %}فلتەر:{% elif current_lang == 'ar' %}تصفية:{% else %}Filter:{% endif %}</span>
-                <button class="btn btn-sm filter-btn active" data-filter="all">
-                    {% if current_lang == 'ku' %}هەموو{% elif current_lang == 'ar' %}الكل{% else %}All{% endif %}
+  <!-- Stats -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body text-center">
+          <i class="fas fa-box fa-2x mb-2" style="color: #E57625;"></i>
+          <h6 class="text-muted mb-0">{% if current_lang == 'ku' %}کۆی بەرهەمەکان{% elif current_lang == 'ar' %}إجمالي المنتجات{% else %}Total Products{% endif %}</h6>
+          <h3>{{ products|length }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body text-center">
+          <i class="fas fa-check-circle fa-2x mb-2 text-success"></i>
+          <h6 class="text-muted mb-0">{% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}مفعل{% else %}Active{% endif %}</h6>
+          <h3>{{ products|selectattr('is_active')|list|length }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body text-center">
+          <i class="fas fa-tags fa-2x mb-2 text-primary"></i>
+          <h6 class="text-muted mb-0">{% if current_lang == 'ku' %}پۆلەکان{% elif current_lang == 'ar' %}التصنيفات{% else %}Categories{% endif %}</h6>
+          <h3>{{ categories|length }}</h3>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 col-6">
+      <div class="card border-0 shadow-sm stat-card">
+        <div class="card-body text-center">
+          <i class="fas fa-exclamation-triangle fa-2x mb-2 text-warning"></i>
+          <h6 class="text-muted mb-0">{% if current_lang == 'ku' %}کەم لە ئەنبار{% elif current_lang == 'ar' %}مخزون منخفض{% else %}Low Stock{% endif %}</h6>
+          <h3>{{ products|selectattr('stock', 'lt', 5)|list|length }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-2">
+      <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="text-muted">{% if current_lang == 'ku' %}فلتەر:{% elif current_lang == 'ar' %}تصفية:{% else %}Filter:{% endif %}</span>
+
+        <button class="btn btn-sm filter-btn active" type="button" data-filter="all">
+          {% if current_lang == 'ku' %}هەموو{% elif current_lang == 'ar' %}الكل{% else %}All{% endif %}
+        </button>
+
+        {% for category in categories %}
+          <button class="btn btn-sm filter-btn" type="button" data-filter="{{ category.id }}">{{ category.get_name(current_lang) }}</button>
+        {% endfor %}
+
+        <input type="text" class="form-control form-control-sm ms-auto"
+               placeholder="{% if current_lang == 'ku' %}گەڕان...{% elif current_lang == 'ar' %}بحث...{% else %}Search...{% endif %}"
+               id="searchProduct" style="width: 200px;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Products Table -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="productsTable">
+          <thead class="table-light">
+            <tr>
+              <th>#</th>
+              <th>{% if current_lang == 'ku' %}وێنە{% elif current_lang == 'ar' %}الصورة{% else %}Image{% endif %}</th>
+              <th>کوردی</th>
+              <th>{% if current_lang == 'ku' %}پۆل{% elif current_lang == 'ar' %}التصنيف{% else %}Category{% endif %}</th>
+              <th>{% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %}</th>
+              <th>{% if current_lang == 'ku' %}باڕکۆد{% elif current_lang == 'ar' %}الباركود{% else %}Barcode{% endif %}</th>
+              <th>{% if current_lang == 'ku' %}شوێن{% elif current_lang == 'ar' %}الظهور{% else %}Visibility{% endif %}</th>
+              <th>{% if current_lang == 'ku' %}بار{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
+              <th>{% if current_lang == 'ku' %}کردارەکان{% elif current_lang == 'ar' %}إجراءات{% else %}Actions{% endif %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for product in products %}
+            <tr data-category="{{ product.category_id or '' }}">
+              <td>{{ product.id }}</td>
+              <td>
+                {% if product.image %}
+                  <img src="{{ url_for('static', filename='images/products/' + product.image) }}" class="rounded img-ph">
+                {% else %}
+                  <div class="rounded d-flex align-items-center justify-content-center" style="width:50px;height:50px;background:#E57625;">
+                    <i class="fas fa-box text-white"></i>
+                  </div>
+                {% endif %}
+              </td>
+              <td>{{ product.name_ku or '-' }}</td>
+              <td>
+                {% if product.category %}
+                  <span class="badge bg-secondary">{{ product.category.get_name(current_lang) }}</span>
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td><strong style="color:#E57625;">{{ "{:,.0f}".format(product.price) }}</strong> {{ t('iqd') }}</td>
+              <td>
+                {% if product.barcode %}
+                  <code class="bg-light text-dark px-2 py-1 rounded" style="font-size: 11px;">{{ product.barcode }}</code>
+                  <button class="btn btn-sm btn-link p-0 ms-1" type="button"
+                          onclick="copyBarcode('{{ product.barcode }}')" title="Copy">
+                    <i class="fas fa-copy text-muted"></i>
+                  </button>
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if product.show_in_website %}
+                  <span class="badge bg-info" title="{% if current_lang == 'ku' %}ماڵپەڕ{% elif current_lang == 'ar' %}الموقع{% else %}Website{% endif %}">🌐</span>
+                {% endif %}
+                {% if product.show_in_pos %}
+                  <span class="badge bg-dark" title="POS">💻</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if product.is_active %}
+                  <span class="badge bg-success">{% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}مفعل{% else %}Active{% endif %}</span>
+                {% else %}
+                  <span class="badge bg-secondary">{% if current_lang == 'ku' %}ناچالاک{% elif current_lang == 'ar' %}معطل{% else %}Inactive{% endif %}</span>
+                {% endif %}
+              </td>
+              <td>
+                <!-- ✅ FIX: add data-name (needed by JS confirm message) + keep dashed attributes -->
+                <button class="btn btn-sm btn-outline-primary edit-product" type="button"
+                        data-id="{{ product.id }}"
+                        data-name="{{ product.name_ku or product.name_ar or product.name_en or ('#' ~ product.id) }}"
+                        data-name-ku="{{ product.name_ku or '' }}"
+                        data-name-ar="{{ product.name_ar or '' }}"
+                        data-name-en="{{ product.name_en or '' }}"
+                        data-desc-ku="{{ product.description_ku or '' }}"
+                        data-desc-ar="{{ product.description_ar or '' }}"
+                        data-desc-en="{{ product.description_en or '' }}"
+                        data-category-id="{{ product.category_id or '' }}"
+                        data-price="{{ product.price }}"
+                        data-stock="{{ product.stock }}"
+                        data-is-active="{{ 'true' if product.is_active else 'false' }}"
+                        data-show-in-website="{{ 'true' if product.show_in_website else 'false' }}"
+                        data-show-in-pos="{{ 'true' if product.show_in_pos else 'false' }}"
+                        data-barcode="{{ product.barcode or '' }}">
+                  <i class="fas fa-edit"></i>
                 </button>
-                {% for category in categories %}
-                <button class="btn btn-sm filter-btn" data-filter="{{ category.id }}">{{ category.get_name(current_lang) }}</button>
-                {% endfor %}
-                <input type="text" class="form-control form-control-sm ms-auto" placeholder="{% if current_lang == 'ku' %}گەڕان...{% elif current_lang == 'ar' %}بحث...{% else %}Search...{% endif %}" id="searchProduct" style="width: 200px;">
-            </div>
-        </div>
-    </div>
 
-    <!-- Products Table -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="productsTable">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>{% if current_lang == 'ku' %}وێنە{% elif current_lang == 'ar' %}الصورة{% else %}Image{% endif %}</th>
-                            <th>کوردی</th>
-                            <th>{% if current_lang == 'ku' %}پۆل{% elif current_lang == 'ar' %}التصنيف{% else %}Category{% endif %}</th>
-                            <th>{% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %}</th>
-                            <th>{% if current_lang == 'ku' %}باڕکۆد{% elif current_lang == 'ar' %}الباركود{% else %}Barcode{% endif %}</th>
-                            <th>{% if current_lang == 'ku' %}شوێن{% elif current_lang == 'ar' %}الظهور{% else %}Visibility{% endif %}</th>
-                            <th>{% if current_lang == 'ku' %}بار{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
-                            <th>{% if current_lang == 'ku' %}کردارەکان{% elif current_lang == 'ar' %}إجراءات{% else %}Actions{% endif %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for product in products %}
-                        <tr data-category="{{ product.category_id }}">
-                            <td>{{ product.id }}</td>
-                            <td>
-                                {% if product.image %}
-                                <img src="{{ url_for('static', filename='images/products/' + product.image) }}" class="rounded" style="width:50px;height:50px;object-fit:cover;">
-                                {% else %}
-                                <div class="rounded d-flex align-items-center justify-content-center" style="width:50px;height:50px;background:#E57625;">
-                                    <i class="fas fa-box text-white"></i>
-                                </div>
-                                {% endif %}
-                            </td>
-                            <td>{{ product.name_ku or '-' }}</td>
-                            <td>
-                                {% if product.category %}
-                                <span class="badge bg-secondary">{{ product.category.get_name(current_lang) }}</span>
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td><strong style="color:#E57625;">{{ "{:,.0f}".format(product.price) }}</strong> {{ t('iqd') }}</td>
-                            <td>
-                                {% if product.barcode %}
-                                <code class="bg-light text-dark px-2 py-1 rounded" style="font-size: 11px;">{{ product.barcode }}</code>
-                                <button class="btn btn-sm btn-link p-0 ms-1" onclick="copyBarcode('{{ product.barcode }}')" title="Copy">
-                                    <i class="fas fa-copy text-muted"></i>
-                                </button>
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if product.show_in_website %}
-                                <span class="badge bg-info" title="{% if current_lang == 'ku' %}ماڵپەڕ{% elif current_lang == 'ar' %}الموقع{% else %}Website{% endif %}">🌐</span>
-                                {% endif %}
-                                {% if product.show_in_pos %}
-                                <span class="badge bg-dark" title="POS">💻</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if product.is_active %}
-                                <span class="badge bg-success">{% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}مفعل{% else %}Active{% endif %}</span>
-                                {% else %}
-                                <span class="badge bg-secondary">{% if current_lang == 'ku' %}ناچالاک{% elif current_lang == 'ar' %}معطل{% else %}Inactive{% endif %}</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary edit-product"
-                                    data-id="{{ product.id }}"
-                                    data-name-ku="{{ product.name_ku or '' }}"
-                                    data-name-ar="{{ product.name_ar or '' }}"
-                                    data-name-en="{{ product.name_en or '' }}"
-                                    data-desc-ku="{{ product.description_ku or '' }}"
-                                    data-desc-ar="{{ product.description_ar or '' }}"
-                                    data-desc-en="{{ product.description_en or '' }}"
-                                    data-category_id="{{ product.category_id or '' }}"
-                                    data-price="{{ product.price }}"
-                                    data-stock="{{ product.stock }}"
-                                    data-is_active="{{ product.is_active }}"
-                                    data-show_in_website="{{ product.show_in_website }}"
-                                    data-show_in_pos="{{ product.show_in_pos }}"
-                                    data-barcode="{{ product.barcode or '' }}">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-warning toggle-product" data-id="{{ product.id }}">
-                                    <i class="fas fa-power-off"></i>
-                                </button>
-                                <button class="btn btn-sm btn-outline-danger delete-product" data-id="{{ product.id }}" data-name="{{ product.name_ku }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="9" class="text-center py-5">
-                                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
-                                <p class="text-muted">{% if current_lang == 'ku' %}هیچ بەرهەمێک نییە{% elif current_lang == 'ar' %}لا توجد منتجات{% else %}No products found{% endif %}</p>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                <button class="btn btn-sm btn-outline-warning toggle-product" type="button" data-id="{{ product.id }}">
+                  <i class="fas fa-power-off"></i>
+                </button>
+
+                <!-- ✅ FIX: your JS reads dataset.name, so we must provide data-name here too -->
+                <button class="btn btn-sm btn-outline-danger delete-product" type="button"
+                        data-id="{{ product.id }}"
+                        data-name="{{ product.name_ku or product.name_ar or product.name_en or ('#' ~ product.id) }}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="9" class="text-center py-5">
+                <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                <p class="text-muted">{% if current_lang == 'ku' %}هیچ بەرهەمێک نییە{% elif current_lang == 'ar' %}لا توجد منتجات{% else %}No products found{% endif %}</p>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Add Product Modal -->
 <div class="modal fade" id="addProductModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title">
-                    <i class="fas fa-plus-circle me-2"></i>
-                    {% if current_lang == 'ku' %}زیادکردنی بەرهەمی نوێ{% elif current_lang == 'ar' %}إضافة منتج جديد{% else %}Add New Product{% endif %}
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">
+          <i class="fas fa-plus-circle me-2"></i>
+          {% if current_lang == 'ku' %}زیادکردنی بەرهەمی نوێ{% elif current_lang == 'ar' %}إضافة منتج جديد{% else %}Add New Product{% endif %}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form id="addProductForm" enctype="multipart/form-data">
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label class="form-label">{% if current_lang == 'ku' %}پۆل{% elif current_lang == 'ar' %}التصنيف{% else %}Category{% endif %} <span class="text-danger">*</span></label>
+              <select class="form-select" name="category_id" id="addCategoryId" required>
+                <option value="">-- {% if current_lang == 'ku' %}پۆل هەڵبژێرە{% elif current_lang == 'ar' %}اختر التصنيف{% else %}Select Category{% endif %} --</option>
+                {% for category in categories %}
+                  <option value="{{ category.id }}">{{ category.get_name(current_lang) }}</option>
+                {% endfor %}
+              </select>
             </div>
-            <form id="addProductForm" enctype="multipart/form-data">
-                <div class="modal-body">
-                    <!-- Category & Price Row -->
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">{% if current_lang == 'ku' %}پۆل{% elif current_lang == 'ar' %}التصنيف{% else %}Category{% endif %} <span class="text-danger">*</span></label>
-                            <select class="form-select" name="category_id" id="addCategoryId" required>
-                                <option value="">-- {% if current_lang == 'ku' %}پۆل هەڵبژێرە{% elif current_lang == 'ar' %}اختر التصنيف{% else %}Select Category{% endif %} --</option>
-                                {% for category in categories %}
-                                <option value="{{ category.id }}">{{ category.get_name(current_lang) }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">{% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %} ({{ t('iqd') }}) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" name="price" required min="0" placeholder="50000">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">{% if current_lang == 'ku' %}ئەنبار{% elif current_lang == 'ar' %}المخزون{% else %}Stock{% endif %}</label>
-                            <input type="number" class="form-control" name="stock" value="0" min="0">
-                        </div>
-                    </div>
+            <div class="col-md-4">
+              <label class="form-label">{% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %} ({{ t('iqd') }}) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="price" required min="0" placeholder="50000">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">{% if current_lang == 'ku' %}ئەنبار{% elif current_lang == 'ar' %}المخزون{% else %}Stock{% endif %}</label>
+              <input type="number" class="form-control" name="stock" value="0" min="0">
+            </div>
+          </div>
 
-                    <!-- Language Tabs -->
-                    <ul class="nav nav-tabs mb-3" role="tablist">
-                        <li class="nav-item">
-                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#add-tab-ku" type="button">
-                                🇮🇶 کوردی *
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#add-tab-ar" type="button">
-                                🇸🇦 العربية
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#add-tab-en" type="button">
-                                🇬🇧 English
-                            </button>
-                        </li>
-                    </ul>
+          <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#add-tab-ku" type="button">🇮🇶 کوردی *</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#add-tab-ar" type="button">🇸🇦 العربية</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#add-tab-en" type="button">🇬🇧 English</button></li>
+          </ul>
 
-                    <div class="tab-content">
-                        <!-- Kurdish Tab -->
-                        <div class="tab-pane fade show active" id="add-tab-ku">
-                            <div class="mb-3">
-                                <label class="form-label">ناوی بەرهەم (کوردی) <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="name_ku" dir="rtl" required placeholder="ناوی بەرهەمەکە بە کوردی">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">وەسف (کوردی)</label>
-                                <textarea class="form-control" name="description_ku" rows="2" dir="rtl" placeholder="وەسفی بەرهەمەکە بە کوردی"></textarea>
-                            </div>
-                        </div>
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="add-tab-ku">
+              <div class="mb-3">
+                <label class="form-label">ناوی بەرهەم (کوردی) <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="name_ku" dir="rtl" required placeholder="ناوی بەرهەمەکە بە کوردی">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">وەسف (کوردی)</label>
+                <textarea class="form-control" name="description_ku" rows="2" dir="rtl" placeholder="وەسفی بەرهەمەکە بە کوردی"></textarea>
+              </div>
+            </div>
 
-                        <!-- Arabic Tab -->
-                        <div class="tab-pane fade" id="add-tab-ar">
-                            <div class="mb-3">
-                                <label class="form-label">اسم المنتج (العربية)</label>
-                                <input type="text" class="form-control" name="name_ar" dir="rtl" placeholder="اسم المنتج بالعربية">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">الوصف (العربية)</label>
-                                <textarea class="form-control" name="description_ar" rows="2" dir="rtl" placeholder="وصف المنتج بالعربية"></textarea>
-                            </div>
-                        </div>
+            <div class="tab-pane fade" id="add-tab-ar">
+              <div class="mb-3">
+                <label class="form-label">اسم المنتج (العربية)</label>
+                <input type="text" class="form-control" name="name_ar" dir="rtl" placeholder="اسم المنتج بالعربية">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">الوصف (العربية)</label>
+                <textarea class="form-control" name="description_ar" rows="2" dir="rtl" placeholder="وصف المنتج بالعربية"></textarea>
+              </div>
+            </div>
 
-                        <!-- English Tab -->
-                        <div class="tab-pane fade" id="add-tab-en">
-                            <div class="mb-3">
-                                <label class="form-label">Product Name (English)</label>
-                                <input type="text" class="form-control" name="name_en" dir="ltr" placeholder="Product name in English">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Description (English)</label>
-                                <textarea class="form-control" name="description_en" rows="2" dir="ltr" placeholder="Product description in English"></textarea>
-                            </div>
-                        </div>
-                    </div>
+            <div class="tab-pane fade" id="add-tab-en">
+              <div class="mb-3">
+                <label class="form-label">Product Name (English)</label>
+                <input type="text" class="form-control" name="name_en" dir="ltr" placeholder="Product name in English">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description (English)</label>
+                <textarea class="form-control" name="description_en" rows="2" dir="ltr" placeholder="Product description in English"></textarea>
+              </div>
+            </div>
+          </div>
 
-                    <!-- Image -->
-                    <div class="row mt-3">
-                        <div class="col-md-8">
-                            <label class="form-label">{% if current_lang == 'ku' %}وێنەی بەرهەم{% elif current_lang == 'ar' %}صورة المنتج{% else %}Product Image{% endif %}</label>
-                            <input type="file" class="form-control" name="image" accept="image/*">
-                        </div>
-                        <div class="col-md-4 d-flex align-items-end">
-                            <div class="form-check form-switch">
-                                <input type="checkbox" class="form-check-input" name="is_active" id="addIsActive" checked>
-                                <label class="form-check-label" for="addIsActive">{% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}مفعل{% else %}Active{% endif %}</label>
-                            </div>
-                        </div>
-                    </div>
+          <div class="row mt-3">
+            <div class="col-md-8">
+              <label class="form-label">{% if current_lang == 'ku' %}وێنەی بەرهەم{% elif current_lang == 'ar' %}صورة المنتج{% else %}Product Image{% endif %}</label>
+              <input type="file" class="form-control" name="image" accept="image/*">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check form-switch">
+                <input type="checkbox" class="form-check-input" name="is_active" id="addIsActive" checked>
+                <label class="form-check-label" for="addIsActive">{% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}مفعل{% else %}Active{% endif %}</label>
+              </div>
+            </div>
+          </div>
 
-                    <!-- ✅ Visibility Options - INSIDE THE FORM -->
-                    <div class="visibility-box mt-3">
-                        <label class="form-label fw-bold mb-2">
-                            <i class="fas fa-eye me-1"></i>
-                            {% if current_lang == 'ku' %}شوێنی پیشاندان{% elif current_lang == 'ar' %}مكان الظهور{% else %}Visibility{% endif %}
-                        </label>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="addShowInWebsite" name="show_in_website" checked>
-                                    <label class="form-check-label" for="addShowInWebsite">
-                                        🌐 {% if current_lang == 'ku' %}ماڵپەڕ (بۆ کڕیاران){% elif current_lang == 'ar' %}الموقع (للزبائن){% else %}Website (for customers){% endif %}
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="addShowInPos" name="show_in_pos" checked>
-                                    <label class="form-check-label" for="addShowInPos">
-                                        💻 {% if current_lang == 'ku' %}POS (بۆ کارمەندان){% elif current_lang == 'ar' %}POS (للموظفين){% else %}POS (for staff){% endif %}
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        <small class="text-muted mt-2 d-block">
-                            {% if current_lang == 'ku' %}
-                            ☕ خواردنەوە و خواردن: تەنها POS هەڵبژێرە | 🎾 کەلوپەل: هەردووکیان هەڵبژێرە
-                            {% elif current_lang == 'ar' %}
-                            ☕ المشروبات والطعام: اختر POS فقط | 🎾 المعدات: اختر كليهما
-                            {% else %}
-                            ☕ Drinks & Food: Select POS only | 🎾 Equipment: Select both
-                            {% endif %}
-                        </small>
-                    </div>
-
-                    <div class="alert alert-info mt-3 mb-0">
-                        <i class="fas fa-info-circle me-2"></i>
-                        {% if current_lang == 'ku' %}
-                        تەنها کوردی پێویستە، زمانەکانی تر ئارەزوومەندانەن
-                        {% elif current_lang == 'ar' %}
-                        الكردية مطلوبة فقط، اللغات الأخرى اختيارية
-                        {% else %}
-                        Only Kurdish is required, other languages are optional
-                        {% endif %}
-                    </div>
+          <div class="visibility-box mt-3">
+            <label class="form-label fw-bold mb-2">
+              <i class="fas fa-eye me-1"></i>
+              {% if current_lang == 'ku' %}شوێنی پیشاندان{% elif current_lang == 'ar' %}مكان الظهور{% else %}Visibility{% endif %}
+            </label>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="addShowInWebsite" name="show_in_website" checked>
+                  <label class="form-check-label" for="addShowInWebsite">
+                    🌐 {% if current_lang == 'ku' %}ماڵپەڕ (بۆ کڕیاران){% elif current_lang == 'ar' %}الموقع (للزبائن){% else %}Website (for customers){% endif %}
+                  </label>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>{{ t('save') }}</button>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="addShowInPos" name="show_in_pos" checked>
+                  <label class="form-check-label" for="addShowInPos">
+                    💻 {% if current_lang == 'ku' %}POS (بۆ کارمەندان){% elif current_lang == 'ar' %}POS (للموظفين){% else %}POS (for staff){% endif %}
+                  </label>
                 </div>
-            </form>
+              </div>
+            </div>
+          </div>
+
+          <div class="alert alert-info mt-3 mb-0">
+            <i class="fas fa-info-circle me-2"></i>
+            {% if current_lang == 'ku' %}تەنها کوردی پێویستە، زمانەکانی تر ئارەزوومەندانەن
+            {% elif current_lang == 'ar' %}الكردية مطلوبة فقط، اللغات الأخرى اختيارية
+            {% else %}Only Kurdish is required, other languages are optional{% endif %}
+          </div>
         </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>{{ t('save') }}</button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 
 <!-- Edit Product Modal -->
 <div class="modal fade" id="editProductModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-warning">
-                <h5 class="modal-title">
-                    <i class="fas fa-edit me-2"></i>
-                    {% if current_lang == 'ku' %}دەستکاری بەرهەم{% elif current_lang == 'ar' %}تعديل المنتج{% else %}Edit Product{% endif %}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title">
+          <i class="fas fa-edit me-2"></i>
+          {% if current_lang == 'ku' %}دەستکاری بەرهەم{% elif current_lang == 'ar' %}تعديل المنتج{% else %}Edit Product{% endif %}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form id="editProductForm" enctype="multipart/form-data">
+        <input type="hidden" name="product_id" id="editProductId">
+        <div class="modal-body">
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label class="form-label">{% if current_lang == 'ku' %}پۆل{% elif current_lang == 'ar' %}التصنيف{% else %}Category{% endif %} <span class="text-danger">*</span></label>
+              <select class="form-select" name="category_id" id="editCategoryId" required>
+                <option value="">-- {% if current_lang == 'ku' %}پۆل هەڵبژێرە{% elif current_lang == 'ar' %}اختر التصنيف{% else %}Select Category{% endif %} --</option>
+                {% for category in categories %}
+                  <option value="{{ category.id }}">{{ category.get_name(current_lang) }}</option>
+                {% endfor %}
+              </select>
             </div>
-            <form id="editProductForm" enctype="multipart/form-data">
-                <input type="hidden" name="product_id" id="editProductId">
-                <div class="modal-body">
-                    <!-- Category & Price Row -->
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <label class="form-label">{% if current_lang == 'ku' %}پۆل{% elif current_lang == 'ar' %}التصنيف{% else %}Category{% endif %} <span class="text-danger">*</span></label>
-                            <select class="form-select" name="category_id" id="editCategoryId" required>
-                                <option value="">-- {% if current_lang == 'ku' %}پۆل هەڵبژێرە{% elif current_lang == 'ar' %}اختر التصنيف{% else %}Select Category{% endif %} --</option>
-                                {% for category in categories %}
-                                <option value="{{ category.id }}">{{ category.get_name(current_lang) }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">{% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %} <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" name="price" id="editPrice" required min="0">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">{% if current_lang == 'ku' %}ئەنبار{% elif current_lang == 'ar' %}المخزون{% else %}Stock{% endif %}</label>
-                            <input type="number" class="form-control" name="stock" id="editStock" min="0">
-                        </div>
-                    </div>
+            <div class="col-md-4">
+              <label class="form-label">{% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %} <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="price" id="editPrice" required min="0">
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">{% if current_lang == 'ku' %}ئەنبار{% elif current_lang == 'ar' %}المخزون{% else %}Stock{% endif %}</label>
+              <input type="number" class="form-control" name="stock" id="editStock" min="0">
+            </div>
+          </div>
 
-                    <!-- Language Tabs -->
-                    <ul class="nav nav-tabs mb-3" role="tablist">
-                        <li class="nav-item">
-                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#edit-tab-ku" type="button">
-                                🇮🇶 کوردی *
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#edit-tab-ar" type="button">
-                                🇸🇦 العربية
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#edit-tab-en" type="button">
-                                🇬🇧 English
-                            </button>
-                        </li>
-                    </ul>
+          <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#edit-tab-ku" type="button">🇮🇶 کوردی *</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#edit-tab-ar" type="button">🇸🇦 العربية</button></li>
+            <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#edit-tab-en" type="button">🇬🇧 English</button></li>
+          </ul>
 
-                    <div class="tab-content">
-                        <!-- Kurdish Tab -->
-                        <div class="tab-pane fade show active" id="edit-tab-ku">
-                            <div class="mb-3">
-                                <label class="form-label">ناوی بەرهەم (کوردی) <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" name="name_ku" id="editNameKu" dir="rtl" required>
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">وەسف (کوردی)</label>
-                                <textarea class="form-control" name="description_ku" id="editDescKu" rows="2" dir="rtl"></textarea>
-                            </div>
-                        </div>
+          <div class="tab-content">
+            <div class="tab-pane fade show active" id="edit-tab-ku">
+              <div class="mb-3">
+                <label class="form-label">ناوی بەرهەم (کوردی) <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="name_ku" id="editNameKu" dir="rtl" required>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">وەسف (کوردی)</label>
+                <textarea class="form-control" name="description_ku" id="editDescKu" rows="2" dir="rtl"></textarea>
+              </div>
+            </div>
 
-                        <!-- Arabic Tab -->
-                        <div class="tab-pane fade" id="edit-tab-ar">
-                            <div class="mb-3">
-                                <label class="form-label">اسم المنتج (العربية)</label>
-                                <input type="text" class="form-control" name="name_ar" id="editNameAr" dir="rtl">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">الوصف (العربية)</label>
-                                <textarea class="form-control" name="description_ar" id="editDescAr" rows="2" dir="rtl"></textarea>
-                            </div>
-                        </div>
+            <div class="tab-pane fade" id="edit-tab-ar">
+              <div class="mb-3">
+                <label class="form-label">اسم المنتج (العربية)</label>
+                <input type="text" class="form-control" name="name_ar" id="editNameAr" dir="rtl">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">الوصف (العربية)</label>
+                <textarea class="form-control" name="description_ar" id="editDescAr" rows="2" dir="rtl"></textarea>
+              </div>
+            </div>
 
-                        <!-- English Tab -->
-                        <div class="tab-pane fade" id="edit-tab-en">
-                            <div class="mb-3">
-                                <label class="form-label">Product Name (English)</label>
-                                <input type="text" class="form-control" name="name_en" id="editNameEn" dir="ltr">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Description (English)</label>
-                                <textarea class="form-control" name="description_en" id="editDescEn" rows="2" dir="ltr"></textarea>
-                            </div>
-                        </div>
-                    </div>
+            <div class="tab-pane fade" id="edit-tab-en">
+              <div class="mb-3">
+                <label class="form-label">Product Name (English)</label>
+                <input type="text" class="form-control" name="name_en" id="editNameEn" dir="ltr">
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Description (English)</label>
+                <textarea class="form-control" name="description_en" id="editDescEn" rows="2" dir="ltr"></textarea>
+              </div>
+            </div>
+          </div>
 
-                    <!-- Image & Status -->
-                    <div class="row mt-3">
-                        <div class="col-md-8">
-                            <label class="form-label">{% if current_lang == 'ku' %}وێنەی نوێ (ئارەزوومەندانە){% elif current_lang == 'ar' %}صورة جديدة (اختياري){% else %}New Image (optional){% endif %}</label>
-                            <input type="file" class="form-control" name="image" accept="image/*">
-                        </div>
-                        <div class="col-md-4 d-flex align-items-end">
-                            <div class="form-check form-switch">
-                                <input type="checkbox" class="form-check-input" name="is_active" id="editIsActive">
-                                <label class="form-check-label" for="editIsActive">{% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}مفعل{% else %}Active{% endif %}</label>
-                            </div>
-                        </div>
-                    </div>
+          <div class="row mt-3">
+            <div class="col-md-8">
+              <label class="form-label">{% if current_lang == 'ku' %}وێنەی نوێ (ئارەزوومەندانە){% elif current_lang == 'ar' %}صورة جديدة (اختياري){% else %}New Image (optional){% endif %}</label>
+              <input type="file" class="form-control" name="image" accept="image/*">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+              <div class="form-check form-switch">
+                <input type="checkbox" class="form-check-input" name="is_active" id="editIsActive">
+                <label class="form-check-label" for="editIsActive">{% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}مفعل{% else %}Active{% endif %}</label>
+              </div>
+            </div>
+          </div>
 
-                    <!-- ✅ Visibility Options - INSIDE THE EDIT FORM -->
-                    <div class="visibility-box mt-3">
-                        <label class="form-label fw-bold mb-2">
-                            <i class="fas fa-eye me-1"></i>
-                            {% if current_lang == 'ku' %}شوێنی پیشاندان{% elif current_lang == 'ar' %}مكان الظهور{% else %}Visibility{% endif %}
-                        </label>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="editShowInWebsite" name="show_in_website">
-                                    <label class="form-check-label" for="editShowInWebsite">
-                                        🌐 {% if current_lang == 'ku' %}ماڵپەڕ (بۆ کڕیاران){% elif current_lang == 'ar' %}الموقع (للزبائن){% else %}Website (for customers){% endif %}
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="editShowInPos" name="show_in_pos">
-                                    <label class="form-check-label" for="editShowInPos">
-                                        💻 {% if current_lang == 'ku' %}POS (بۆ کارمەندان){% elif current_lang == 'ar' %}POS (للموظفين){% else %}POS (for staff){% endif %}
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+          <div class="visibility-box mt-3">
+            <label class="form-label fw-bold mb-2">
+              <i class="fas fa-eye me-1"></i>
+              {% if current_lang == 'ku' %}شوێنی پیشاندان{% elif current_lang == 'ar' %}مكان الظهور{% else %}Visibility{% endif %}
+            </label>
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="editShowInWebsite" name="show_in_website">
+                  <label class="form-check-label" for="editShowInWebsite">
+                    🌐 {% if current_lang == 'ku' %}ماڵپەڕ (بۆ کڕیاران){% elif current_lang == 'ar' %}الموقع (للزبائن){% else %}Website (for customers){% endif %}
+                  </label>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>{{ t('save') }}</button>
+              </div>
+              <div class="col-md-6">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="editShowInPos" name="show_in_pos">
+                  <label class="form-check-label" for="editShowInPos">
+                    💻 {% if current_lang == 'ku' %}POS (بۆ کارمەندان){% elif current_lang == 'ar' %}POS (للموظفين){% else %}POS (for staff){% endif %}
+                  </label>
                 </div>
-            </form>
+              </div>
+            </div>
+          </div>
+
         </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
+          <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>{{ t('save') }}</button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Copy barcode to clipboard
-    window.copyBarcode = function(barcode) {
-        navigator.clipboard.writeText(barcode).then(() => {
-            alert('{% if current_lang == "ku" %}باڕکۆد کۆپی کرا{% elif current_lang == "ar" %}تم نسخ الباركود{% else %}Barcode copied{% endif %}');
-        });
-    };
 
-    // Filter by category
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            let filter = this.dataset.filter;
-            document.querySelectorAll('#productsTable tbody tr[data-category]').forEach(row => {
-                row.style.display = (filter === 'all' || row.dataset.category === filter) ? '' : 'none';
-            });
-        });
+  // helper: normalize dataset bool
+  function dsBool(v) {
+    if (v === true || v === false) return v;
+    const s = (v ?? "").toString().trim().toLowerCase();
+    return (s === "true" || s === "1" || s === "yes" || s === "on");
+  }
+
+  window.copyBarcode = function(barcode) {
+    if (!barcode) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(barcode).then(() => {
+        alert('{% if current_lang == "ku" %}باڕکۆد کۆپی کرا{% elif current_lang == "ar" %}تم نسخ الباركود{% else %}Barcode copied{% endif %}');
+      }).catch(() => fallbackCopy(barcode));
+    } else {
+      fallbackCopy(barcode);
+    }
+  };
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    alert('{% if current_lang == "ku" %}باڕکۆد کۆپی کرا{% elif current_lang == "ar" %}تم نسخ الباركود{% else %}Barcode copied{% endif %}');
+  }
+
+  // Filter by category (works with search together)
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      applyFilterAndSearch();
     });
+  });
 
-    // Search
-    document.getElementById('searchProduct').addEventListener('input', function() {
-        let search = this.value.toLowerCase();
-        document.querySelectorAll('#productsTable tbody tr').forEach(row => {
-            row.style.display = row.textContent.toLowerCase().includes(search) ? '' : 'none';
-        });
+  // Search
+  const searchInput = document.getElementById('searchProduct');
+  if (searchInput) {
+    searchInput.addEventListener('input', applyFilterAndSearch);
+  }
+
+  function applyFilterAndSearch() {
+    const activeBtn = document.querySelector('.filter-btn.active');
+    const filter = activeBtn ? activeBtn.dataset.filter : 'all';
+    const q = (searchInput ? searchInput.value : '').toLowerCase();
+
+    document.querySelectorAll('#productsTable tbody tr[data-category]').forEach(row => {
+      const matchFilter = (filter === 'all' || row.dataset.category === filter);
+      const matchSearch = (!q || row.textContent.toLowerCase().includes(q));
+      row.style.display = (matchFilter && matchSearch) ? '' : 'none';
     });
+  }
 
-    // Add Product
-    document.getElementById('addProductForm').addEventListener('submit', function(e) {
-        e.preventDefault();
+  // ✅ Add Product
+  const addForm = document.getElementById('addProductForm');
+  if (addForm) {
+    addForm.addEventListener('submit', function(e) {
+      e.preventDefault();
 
-        let categorySelect = document.getElementById('addCategoryId');
-        if (!categorySelect.value) {
-            categorySelect.classList.add('is-invalid');
-            alert('{% if current_lang == "ku" %}تکایە پۆلێک هەڵبژێرە{% elif current_lang == "ar" %}الرجاء اختيار التصنيف{% else %}Please select a category{% endif %}');
-            return;
-        }
-        categorySelect.classList.remove('is-invalid');
+      const categorySelect = document.getElementById('addCategoryId');
+      if (!categorySelect.value) {
+        categorySelect.classList.add('is-invalid');
+        alert('{% if current_lang == "ku" %}تکایە پۆلێک هەڵبژێرە{% elif current_lang == "ar" %}الرجاء اختيار التصنيف{% else %}Please select a category{% endif %}');
+        return;
+      }
+      categorySelect.classList.remove('is-invalid');
 
-        let formData = new FormData(this);
-        formData.set('is_active', document.getElementById('addIsActive').checked ? 'true' : 'false');
-        formData.set('show_in_website', document.getElementById('addShowInWebsite').checked ? 'true' : 'false');
-        formData.set('show_in_pos', document.getElementById('addShowInPos').checked ? 'true' : 'false');
+      const formData = new FormData(addForm);
+      formData.set('is_active', document.getElementById('addIsActive').checked ? '1' : '0');
+      formData.set('show_in_website', document.getElementById('addShowInWebsite').checked ? '1' : '0');
+      formData.set('show_in_pos', document.getElementById('addShowInPos').checked ? '1' : '0');
 
-        let btn = this.querySelector('button[type="submit"]');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>...';
+      const btn = addForm.querySelector('button[type="submit"]');
+      const oldHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>...';
 
-        fetch('/admin/api/product', {
-            method: 'POST',
-            body: formData
-        })
+      fetch('/admin/api/product', { method: 'POST', body: formData, credentials: 'same-origin' })
         .then(r => r.json())
         .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('{% if current_lang == "ku" %}هەڵە{% elif current_lang == "ar" %}خطأ{% else %}Error{% endif %}: ' + (data.message || 'Error'));
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-save me-2"></i>{{ t("save") }}';
-            }
-        })
-        .catch(err => {
-            alert('{% if current_lang == "ku" %}هەڵەی پەیوەندی{% elif current_lang == "ar" %}خطأ في الاتصال{% else %}Connection error{% endif %}');
+          if (data.success) location.reload();
+          else {
+            alert('{% if current_lang == "ku" %}هەڵە{% elif current_lang == "ar" %}خطأ{% else %}Error{% endif %}: ' + (data.message || 'Error'));
             btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-save me-2"></i>{{ t("save") }}';
-        });
-    });
-
-    // Edit Product - Open Modal
-    document.querySelectorAll('.edit-product').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.getElementById('editProductId').value = this.dataset.id;
-            document.getElementById('editNameKu').value = this.dataset.nameKu;
-            document.getElementById('editNameAr').value = this.dataset.nameAr;
-            document.getElementById('editNameEn').value = this.dataset.nameEn;
-            document.getElementById('editDescKu').value = this.dataset.descKu;
-            document.getElementById('editDescAr').value = this.dataset.descAr;
-            document.getElementById('editDescEn').value = this.dataset.descEn;
-            document.getElementById('editCategoryId').value = this.dataset.category_id;
-            document.getElementById('editPrice').value = this.dataset.price;
-            document.getElementById('editStock').value = this.dataset.stock;
-            document.getElementById('editIsActive').checked = this.dataset.is_active === 'True';
-            document.getElementById('editShowInWebsite').checked = this.dataset.show_in_website === 'True';
-            document.getElementById('editShowInPos').checked = this.dataset.show_in_pos === 'True';
-            new bootstrap.Modal(document.getElementById('editProductModal')).show();
-        });
-    });
-
-    // Edit Product Submit
-    document.getElementById('editProductForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        let productId = document.getElementById('editProductId').value;
-        let formData = new FormData(this);
-        formData.set('is_active', document.getElementById('editIsActive').checked ? 'true' : 'false');
-        formData.set('show_in_website', document.getElementById('editShowInWebsite').checked ? 'true' : 'false');
-        formData.set('show_in_pos', document.getElementById('editShowInPos').checked ? 'true' : 'false');
-
-        fetch(`/admin/api/product/${productId}`, {
-            method: 'POST',
-            body: formData
+            btn.innerHTML = oldHtml;
+          }
         })
+        .catch(() => {
+          alert('{% if current_lang == "ku" %}هەڵەی پەیوەندی{% elif current_lang == "ar" %}خطأ في الاتصال{% else %}Connection error{% endif %}');
+          btn.disabled = false;
+          btn.innerHTML = oldHtml;
+        });
+    });
+  }
+
+  // ✅ Edit Product - Open Modal
+  document.querySelectorAll('.edit-product').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.getElementById('editProductId').value = this.dataset.id || '';
+
+      document.getElementById('editNameKu').value = this.dataset.nameKu || '';
+      document.getElementById('editNameAr').value = this.dataset.nameAr || '';
+      document.getElementById('editNameEn').value = this.dataset.nameEn || '';
+
+      document.getElementById('editDescKu').value = this.dataset.descKu || '';
+      document.getElementById('editDescAr').value = this.dataset.descAr || '';
+      document.getElementById('editDescEn').value = this.dataset.descEn || '';
+
+      document.getElementById('editCategoryId').value = this.dataset.categoryId || '';
+      document.getElementById('editPrice').value = this.dataset.price || 0;
+      document.getElementById('editStock').value = this.dataset.stock || 0;
+
+      document.getElementById('editIsActive').checked = dsBool(this.dataset.isActive);
+      document.getElementById('editShowInWebsite').checked = dsBool(this.dataset.showInWebsite);
+      document.getElementById('editShowInPos').checked = dsBool(this.dataset.showInPos);
+
+      new bootstrap.Modal(document.getElementById('editProductModal')).show();
+    });
+  });
+
+  // ✅ Edit Product Submit
+  const editForm = document.getElementById('editProductForm');
+  if (editForm) {
+    editForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      const productId = document.getElementById('editProductId').value;
+      const formData = new FormData(editForm);
+
+      formData.set('is_active', document.getElementById('editIsActive').checked ? '1' : '0');
+      formData.set('show_in_website', document.getElementById('editShowInWebsite').checked ? '1' : '0');
+      formData.set('show_in_pos', document.getElementById('editShowInPos').checked ? '1' : '0');
+
+      fetch(`/admin/api/product/${productId}`, { method: 'POST', body: formData, credentials: 'same-origin' })
         .then(r => r.json())
         .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('{% if current_lang == "ku" %}هەڵە{% elif current_lang == "ar" %}خطأ{% else %}Error{% endif %}: ' + data.message);
-            }
-        });
+          if (data.success) location.reload();
+          else alert('{% if current_lang == "ku" %}هەڵە{% elif current_lang == "ar" %}خطأ{% else %}Error{% endif %}: ' + (data.message || 'Error'));
+        })
+        .catch(() => alert('{% if current_lang == "ku" %}هەڵەی پەیوەندی{% elif current_lang == "ar" %}خطأ في الاتصال{% else %}Connection error{% endif %}'));
     });
+  }
 
-    // Toggle Status
-    document.querySelectorAll('.toggle-product').forEach(btn => {
-        btn.addEventListener('click', function() {
-            fetch(`/admin/api/product/${this.dataset.id}/toggle`, { method: 'POST' })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) location.reload();
-                else alert(data.message);
-            });
-        });
+  // Toggle Status
+  document.querySelectorAll('.toggle-product').forEach(btn => {
+    btn.addEventListener('click', function() {
+      fetch(`/admin/api/product/${this.dataset.id}/toggle`, { method: 'POST', credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(data => { if (data.success) location.reload(); else alert(data.message || 'Error'); })
+        .catch(() => alert('{% if current_lang == "ku" %}هەڵەی پەیوەندی{% elif current_lang == "ar" %}خطأ في الاتصال{% else %}Connection error{% endif %}'));
     });
+  });
 
-    // Delete
-    document.querySelectorAll('.delete-product').forEach(btn => {
-        btn.addEventListener('click', function() {
-            if (confirm(`{% if current_lang == "ku" %}سڕینەوەی{% elif current_lang == "ar" %}حذف{% else %}Delete{% endif %} "${this.dataset.name}"?`)) {
-                fetch(`/admin/api/product/${this.dataset.id}`, { method: 'DELETE' })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) location.reload();
-                    else alert(data.message);
-                });
-            }
-        });
+  // ✅ Delete (FIXED: proper DELETE request + fallback to your old _method style)
+  document.querySelectorAll('.delete-product').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const name = this.dataset.name || ('#' + this.dataset.id);
+      const msg = `{% if current_lang == "ku" %}سڕینەوەی{% elif current_lang == "ar" %}حذف{% else %}Delete{% endif %} "${name}"?`;
+      if (!confirm(msg)) return;
+
+      const id = this.dataset.id;
+
+      // Try real DELETE first (best)
+      fetch(`/admin/api/product/${id}`, { method: 'DELETE', credentials: 'same-origin' })
+        .then(async r => {
+          // some backends return empty body on DELETE
+          const data = await r.json().catch(() => ({}));
+          if (r.ok && (data.success === true || Object.keys(data).length === 0)) {
+            location.reload();
+            return;
+          }
+          // fallback to your existing _method pattern if backend needs it
+          return fetch(`/admin/api/product/${id}?_method=DELETE`, { method: 'POST', credentials: 'same-origin' })
+            .then(r2 => r2.json())
+            .then(d2 => { if (d2.success) location.reload(); else alert(d2.message || 'Delete failed'); });
+        })
+        .catch(() => alert('{% if current_lang == "ku" %}هەڵەی پەیوەندی{% elif current_lang == "ar" %}خطأ في الاتصال{% else %}Connection error{% endif %}'));
     });
+  });
+
 });
 </script>
 {% endblock %}

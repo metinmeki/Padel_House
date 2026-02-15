@@ -513,103 +513,27 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Notifications Script -->
+<!-- Notifications ONLY -->
 <script>
+document.addEventListener('DOMContentLoaded', () => {
   async function loadNotifications() {
     try {
-      // Unread count
       const cRes = await fetch('/admin/api/notifications/unread-count');
       const cData = await cRes.json();
-
       const badge = document.getElementById('notifBadge');
-      if (cData.success && cData.count > 0) {
+      if (badge && cData.success && cData.count > 0) {
         badge.style.display = 'inline';
         badge.textContent = cData.count;
-      } else {
+      } else if (badge) {
         badge.style.display = 'none';
       }
-
-      // Notification list
-      const res = await fetch('/admin/api/notifications');
-      const data = await res.json();
-
-      const menu = document.getElementById('notifMenu');
-      menu.innerHTML = '';
-
-      if (!data.success || !data.items || data.items.length === 0) {
-        menu.innerHTML = `<li class="px-3 py-2 text-muted small">
-          {% if current_lang == 'ku' %}هیچ ئاگادارییەک نییە
-          {% elif current_lang == 'ar' %}لا توجد إشعارات
-          {% else %}No notifications{% endif %}
-        </li>`;
-        return;
-      }
-
-      data.items.forEach(n => {
-        const title = n.title || 'Notification';
-        const msg = n.message || '';
-        const url = n.url || '';
-        const unreadDot = (!n.is_read) ? `<span class="badge bg-danger ms-2">new</span>` : '';
-
-        const li = document.createElement('li');
-        li.innerHTML = `
-          <a class="dropdown-item" href="${url || '#'}" style="white-space: normal;">
-            <div class="fw-bold">${title} ${unreadDot}</div>
-            <div class="small text-muted">${msg}</div>
-          </a>
-        `;
-
-        // Mark as read when clicked
-        li.querySelector('a').addEventListener('click', async (ev) => {
-          ev.preventDefault();
-          try {
-            await fetch('/admin/api/notifications/' + n.id + '/read', { method: 'POST' });
-          } catch (e) {}
-          if (url) window.location.href = url;
-        });
-
-        menu.appendChild(li);
-
-        // Add divider
-        const divider = document.createElement('li');
-        divider.innerHTML = `<hr class="dropdown-divider">`;
-        menu.appendChild(divider);
-      });
-
-      // Remove last divider
-      if (menu.lastChild) menu.removeChild(menu.lastChild);
-
-    } catch (err) {
-      console.log("Notification error:", err);
-    }
+    } catch (e) {}
   }
-
-  // Load now + every 20 seconds
   loadNotifications();
   setInterval(loadNotifications, 20000);
+});
 </script>
 
-<!-- Auto-refresh pending count every 30 seconds -->
-<script>
-    function updatePendingCount() {
-        fetch('/booking/api/pending-count')
-            .then(response => response.json())
-            .then(data => {
-                const badges = document.querySelectorAll('.pending-badge');
-                badges.forEach(badge => {
-                   if (data.pending > 0) {
-                      badge.textContent = data.pending;
-                      badge.style.display = 'inline';
-                   } else {
-                      badge.style.display = 'none';
-                   }
-                });
-            })
-            .catch(err => console.log('Could not fetch pending count', err));
-    }
-
-    updatePendingCount();
-    setInterval(updatePendingCount, 30000);
-</script>
 
 {% block extra_js %}{% endblock %}
 

@@ -28,7 +28,6 @@ def safe_notify_admins(
     - Logs error for debugging
     """
     try:
-        # import inside try so booking never breaks
         from app.services.notify import notify_admins
 
         notify_admins(
@@ -40,12 +39,10 @@ def safe_notify_admins(
         return True
 
     except ImportError:
-        # notify.py not created yet
         print("ℹ️ Notification service not installed yet.")
         return False
 
     except Exception as e:
-        # Real error (DB, User model, etc.)
         print("❌ Notification error:", e)
         return False
 
@@ -78,9 +75,6 @@ def is_discount_hour(hour: int, discount_start: int, discount_end: int):
     Discount window can cross midnight.
     If start < end: hour in [start, end] (INCLUSIVE)
     If start > end: hour in [start..23] or [0..end]
-
-    ✅ FIXED: Changed to <= de to include the end hour (16:00)
-    Example: discount_start=12, discount_end=16 will include hours 12,13,14,15,16
     """
     hour = int(hour) % 24
     ds = int(discount_start) % 24
@@ -89,8 +83,8 @@ def is_discount_hour(hour: int, discount_start: int, discount_end: int):
     if ds == de:
         return False  # no discount window
     if ds < de:
-        return ds <= hour <= de  # ✅ Changed < to <=
-    return hour >= ds or hour <= de  # ✅ Changed < to <= (crosses midnight)
+        return ds <= hour <= de
+    return hour >= ds or hour <= de
 
 
 def booking_record_hours(booking: Booking):
@@ -126,7 +120,7 @@ def booking_page():
 
 
 # -----------------------------
-# ✅ API: Pending count (fix your console 404)
+# ✅ API: Pending count
 # called: GET /booking/api/pending-count
 # -----------------------------
 @booking_bp.route('/api/pending-count', methods=['GET'])
@@ -168,18 +162,26 @@ def get_availability_slots(stadium_id, booking_date):
     if not stadium:
         return jsonify({'error': 'Stadium not found'}), 404
 
-    existing_bookings = Booking.query.filter_by(stadium_id=stadium_id, date=booking_date_obj).filter(
+    # ✅ IMPORTANT:
+    # - pending should NOT be red/blocked (only shows pending UI)
+    # - confirmed becomes red/blocked
+    # - cancelled must become available again -> do NOT include cancelled here
+    existing_bookings = Booking.query.filter_by(
+        stadium_id=stadium_id,
+        date=booking_date_obj
+    ).filter(
         Booking.status.in_(['pending', 'confirmed'])
     ).all()
 
-    booked_hours = set()
+    confirmed_hours = set()
     pending_hours = set()
 
     for b in existing_bookings:
         hrs = booking_record_hours(b)
         for h in hrs:
-            booked_hours.add(h)
-            if b.status == 'pending':
+            if b.status == 'confirmed':
+                confirmed_hours.add(h)
+            elif b.status == 'pending':
                 pending_hours.add(h)
 
     opening = settings.opening_hour or 12
@@ -193,7 +195,9 @@ def get_availability_slots(stadium_id, booking_date):
 
     slots = []
     for hour in hours:
-        is_booked = hour in booked_hours
+        # ✅ Red only after admin approves
+        is_booked = hour in confirmed_hours
+        # ✅ Pending shown as pending (not booked)
         is_pending = hour in pending_hours
         is_disc = is_discount_hour(hour, discount_start, discount_end)
 
@@ -240,7 +244,12 @@ def check_availability():
     start_hour = int(start_hour) % 24
     requested_hours = set(hours_covered(start_hour, duration))
 
-    conflicts = Booking.query.filter_by(stadium_id=stadium_id, date=booking_date_obj).filter(
+    # ✅ Conflict only pending+confirmed.
+    # cancelled must NOT block so that admin cancellation frees the slot.
+    conflicts = Booking.query.filter_by(
+        stadium_id=stadium_id,
+        date=booking_date_obj
+    ).filter(
         Booking.status.in_(['pending', 'confirmed'])
     ).all()
 
@@ -280,7 +289,13 @@ def create_booking():
             return jsonify({'success': False, 'message': 'Stadium not found'}), 404
 
         requested_hours = set(hours_covered(start_hour, duration))
-        conflicts = Booking.query.filter_by(stadium_id=stadium_id, date=booking_date).filter(
+
+        # ✅ Conflict only pending+confirmed.
+        # cancelled must NOT block so that cancelled times become available again.
+        conflicts = Booking.query.filter_by(
+            stadium_id=stadium_id,
+            date=booking_date
+        ).filter(
             Booking.status.in_(['pending', 'confirmed'])
         ).all()
 
@@ -336,16 +351,12 @@ def create_booking():
         db.session.add(new_booking)
         db.session.commit()
 
-        # ✅ Notify admins about new booking
         safe_notify_admins(
             title="New booking request",
             message=f"Booking #{new_booking.id} is pending approval",
             url=f"/admin/booking/{new_booking.id}",
             ntype="booking_created"
         )
-
-        # ✅ IMPORTANT: do NOT send to Google Sheets here anymore.
-        # It will be sent ONLY after admin approves in admin.py.
 
         return jsonify({
             'success': True,

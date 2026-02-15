@@ -8,30 +8,86 @@
     <!-- Filters -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <label class="form-label">{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</label>
-            <select id="filter-status" class="form-select">
-                <option value="">{{ t('all') }}</option>
-                <option value="pending">{{ t('pending') }}</option>
-                <option value="confirmed">{{ t('confirmed') }}</option>
-                <option value="delivered">{{ t('delivered') }}</option>
-                <option value="cancelled">{{ t('cancelled') }}</option>
-            </select>
-        </div>
+    <label class="form-label">
+        {% if current_lang == 'ku' %}
+            دۆخ
+        {% elif current_lang == 'ar' %}
+            الحالة
+        {% else %}
+            Status
+        {% endif %}
+    </label>
+
+    <select id="filter-status" class="form-select">
+
+    {% if not current_status or current_status == 'all' %}
+        <option value="all" selected>{{ t('all') }}</option>
+    {% else %}
+        <option value="all">{{ t('all') }}</option>
+    {% endif %}
+
+    {% if current_status == 'pending' %}
+        <option value="pending" selected>{{ t('pending') }}</option>
+    {% else %}
+        <option value="pending">{{ t('pending') }}</option>
+    {% endif %}
+
+    {% if current_status == 'confirmed' %}
+        <option value="confirmed" selected>{{ t('confirmed') }}</option>
+    {% else %}
+        <option value="confirmed">{{ t('confirmed') }}</option>
+    {% endif %}
+
+    {% if current_status == 'delivered' %}
+        <option value="delivered" selected>{{ t('delivered') }}</option>
+    {% else %}
+        <option value="delivered">{{ t('delivered') }}</option>
+    {% endif %}
+
+    {% if current_status == 'cancelled' %}
+        <option value="cancelled" selected>{{ t('cancelled') }}</option>
+    {% else %}
+        <option value="cancelled">{{ t('cancelled') }}</option>
+    {% endif %}
+
+</select>
+</div>
+
         <div class="col-md-3">
             <label class="form-label">{{ t('delivery_method') }}</label>
             <select id="filter-delivery" class="form-select">
-                <option value="">{{ t('all') }}</option>
-                <option value="pickup">{{ t('pickup') }}</option>
-                <option value="delivery">{{ t('delivery') }}</option>
-            </select>
+
+    {% if not current_delivery or current_delivery == 'all' %}
+        <option value="all" selected>{{ t('all') }}</option>
+    {% else %}
+        <option value="all">{{ t('all') }}</option>
+    {% endif %}
+
+    {% if current_delivery == 'pickup' %}
+        <option value="pickup" selected>{{ t('pickup') }}</option>
+    {% else %}
+        <option value="pickup">{{ t('pickup') }}</option>
+    {% endif %}
+
+    {% if current_delivery == 'delivery' %}
+        <option value="delivery" selected>{{ t('delivery') }}</option>
+    {% else %}
+        <option value="delivery">{{ t('delivery') }}</option>
+    {% endif %}
+
+</select>
         </div>
+
         <div class="col-md-3">
             <label class="form-label">{{ t('select_date') }}</label>
-            <input type="date" id="filter-date" class="form-control">
+            <input type="date" id="filter-date" class="form-control" value="{{ current_date or '' }}">
         </div>
+
         <div class="col-md-3">
             <label class="form-label">{{ t('search') }}</label>
-            <input type="text" id="filter-search" class="form-control" placeholder="{% if current_lang == 'ku' %}ناو یان ژمارە{% elif current_lang == 'ar' %}الاسم أو الرقم{% else %}Name or phone{% endif %}">
+            <input type="text" id="filter-search" class="form-control"
+                   value="{{ current_q or '' }}"
+                   placeholder="{% if current_lang == 'ku' %}ناو یان ژمارە{% elif current_lang == 'ar' %}الاسم أو الرقم{% else %}Name or phone{% endif %}">
         </div>
     </div>
 
@@ -61,22 +117,22 @@
                         </td>
                         <td>
                             {% if order.delivery_method == 'pickup' %}
-                            <span class="badge bg-success">{{ t('pickup') }}</span>
+                                <span class="badge bg-success">{{ t('pickup') }}</span>
                             {% else %}
-                            <span class="badge bg-warning text-dark">{{ t('delivery') }}</span>
+                                <span class="badge bg-warning text-dark">{{ t('delivery') }}</span>
                             {% endif %}
                         </td>
                         <td>{{ order.items|length if order.items else 0 }} {% if current_lang == 'ku' %}بەرهەم{% elif current_lang == 'ar' %}منتج{% else %}items{% endif %}</td>
                         <td>{{ "{:,.0f}".format(order.total_price|default(0)) }} {{ t('iqd') }}</td>
                         <td>
                             {% if order.status == 'pending' %}
-                            <span class="badge badge-pending">{{ t('pending') }}</span>
+                                <span class="badge badge-pending">{{ t('pending') }}</span>
                             {% elif order.status == 'confirmed' %}
-                            <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
+                                <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
                             {% elif order.status == 'delivered' %}
-                            <span class="badge badge-completed">{{ t('delivered') }}</span>
+                                <span class="badge badge-completed">{{ t('delivered') }}</span>
                             {% else %}
-                            <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
+                                <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
                             {% endif %}
                         </td>
                         <td>
@@ -132,7 +188,40 @@
 
 {% block extra_js %}
 <script>
-// View order
+function applyOrderFilters() {
+    const status = document.getElementById('filter-status').value || 'all';
+    const delivery = document.getElementById('filter-delivery').value || 'all';
+    const d = document.getElementById('filter-date').value || '';
+    const q = document.getElementById('filter-search').value.trim();
+
+    const params = new URLSearchParams();
+    params.set('status', status);
+    params.set('delivery', delivery);
+    if (d) params.set('date', d);
+    if (q) params.set('q', q);
+
+    window.location.href = `/admin/orders?` + params.toString();
+}
+
+// auto apply on change
+document.getElementById('filter-status').addEventListener('change', applyOrderFilters);
+document.getElementById('filter-delivery').addEventListener('change', applyOrderFilters);
+document.getElementById('filter-date').addEventListener('change', applyOrderFilters);
+
+// search enter + typing
+document.getElementById('filter-search').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') applyOrderFilters();
+});
+let orderSearchTimer;
+document.getElementById('filter-search').addEventListener('input', () => {
+    clearTimeout(orderSearchTimer);
+    orderSearchTimer = setTimeout(applyOrderFilters, 500);
+});
+
+
+// -------------------------
+// View order (your code)
+// -------------------------
 document.querySelectorAll('.btn-view').forEach(btn => {
     btn.addEventListener('click', async function() {
         const id = this.dataset.id;
@@ -160,12 +249,8 @@ document.querySelectorAll('.btn-view').forEach(btn => {
         const method = (order.delivery_method || '').toLowerCase();
         const isDelivery = method === 'delivery';
 
-        // ✅ handle totals from API (some endpoints use total_price, some use total)
         const totalValue = (order.total_price ?? order.total ?? 0);
 
-        // ✅ Address UI:
-        // - delivery: show area + address (even if one missing)
-        // - pickup: show "استلام من المتجر" clearly
         let addressBlock = '';
         if (isDelivery) {
             const area = order.area || '';

@@ -8,34 +8,72 @@
     <!-- Filters -->
     <div class="row g-3 mb-4">
         <div class="col-md-3">
-            <label class="form-label">{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</label>
+            <label class="form-label">
+                {% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}
+            </label>
+
             <select id="filter-status" class="form-select">
-                <option value="">{{ t('all') }}</option>
-                <option value="pending">{{ t('pending') }}</option>
-                <option value="confirmed">{{ t('confirmed') }}</option>
-                <option value="completed">{{ t('completed') }}</option>
-                <option value="cancelled">{{ t('cancelled') }}</option>
+                {% if not current_status or current_status == 'all' %}
+                    <option value="all" selected>{{ t('all') }}</option>
+                {% else %}
+                    <option value="all">{{ t('all') }}</option>
+                {% endif %}
+
+                {% if current_status == 'pending' %}
+                    <option value="pending" selected>{{ t('pending') }}</option>
+                {% else %}
+                    <option value="pending">{{ t('pending') }}</option>
+                {% endif %}
+
+                {% if current_status == 'confirmed' %}
+                    <option value="confirmed" selected>{{ t('confirmed') }}</option>
+                {% else %}
+                    <option value="confirmed">{{ t('confirmed') }}</option>
+                {% endif %}
+
+                {% if current_status == 'completed' %}
+                    <option value="completed" selected>{{ t('completed') }}</option>
+                {% else %}
+                    <option value="completed">{{ t('completed') }}</option>
+                {% endif %}
+
+                {% if current_status == 'cancelled' %}
+                    <option value="cancelled" selected>{{ t('cancelled') }}</option>
+                {% else %}
+                    <option value="cancelled">{{ t('cancelled') }}</option>
+                {% endif %}
             </select>
         </div>
 
         <div class="col-md-3">
             <label class="form-label">{{ t('select_stadium') }}</label>
+
             <select id="filter-stadium" class="form-select">
-                <option value="">{{ t('all') }}</option>
+                {% if not current_stadium or current_stadium == 'all' %}
+                    <option value="all" selected>{{ t('all') }}</option>
+                {% else %}
+                    <option value="all">{{ t('all') }}</option>
+                {% endif %}
+
                 {% for stadium in stadiums %}
-                <option value="{{ stadium.id }}">{{ stadium.name }}</option>
+                    {% if current_stadium is not none and current_stadium|string == stadium.id|string %}
+                        <option value="{{ stadium.id }}" selected>{{ stadium.name }}</option>
+                    {% else %}
+                        <option value="{{ stadium.id }}">{{ stadium.name }}</option>
+                    {% endif %}
                 {% endfor %}
             </select>
         </div>
 
         <div class="col-md-3">
             <label class="form-label">{{ t('select_date') }}</label>
-            <input type="date" id="filter-date" class="form-control">
+            <input type="date" id="filter-date" class="form-control" value="{{ current_date or '' }}">
         </div>
 
         <div class="col-md-3">
             <label class="form-label">{{ t('search') }}</label>
             <input type="text" id="filter-search" class="form-control"
+                   value="{{ current_q or '' }}"
                    placeholder="{% if current_lang == 'ku' %}ناو یان ژمارە{% elif current_lang == 'ar' %}الاسم أو الرقم{% else %}Name or phone{% endif %}">
         </div>
     </div>
@@ -98,16 +136,18 @@
                                     <i class="fas fa-eye"></i>
                                 </a>
 
+                                <!-- ✅ Approve ONLY pending -->
                                 {% if booking.status == 'pending' %}
-                                <!-- ✅ ONE CLICK APPROVE -->
                                 <button type="button"
                                         class="btn btn-outline-success"
                                         onclick="approveBooking({{ booking.id }}, this); return false;"
                                         title="{{ t('confirm') }}">
                                     <i class="fas fa-check"></i>
                                 </button>
+                                {% endif %}
 
-                                <!-- ✅ CANCEL -->
+                                <!-- ✅ Cancel pending OR confirmed (so slot becomes available again) -->
+                                {% if booking.status in ['pending', 'confirmed'] %}
                                 <button type="button"
                                         class="btn btn-outline-danger"
                                         onclick="cancelBooking({{ booking.id }}, this); return false;"
@@ -132,8 +172,38 @@
 
 {% block extra_js %}
 <script>
+function applyFilters() {
+    const status = document.getElementById('filter-status').value || 'all';
+    const stadium = document.getElementById('filter-stadium').value || 'all';
+    const d = document.getElementById('filter-date').value || '';
+    const q = document.getElementById('filter-search').value.trim();
+
+    const params = new URLSearchParams();
+    params.set('status', status);
+    params.set('stadium', stadium);
+    if (d) params.set('date', d);
+    if (q) params.set('q', q);
+
+    window.location.href = `/admin/bookings?` + params.toString();
+}
+
+// auto apply on change
+document.getElementById('filter-status').addEventListener('change', applyFilters);
+document.getElementById('filter-stadium').addEventListener('change', applyFilters);
+document.getElementById('filter-date').addEventListener('change', applyFilters);
+
+// search: enter + typing delay
+document.getElementById('filter-search').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') applyFilters();
+});
+
+let searchTimer;
+document.getElementById('filter-search').addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(applyFilters, 500);
+});
+
 async function approveBooking(id, btn) {
-    // ✅ prevent double click
     btn.disabled = true;
     const oldHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
@@ -145,16 +215,9 @@ async function approveBooking(id, btn) {
         });
 
         const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-            throw new Error((data && data.message) || 'Approve failed');
-        }
-
-        // optional message:
-        // alert(data.message || 'Approved ✅');
+        if (!res.ok) throw new Error((data && data.message) || 'Approve failed');
 
         location.reload();
-
     } catch (err) {
         alert(err.message || 'Connection error');
         btn.disabled = false;
@@ -175,13 +238,9 @@ async function cancelBooking(id, btn) {
         });
 
         const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-            throw new Error((data && data.message) || 'Cancel failed');
-        }
+        if (!res.ok) throw new Error((data && data.message) || 'Cancel failed');
 
         location.reload();
-
     } catch (err) {
         alert(err.message || 'Connection error');
         btn.disabled = false;

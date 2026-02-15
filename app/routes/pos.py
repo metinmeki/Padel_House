@@ -126,12 +126,16 @@ def start_session():
         return redirect(url_for('pos.index'))
 
     if session_type == 'stadium':
-        existing = POSSession.query.filter_by(
-            session_type='stadium',
-            stadium_id=location_id_int,
-            status='active'
-        ).first()
+        existing = (POSSession.query
+            .filter_by(session_type='stadium', stadium_id=location_id_int, status='active')
+            .order_by(POSSession.id.desc())
+            .first())
+
         if existing:
+            if existing.end_time:
+                flash('يوجد جلسة منتهية اللعب ولم يتم الدفع بعد. الرجاء إنهاء الدفع أو إلغاء الجلسة.', 'warning')
+            else:
+                flash('يوجد جلسة نشطة بالفعل لهذا الملعب.', 'info')
             return redirect(url_for('pos.session_detail', session_id=existing.id))
 
         session = POSSession(
@@ -140,16 +144,21 @@ def start_session():
             customer_name=customer_name,
             customer_phone=customer_phone,
             start_time=datetime.now(),
+            end_time=None,
             status='active'
         )
 
     elif session_type == 'table':
-        existing = POSSession.query.filter_by(
-            session_type='table',
-            table_id=location_id_int,
-            status='active'
-        ).first()
+        existing = (POSSession.query
+            .filter_by(session_type='table', table_id=location_id_int, status='active')
+            .order_by(POSSession.id.desc())
+            .first())
+
         if existing:
+            if existing.end_time:
+                flash('يوجد جلسة منتهية ولم يتم الدفع بعد. الرجاء إنهاء الدفع أو إلغاء الجلسة.', 'warning')
+            else:
+                flash('يوجد جلسة نشطة بالفعل لهذه الطاولة.', 'info')
             return redirect(url_for('pos.session_detail', session_id=existing.id))
 
         session = POSSession(
@@ -158,6 +167,7 @@ def start_session():
             customer_name=customer_name,
             customer_phone=customer_phone,
             start_time=datetime.now(),
+            end_time=None,
             status='active'
         )
     else:

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, session, flash, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, session, flash, redirect, url_for, abort
 from app import db
 from app.models.product import Product
 from app.models.category import Category
@@ -6,15 +6,11 @@ from app.models.order import Order, OrderItem
 
 store_bp = Blueprint('store', __name__)
 
+
 # -----------------------------
 # ✅ Notifications Hook (SAFE)
 # -----------------------------
 def safe_notify_admins(title: str, message: str = "", url: str = "", ntype: str = "order_created"):
-    """
-    Safe notification hook.
-    - Uses Notification system if available
-    - Never breaks order flow
-    """
     try:
         from app.services.notify import notify_admins
         notify_admins(title=title, message=message, url=url, ntype=ntype)
@@ -27,12 +23,18 @@ def safe_notify_admins(title: str, message: str = "", url: str = "", ntype: str 
         return False
 
 
+# -----------------------------
+# ✅ Store Products
+# -----------------------------
 @store_bp.route('/')
 def products():
     """عرض المنتجات مع الفلترة حسب الفئة"""
     category_id = request.args.get('category', type=int)
-    categories = Category.query.filter_by(is_active=True).all()
 
+    # ✅ only categories that should appear on website
+    categories = Category.query.filter_by(is_active=True, show_on_website=True).all()
+
+    # ✅ only products visible on website
     query = Product.query.filter_by(is_active=True, show_in_website=True)
 
     if category_id:
@@ -52,6 +54,11 @@ def products():
 def product_detail(product_id):
     """صفحة تفاصيل المنتج"""
     product = Product.query.get_or_404(product_id)
+
+    # ✅ block opening hidden/inactive products
+    if not product.is_active or not product.show_in_website:
+        abort(404)
+
     related_products = Product.query.filter(
         Product.category_id == product.category_id,
         Product.id != product.id,
@@ -75,7 +82,7 @@ def cart():
 
     for item in cart_items:
         product = Product.query.get(item['product_id'])
-        if product:
+        if product and product.is_active and product.show_in_website:
             subtotal = product.price * item['quantity']
             products.append({
                 'product': product,
@@ -84,31 +91,26 @@ def cart():
             })
             total += subtotal
 
-    return render_template(
-        'store/cart.html',
-        cart_items=products,
-        total=total,
-        subtotal=total
-    )
+    return render_template('store/cart.html', cart_items=products, total=total, subtotal=total)
 
 
 @store_bp.route('/cart/add', methods=['POST'])
 def add_to_cart():
     """إضافة منتج للسلة"""
-    data = request.json
+    data = request.json or {}
     product_id = data.get('product_id')
-    quantity = data.get('quantity', 1)
+    quantity = int(data.get('quantity', 1) or 1)
 
     product = Product.query.get(product_id)
-    if not product:
-        return jsonify({'success': False, 'message': 'المنتج غير موجود'})
+    if not product or not product.is_active or not product.show_in_website:
+        return jsonify({'success': False, 'message': 'المنتج غير متاح'}), 404
 
-    if hasattr(product, 'stock') and product.stock <= 0:
-        return jsonify({'success': False, 'message': 'المنتج غير متوفر حالياً'})
+    if hasattr(product, 'stock') and product.stock is not None and product.stock <= 0:
+        return jsonify({'success': False, 'message': 'المنتج غير متوفر حالياً'}), 400
 
     cart = session.get('cart', [])
-
     found = False
+
     for item in cart:
         if item['product_id'] == product_id:
             item['quantity'] += quantity
@@ -127,8 +129,7 @@ def add_to_cart():
 
 @store_bp.route('/cart/remove', methods=['POST'])
 def remove_from_cart():
-    """حذف منتج من السلة"""
-    data = request.json
+    data = request.json or {}
     product_id = data.get('product_id')
 
     cart = session.get('cart', [])
@@ -141,8 +142,7 @@ def remove_from_cart():
 
 @store_bp.route('/cart/update', methods=['POST'])
 def update_cart():
-    """تحديث كمية المنتج في السلة"""
-    data = request.json
+    data = request.json or {}
     product_id = data.get('product_id')
     change = data.get('change')
     quantity = data.get('quantity')
@@ -152,11 +152,9 @@ def update_cart():
     for item in cart:
         if item['product_id'] == product_id:
             if change is not None:
-                item['quantity'] += change
-                if item['quantity'] < 1:
-                    item['quantity'] = 1
+                item['quantity'] = max(1, int(item['quantity']) + int(change))
             elif quantity is not None:
-                item['quantity'] = max(1, quantity)
+                item['quantity'] = max(1, int(quantity))
             break
 
     session['cart'] = cart
@@ -165,7 +163,7 @@ def update_cart():
     total = 0
     for item in cart:
         product = Product.query.get(item['product_id'])
-        if product:
+        if product and product.is_active and product.show_in_website:
             total += product.price * item['quantity']
 
     return jsonify({'success': True, 'total': total})
@@ -173,7 +171,6 @@ def update_cart():
 
 @store_bp.route('/cart/clear', methods=['POST'])
 def clear_cart():
-    """تفريغ السلة"""
     session['cart'] = []
     session.modified = True
     return jsonify({'success': True})
@@ -181,7 +178,6 @@ def clear_cart():
 
 @store_bp.route('/cart/count')
 def cart_count():
-    """عدد العناصر في السلة"""
     cart = session.get('cart', [])
     total_items = sum(item['quantity'] for item in cart)
     return jsonify({'count': len(cart), 'total_items': total_items})
@@ -189,9 +185,7 @@ def cart_count():
 
 @store_bp.route('/checkout', methods=['GET', 'POST'])
 def checkout():
-    """صفحة الدفع"""
     cart_items = session.get('cart', [])
-
     if not cart_items:
         return render_template('store/checkout.html', cart_items=[], total=0, subtotal=0)
 
@@ -200,7 +194,7 @@ def checkout():
 
     for item in cart_items:
         product = Product.query.get(item['product_id'])
-        if product:
+        if product and product.is_active and product.show_in_website:
             subtotal = product.price * item['quantity']
             products.append({
                 'product': product,
@@ -217,7 +211,6 @@ def checkout():
 # -----------------------------
 @store_bp.route('/api/order', methods=['POST'])
 def create_order_api():
-    """API endpoint for placing orders via AJAX"""
     try:
         data = request.json or {}
 
@@ -253,12 +246,12 @@ def create_order_api():
             quantity = int(item.get('quantity', 1) or 1)
 
             product = Product.query.get(product_id)
-            if product:
+            if product and product.is_active and product.show_in_website:
                 item_subtotal = product.price * quantity
                 subtotal += item_subtotal
 
-                product_name = product.get_name('ku') if hasattr(product, 'get_name') else getattr(product, 'name_ku', getattr(product, 'name', 'منتج'))
-                items_list.append(f"{product_name} x{quantity}")
+                pname = product.get_name('ku') if hasattr(product, 'get_name') else getattr(product, 'name_ku', 'منتج')
+                items_list.append(f"{pname} x{quantity}")
 
                 order_items_data.append({
                     'product': product,
@@ -272,7 +265,6 @@ def create_order_api():
         delivery_fee = 5000 if delivery_method == 'delivery' else 0
         total_price = subtotal + delivery_fee
 
-        # ✅ Create order (PENDING)
         order = Order(
             customer_name=customer_name,
             customer_phone=customer_phone,
@@ -288,24 +280,22 @@ def create_order_api():
         db.session.add(order)
         db.session.flush()
 
-        # Add items + update stock
         for item_data in order_items_data:
             product = item_data['product']
-            order_item = OrderItem(
+            qty = item_data['quantity']
+
+            db.session.add(OrderItem(
                 order_id=order.id,
                 product_id=product.id,
-                quantity=item_data['quantity'],
+                quantity=qty,
                 price=item_data['price']
-            )
-            db.session.add(order_item)
+            ))
 
-            if hasattr(product, 'stock') and product.stock is not None:
-                if product.stock >= item_data['quantity']:
-                    product.stock -= item_data['quantity']
+            if hasattr(product, 'stock') and product.stock is not None and product.stock >= qty:
+                product.stock -= qty
 
         db.session.commit()
 
-        # ✅ Notify admins about new order
         safe_notify_admins(
             title="New store order 🛒",
             message=f"Order #{order.id} pending | {customer_name} | {customer_phone} | Items: " + " | ".join(items_list),
@@ -313,17 +303,10 @@ def create_order_api():
             ntype="order_created"
         )
 
-        # ✅ IMPORTANT: do NOT send to Google Sheets here anymore.
-        # It will be sent ONLY after admin confirms in admin.py.
-
         session['cart'] = []
         session.modified = True
 
-        return jsonify({
-            'success': True,
-            'message': 'تم إرسال الطلب بنجاح! رقم الطلب: ' + str(order.id),
-            'order_id': order.id
-        })
+        return jsonify({'success': True, 'message': f'تم إرسال الطلب بنجاح! رقم الطلب: {order.id}', 'order_id': order.id})
 
     except Exception as e:
         db.session.rollback()
@@ -331,12 +314,8 @@ def create_order_api():
         return jsonify({'success': False, 'message': f'خطأ: {str(e)}'}), 500
 
 
-# -----------------------------
-# ✅ Form-based order placement
-# -----------------------------
 @store_bp.route('/place-order', methods=['POST'])
 def place_order():
-    """Form-based order placement"""
     cart = session.get('cart', [])
     if not cart:
         flash('السلة فارغة', 'error')
@@ -368,10 +347,10 @@ def place_order():
 
         for item in cart:
             product = Product.query.get(item['product_id'])
-            if product:
+            if product and product.is_active and product.show_in_website:
                 subtotal += product.price * item['quantity']
-                product_name = product.get_name('ku') if hasattr(product, 'get_name') else getattr(product, 'name_ku', getattr(product, 'name', 'منتج'))
-                items_list.append(f"{product_name} x{item['quantity']}")
+                pname = product.get_name('ku') if hasattr(product, 'get_name') else getattr(product, 'name_ku', 'منتج')
+                items_list.append(f"{pname} x{item['quantity']}")
 
         delivery_fee = 5000 if delivery_method == 'delivery' else 0
         total_price = subtotal + delivery_fee
@@ -393,22 +372,19 @@ def place_order():
 
         for item in cart:
             product = Product.query.get(item['product_id'])
-            if product:
-                order_item = OrderItem(
+            if product and product.is_active and product.show_in_website:
+                db.session.add(OrderItem(
                     order_id=order.id,
                     product_id=product.id,
                     quantity=item['quantity'],
                     price=product.price
-                )
-                db.session.add(order_item)
+                ))
 
-                if hasattr(product, 'stock') and product.stock is not None:
-                    if product.stock >= item['quantity']:
-                        product.stock -= item['quantity']
+                if hasattr(product, 'stock') and product.stock is not None and product.stock >= item['quantity']:
+                    product.stock -= item['quantity']
 
         db.session.commit()
 
-        # ✅ Notify admins about new order
         safe_notify_admins(
             title="New store order 🛒",
             message=f"Order #{order.id} pending | {customer_name} | {customer_phone} | Items: " + " | ".join(items_list),
@@ -417,7 +393,6 @@ def place_order():
         )
 
         flash('تم إرسال طلبك بنجاح!', 'success')
-
         session['cart'] = []
         session.modified = True
 
@@ -431,6 +406,5 @@ def place_order():
 
 @store_bp.route('/order-success/<int:order_id>')
 def order_success(order_id):
-    """صفحة نجاح الطلب"""
     order = Order.query.get_or_404(order_id)
     return render_template('store/order_success.html', order=order)

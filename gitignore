@@ -33,9 +33,6 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Migration files
-migrations/
-
-# Static uploads
+# Static generated files
+app/static/barcodes/
 app/static/uploads/
-static/barcodes/

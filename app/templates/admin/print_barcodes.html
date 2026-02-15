@@ -4,145 +4,129 @@
 
 {% block extra_css %}
 <style>
-    /* Barcode sticker styles */
-    .barcode-container {
-        background: #fff;
-        border-radius: 12px;
-        padding: 20px;
-    }
-    
-    .barcode-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-        gap: 15px;
-    }
-    
-    .barcode-sticker {
-        background: #fff;
-        border: 2px dashed #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        text-align: center;
-        transition: all 0.2s;
-    }
-    
-    .barcode-sticker:hover {
-        border-color: #E57625;
-        box-shadow: 0 4px 12px rgba(229, 118, 37, 0.2);
-    }
-    
-    .barcode-sticker.selected {
-        border-color: #E57625;
-        background: #fff8f4;
-    }
-    
-    .barcode-sticker .product-name {
-        font-weight: 600;
-        font-size: 14px;
-        margin-bottom: 8px;
-        color: #333;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    
-    .barcode-sticker .barcode-image {
-        margin: 10px 0;
-    }
-    
-    .barcode-sticker .barcode-image svg {
-        max-width: 100%;
-        height: 50px;
-    }
-    
-    .barcode-sticker .barcode-number {
-        font-family: 'Courier New', monospace;
-        font-size: 12px;
-        color: #666;
-        letter-spacing: 2px;
-    }
-    
-    .barcode-sticker .product-price {
-        font-size: 18px;
-        font-weight: 700;
-        color: #E57625;
-        margin-top: 8px;
-    }
-    
-    /* Print styles */
-    @media print {
-        body * {
-            visibility: hidden;
-        }
-        
-        #printArea, #printArea * {
-            visibility: visible;
-        }
-        
-        #printArea {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-        }
-        
-        .no-print {
-            display: none !important;
-        }
-        
-        .barcode-sticker {
-            border: 1px solid #000;
-            page-break-inside: avoid;
-            margin: 5mm;
-            padding: 3mm;
-        }
-        
-        /* Sticker size options */
-        .print-size-small .barcode-sticker {
-            width: 38mm;
-            height: 25mm;
-        }
-        
-        .print-size-medium .barcode-sticker {
-            width: 50mm;
-            height: 30mm;
-        }
-        
-        .print-size-large .barcode-sticker {
-            width: 60mm;
-            height: 40mm;
-        }
-    }
-    
-    /* Product selection */
-    .product-select-card {
-        background: #f8f9fa;
-        border: 2px solid #e9ecef;
-        border-radius: 8px;
-        padding: 12px;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    
-    .product-select-card:hover {
-        border-color: #E57625;
-    }
-    
-    .product-select-card.selected {
-        border-color: #E57625;
-        background: #fff8f4;
-    }
-    
-    .product-select-card input[type="checkbox"] {
-        display: none;
-    }
-    
-    .quantity-input {
-        width: 60px;
-        text-align: center;
-    }
-</style>
+  :root{
+    --label-w: 50mm;     /* same like your photo */
+    --label-h: 30mm;
+    --label-pad: 2.2mm;
+  }
 
+  .barcode-sticker{
+    background:#fff;
+    border:1px solid #cfcfcf;
+    border-radius:6px;
+    padding: var(--label-pad);
+    width: var(--label-w);
+    height: var(--label-h);
+
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    overflow:hidden;
+  }
+
+  .sticker-top{
+    font-size:9px;
+    color:#333;
+    text-align:left;
+    line-height:1;
+    opacity:.9;
+  }
+
+  .sticker-name{
+    font-weight:700;
+    font-size:11px;
+    text-align:center;
+    line-height:1.1;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    margin-top:1mm;
+  }
+
+  .sticker-barcode{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin: 0.6mm 0;
+  }
+  .sticker-barcode svg{
+    width:100%;
+    height:12mm;     /* barcode height */
+  }
+
+  .sticker-number{
+    font-family: "Courier New", monospace;
+    font-size:9px;
+    text-align:center;
+    letter-spacing:1px;
+    color:#333;
+    line-height:1;
+  }
+
+  .sticker-price{
+    font-weight:900;
+    font-size:12px;
+    text-align:center;
+    line-height:1.1;
+    margin-top:0.5mm;
+  }
+
+  .sticker-url{
+    font-size:8px;
+    color:#333;
+    text-align:center;
+    line-height:1;
+    opacity:.9;
+  }
+
+  /* Preview grid (screen) */
+  .barcode-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap:15px;
+  }
+
+  /* PRINT */
+  @media print {
+
+  body{
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  body *{
+    visibility:hidden;
+  }
+
+  #printArea,
+  #printArea *{
+    visibility:visible;
+  }
+
+  #printArea{
+    position:absolute;
+    left:0;
+    top:0;
+    width:50mm;
+  }
+
+  #printGrid{
+    display:flex;
+    flex-direction:column;
+    gap:0;
+  }
+
+  .barcode-sticker{
+    width:50mm !important;
+    height:30mm !important;
+    margin:0 !important;
+    padding:2mm;
+    border:1px solid #000;
+    box-sizing:border-box;
+  }
+
+}
+</style>
 <!-- JsBarcode library -->
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 {% endblock %}

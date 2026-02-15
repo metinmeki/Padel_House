@@ -1,245 +1,603 @@
-{% extends 'admin/base_admin.html' %}
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Categories - Admin</title>
 
-{% block title %}{% if current_lang == 'ku' %}پۆلەکان{% elif current_lang == 'ar' %}التصنيفات{% else %}Categories{% endif %} - {{ t('admin') }}{% endblock %}
-{% block page_title %}{% if current_lang == 'ku' %}پۆلەکان{% elif current_lang == 'ar' %}التصنيفات{% else %}Categories{% endif %}{% endblock %}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-{% block content %}
-<div class="table-card">
+  <style>
+    :root {
+      --primary-color: #E57625;
+      --sidebar-bg: #1a1a2e;
+      --sidebar-width: 260px;
+    }
+
+    body {
+      font-family: 'Cairo', sans-serif;
+      background-color: #f4f6f9;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: var(--sidebar-width);
+      height: 100vh;
+      background: linear-gradient(180deg, var(--sidebar-bg), #16213e);
+      padding: 20px 0;
+      z-index: 1000;
+      overflow-y: auto;
+    }
+
+    .sidebar::-webkit-scrollbar { width: 6px; }
+    .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+    .sidebar::-webkit-scrollbar-thumb { background: rgba(229,118,37,0.5); border-radius: 3px; }
+    .sidebar::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
+
+    .user-profile {
+      padding: 15px 20px;
+      margin: 0 10px 20px 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .user-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-color), #ff9051);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      color: #fff;
+      font-weight: 600;
+      box-shadow: 0 4px 8px rgba(229,118,37,0.3);
+    }
+
+    .user-info { color: #fff; }
+    .user-name { font-size: 1rem; font-weight: 600; margin-bottom: 2px; }
+
+    .user-role {
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.6);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .role-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.7rem;
+      margin-top: 5px;
+    }
+
+    .role-super-admin {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(102,126,234,0.3);
+    }
+
+    .sidebar .nav-link {
+      color: rgba(255,255,255,0.7);
+      padding: 12px 20px;
+      margin: 2px 10px;
+      border-radius: 8px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      text-decoration: none;
+    }
+
+    .sidebar .nav-link:hover {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      transform: translateX(3px);
+    }
+
+    .sidebar .nav-link.active {
+      background: rgba(229,118,37,0.2);
+      color: var(--primary-color);
+      border-left: 3px solid var(--primary-color);
+    }
+
+    .sidebar .nav-link i { width: 24px; }
+
+    .pending-badge { animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    .super-admin-section {
+      background: rgba(102, 126, 234, 0.1);
+      border-left: 3px solid #667eea;
+    }
+
+    .super-admin-section:hover { background: rgba(102, 126, 234, 0.15); }
+
+    .sidebar hr {
+      border-color: rgba(255,255,255,0.1);
+      margin: 15px 20px;
+    }
+
+    .main-content {
+      margin-left: var(--sidebar-width);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    .notification-bell { position: relative; }
+    .notification-bell .btn {
+      border-radius: 50%;
+      width: 45px;
+      height: 45px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .notification-bell .badge { font-size: 0.7rem; }
+
+    .table-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+
+    .badge-pending { background-color: #ffc107; color: #000; }
+    .badge-confirmed { background-color: #28a745; color: #fff; }
+    .badge-cancelled { background-color: #dc3545; color: #fff; }
+    .badge-completed { background-color: #17a2b8; color: #fff; }
+
+    @media (max-width: 768px) {
+      .sidebar { transform: translateX(-100%); }
+      .main-content { margin-left: 0; }
+    }
+  </style>
+</head>
+
+<body>
+<aside class="sidebar">
+  <div class="text-center mb-4">
+    <h4 style="color: var(--primary-color); font-weight: 700;">Padel House</h4>
+    <small class="text-white-50">Admin</small>
+  </div>
+
+  <div class="user-profile">
+    <div class="d-flex align-items-center">
+      <div class="user-avatar me-3">A</div>
+      <div class="user-info flex-grow-1">
+        <div class="user-name">admin</div>
+        <div class="user-role">
+          <span class="role-badge role-super-admin">
+            <i class="fas fa-crown me-1"></i>SUPER ADMIN
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ul class="nav flex-column px-3">
+    <li class="nav-item">
+      <a href="/admin/dashboard" class="nav-link"><span><i class="fas fa-home me-2"></i>dashboard</span></a>
+    </li>
+    <li class="nav-item">
+      <a href="/admin/pending-bookings" class="nav-link"><span><i class="fas fa-clock me-2"></i>Pending Bookings</span></a>
+    </li>
+    <li class="nav-item">
+      <a href="/admin/bookings" class="nav-link"><span><i class="fas fa-calendar-check me-2"></i>bookings</span></a>
+    </li>
+    <li class="nav-item">
+      <a href="/admin/orders" class="nav-link"><span><i class="fas fa-shopping-bag me-2"></i>orders</span></a>
+    </li>
+    <hr>
+    <li class="nav-item">
+      <a href="/admin/products" class="nav-link"><span><i class="fas fa-box me-2"></i>products</span></a>
+    </li>
+    <li class="nav-item">
+      <a href="/admin/categories" class="nav-link active"><span><i class="fas fa-tags me-2"></i>Categories</span></a>
+    </li>
+    <li class="nav-item">
+      <a href="/admin/stadiums" class="nav-link"><span><i class="fas fa-futbol me-2"></i>Stadiums</span></a>
+    </li>
+    <hr>
+    <li class="nav-item">
+      <a href="/admin/expenses" class="nav-link"><span><i class="fas fa-wallet me-2"></i>Expenses</span></a>
+    </li>
+    <li class="nav-item">
+      <a href="/admin/reports" class="nav-link"><span><i class="fas fa-chart-bar me-2"></i>reports</span></a>
+    </li>
+    <hr>
+    <li class="nav-item">
+      <a href="/admin/settings" class="nav-link"><span><i class="fas fa-cog me-2"></i>settings</span></a>
+    </li>
+    <li class="nav-item">
+      <a href="/admin/users" class="nav-link super-admin-section">
+        <span><i class="fas fa-users-cog me-2"></i>Users</span>
+        <i class="fas fa-crown text-warning" style="font-size: 0.75rem;"></i>
+      </a>
+    </li>
+    <hr>
+    <li class="nav-item">
+      <a href="/" class="nav-link" target="_blank"><span><i class="fas fa-external-link-alt me-2"></i>View Site</span></a>
+    </li>
+    <li class="nav-item">
+      <a href="/auth/logout" class="nav-link text-danger"><span><i class="fas fa-sign-out-alt me-2"></i>Logout</span></a>
+    </li>
+  </ul>
+</aside>
+
+<div class="main-content">
+  <div class="d-flex justify-content-end mb-3">
+    <div class="dropdown notification-bell">
+      <button class="btn btn-light position-relative" data-bs-toggle="dropdown" aria-expanded="false" title="Notifications">
+        <i class="fas fa-bell"></i>
+        <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">0</span>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end" style="width:360px; max-height:400px; overflow-y:auto;" id="notifMenu">
+        <li class="px-3 py-2 text-muted small">No notifications</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="table-card">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h5 class="mb-0">
-            <i class="fas fa-tags me-2" style="color: #E57625;"></i>
-            {% if current_lang == 'ku' %}بەڕێوەبردنی پۆلەکان{% elif current_lang == 'ar' %}إدارة التصنيفات{% else %}Manage Categories{% endif %}
-        </h5>
-        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#categoryModal">
-            <i class="fas fa-plus me-2"></i>{{ t('add') }}
-        </button>
+      <h5 class="mb-0">
+        <i class="fas fa-tags me-2" style="color: #E57625;"></i>
+        Manage Categories
+      </h5>
+      <button class="btn btn-primary" id="btnAddCategory" data-bs-toggle="modal" data-bs-target="#categoryModal">
+        <i class="fas fa-plus me-2"></i>Add
+      </button>
     </div>
 
     <div class="table-responsive">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>کوردی</th>
-                    <th>العربية</th>
-                    <th>English</th>
-                    <th>{{ t('products') }}</th>
-                    <th>{{ t('actions') }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% if categories %}
-                    {% for category in categories %}
-                    <tr>
-                        <td>{{ category.id }}</td>
-                        <td>{{ category.name_ku or '-' }}</td>
-                        <td>{{ category.name_ar or '-' }}</td>
-                        <td>{{ category.name_en or '-' }}</td>
-                        <td>
-                            <span class="badge bg-primary">{{ category.products|length }}</span>
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-primary btn-edit"
-                                        data-id="{{ category.id }}"
-                                        data-name-ku="{{ category.name_ku or '' }}"
-                                        data-name-ar="{{ category.name_ar or '' }}"
-                                        data-name-en="{{ category.name_en or '' }}"
-                                        data-desc-ku="{{ category.description_ku or '' }}"
-                                        data-desc-ar="{{ category.description_ar or '' }}"
-                                        data-desc-en="{{ category.description_en or '' }}">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-outline-danger btn-delete" data-id="{{ category.id }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                {% else %}
-                <tr>
-                    <td colspan="6" class="text-center py-4 text-muted">
-                        {% if current_lang == 'ku' %}هیچ پۆلێک نییە{% elif current_lang == 'ar' %}لا توجد تصنيفات{% else %}No categories found{% endif %}
-                    </td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
-    </div>
-</div>
+      <table class="table table-hover align-middle">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>کوردی</th>
+            <th>العربية</th>
+            <th>English</th>
+            <th>🌐 / 🧾</th>
+            <th>products</th>
+            <th>actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in categories %}
+          <tr>
+            <td>{{ loop.index }}</td>
 
-<!-- Category Modal -->
-<div class="modal fade" id="categoryModal" tabindex="-1">
+            <td>{{ c.name_ku }}</td>
+            <td>{{ c.name_ar or '-' }}</td>
+            <td>{{ c.name_en or '-' }}</td>
+
+            <td>
+              {% if c.show_on_website %}
+              <span class="badge bg-info">🌐</span>
+              {% else %}
+              <span class="badge bg-secondary">🌐</span>
+              {% endif %}
+
+              {% if c.show_on_pos %}
+              <span class="badge bg-dark">🧾</span>
+              {% else %}
+              <span class="badge bg-secondary">🧾</span>
+              {% endif %}
+            </td>
+
+            <td>
+              <span class="badge bg-primary">{{ c.products|length }}</span>
+            </td>
+
+            <td>
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary btn-edit"
+                        data-id="{{ c.id }}"
+                        data-name-ku="{{ c.name_ku }}"
+                        data-name-ar="{{ c.name_ar or '' }}"
+                        data-name-en="{{ c.name_en or '' }}"
+                        data-desc-ku="{{ c.description_ku or '' }}"
+                        data-desc-ar="{{ c.description_ar or '' }}"
+                        data-desc-en="{{ c.description_en or '' }}"
+                        data-show-website="{{ 1 if c.show_on_website else 0 }}"
+                        data-show-pos="{{ 1 if c.show_on_pos else 0 }}">
+                  <i class="fas fa-edit"></i>
+                </button>
+
+                <button class="btn btn-outline-danger btn-delete" data-id="{{ c.id }}">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="7" class="text-center text-muted py-4">
+              No categories yet
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal fade" id="categoryModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">
-                    {% if current_lang == 'ku' %}زیادکردنی پۆل{% elif current_lang == 'ar' %}إضافة تصنيف{% else %}Add Category{% endif %}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <form id="categoryForm">
-                <div class="modal-body">
-                    <input type="hidden" id="category-id">
-
-                    <!-- Language Tabs -->
-                    <ul class="nav nav-tabs mb-3" role="tablist">
-                        <li class="nav-item">
-                            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-ku" type="button">
-                                🇮🇶 کوردی *
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ar" type="button">
-                                🇸🇦 العربية
-                            </button>
-                        </li>
-                        <li class="nav-item">
-                            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-en" type="button">
-                                🇬🇧 English
-                            </button>
-                        </li>
-                    </ul>
-
-                    <div class="tab-content">
-                        <!-- Kurdish Tab -->
-                        <div class="tab-pane fade show active" id="tab-ku">
-                            <div class="mb-3">
-                                <label class="form-label">ناوی پۆل (کوردی) *</label>
-                                <input type="text" id="name-ku" class="form-control" dir="rtl" required
-                                       placeholder="ناوی پۆلەکە بە کوردی">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">وەسف (کوردی)</label>
-                                <textarea id="desc-ku" class="form-control" rows="2" dir="rtl"
-                                          placeholder="وەسفی پۆلەکە بە کوردی"></textarea>
-                            </div>
-                        </div>
-
-                        <!-- Arabic Tab -->
-                        <div class="tab-pane fade" id="tab-ar">
-                            <div class="mb-3">
-                                <label class="form-label">اسم التصنيف (العربية)</label>
-                                <input type="text" id="name-ar" class="form-control" dir="rtl"
-                                       placeholder="اسم التصنيف بالعربية">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">الوصف (العربية)</label>
-                                <textarea id="desc-ar" class="form-control" rows="2" dir="rtl"
-                                          placeholder="وصف التصنيف بالعربية"></textarea>
-                            </div>
-                        </div>
-
-                        <!-- English Tab -->
-                        <div class="tab-pane fade" id="tab-en">
-                            <div class="mb-3">
-                                <label class="form-label">Category Name (English)</label>
-                                <input type="text" id="name-en" class="form-control" dir="ltr"
-                                       placeholder="Category name in English">
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Description (English)</label>
-                                <textarea id="desc-en" class="form-control" rows="2" dir="ltr"
-                                          placeholder="Category description in English"></textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="alert alert-info mt-3">
-                        <i class="fas fa-info-circle me-2"></i>
-                        {% if current_lang == 'ku' %}
-                        تەنها کوردی پێویستە، زمانەکانی تر ئارەزوومەندانەن
-                        {% elif current_lang == 'ar' %}
-                        الكردية مطلوبة فقط، اللغات الأخرى اختيارية
-                        {% else %}
-                        Only Kurdish is required, other languages are optional
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
-                    <button type="submit" class="btn btn-primary">{{ t('save') }}</button>
-                </div>
-            </form>
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">Add Category</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
+
+        <form id="categoryForm">
+          <div class="modal-body">
+            <input type="hidden" id="category-id" value="">
+
+            <div class="mb-3">
+              <label class="form-label">Visibility</label>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="show-website" checked>
+                  <label class="form-check-label">🌐 Website</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="show-pos" checked>
+                  <label class="form-check-label">🧾 POS</label>
+                </div>
+              </div>
+            </div>
+
+            <ul class="nav nav-tabs mb-3" id="langTabs">
+              <li class="nav-item">
+                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-ku" type="button">🇮🇶 کوردی *</button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ar" type="button">🇸🇦 العربية</button>
+              </li>
+              <li class="nav-item">
+                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-en" type="button">🇬🇧 English</button>
+              </li>
+            </ul>
+
+            <div class="tab-content">
+              <div class="tab-pane fade show active" id="tab-ku">
+                <input id="name-ku" class="form-control mb-2" dir="rtl" required placeholder="ناوی پۆل">
+                <textarea id="desc-ku" class="form-control" rows="2" dir="rtl" placeholder="وەسف"></textarea>
+              </div>
+              <div class="tab-pane fade" id="tab-ar">
+                <input id="name-ar" class="form-control mb-2" dir="rtl" placeholder="اسم التصنيف">
+                <textarea id="desc-ar" class="form-control" rows="2" dir="rtl" placeholder="الوصف"></textarea>
+              </div>
+              <div class="tab-pane fade" id="tab-en">
+                <input id="name-en" class="form-control mb-2" dir="ltr" placeholder="Category Name">
+                <textarea id="desc-en" class="form-control" rows="2" dir="ltr" placeholder="Description"></textarea>
+              </div>
+            </div>
+
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+
+      </div>
     </div>
+  </div>
 </div>
-{% endblock %}
 
-{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Notifications -->
 <script>
-const modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+async function loadNotifications() {
+  try {
+    const cRes = await fetch('/admin/api/notifications/unread-count', { credentials: 'same-origin' });
+    const cData = await cRes.json();
+    const badge = document.getElementById('notifBadge');
+    if (cData.success && cData.count > 0) {
+      badge.style.display = 'inline';
+      badge.textContent = cData.count;
+    } else {
+      badge.style.display = 'none';
+    }
 
-// Edit category
-document.querySelectorAll('.btn-edit').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.getElementById('modalTitle').textContent = '{% if current_lang == "ku" %}دەستکاری پۆل{% elif current_lang == "ar" %}تعديل التصنيف{% else %}Edit Category{% endif %}';
-        document.getElementById('category-id').value = this.dataset.id;
-        document.getElementById('name-ku').value = this.dataset.nameKu;
-        document.getElementById('name-ar').value = this.dataset.nameAr;
-        document.getElementById('name-en').value = this.dataset.nameEn;
-        document.getElementById('desc-ku').value = this.dataset.descKu;
-        document.getElementById('desc-ar').value = this.dataset.descAr;
-        document.getElementById('desc-en').value = this.dataset.descEn;
-        modal.show();
+    const res = await fetch('/admin/api/notifications', { credentials: 'same-origin' });
+    const data = await res.json();
+    const menu = document.getElementById('notifMenu');
+    menu.innerHTML = '';
+
+    if (!data.success || !data.items || data.items.length === 0) {
+      menu.innerHTML = `<li class="px-3 py-2 text-muted small">No notifications</li>`;
+      return;
+    }
+
+    data.items.forEach((n, index) => {
+      const title = n.title || 'Notification';
+      const msg = n.message || '';
+      const url = n.url || '#';
+      const unreadDot = (!n.is_read) ? `<span class="badge bg-danger ms-2">new</span>` : '';
+
+      const li = document.createElement('li');
+      li.innerHTML = `
+        <a class="dropdown-item" href="${url}" style="white-space: normal;">
+          <div class="fw-bold">${title} ${unreadDot}</div>
+          <div class="small text-muted">${msg}</div>
+        </a>
+      `;
+
+      li.querySelector('a').addEventListener('click', async (ev) => {
+        ev.preventDefault();
+        try {
+          await fetch(`/admin/api/notifications/${n.id}/read`, { method: 'POST', credentials: 'same-origin' });
+        } catch (e) {}
+        if (url !== '#') window.location.href = url;
+      });
+
+      menu.appendChild(li);
+      if (index < data.items.length - 1) {
+        const divider = document.createElement('li');
+        divider.innerHTML = `<hr class="dropdown-divider">`;
+        menu.appendChild(divider);
+      }
     });
-});
+  } catch (err) {
+    console.log("Notification error:", err);
+  }
+}
+loadNotifications();
+setInterval(loadNotifications, 20000);
+</script>
 
-// Delete category
-document.querySelectorAll('.btn-delete').forEach(btn => {
-    btn.addEventListener('click', async function() {
-        if (!confirm('{% if current_lang == "ku" %}دڵنیایت لە سڕینەوە؟{% elif current_lang == "ar" %}هل أنت متأكد من الحذف؟{% else %}Are you sure you want to delete?{% endif %}')) return;
+<!-- ✅ FULL FIXED CATEGORIES SCRIPT (ADD + EDIT + DELETE) -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  console.log('🔧 Categories page initializing...');
 
-        const response = await fetch(`/admin/api/category/${this.dataset.id}`, {
-            method: 'DELETE'
-        });
+  const modalEl = document.getElementById('categoryModal');
+  if (!modalEl) return;
 
-        if (response.ok) {
-            location.reload();
-        } else {
-            const result = await response.json();
-            alert(result.message || 'Error deleting category');
-        }
+  const modal = new bootstrap.Modal(modalEl);
+  const categoryForm = document.getElementById('categoryForm');
+
+  // KILL OLD HANDLERS
+  categoryForm.onsubmit = null;
+
+  const categoryId = document.getElementById('category-id');
+  const modalTitle = document.getElementById('modalTitle');
+  const nameKu = document.getElementById('name-ku');
+  const nameAr = document.getElementById('name-ar');
+  const nameEn = document.getElementById('name-en');
+  const descKu = document.getElementById('desc-ku');
+  const descAr = document.getElementById('desc-ar');
+  const descEn = document.getElementById('desc-en');
+  const showWebsite = document.getElementById('show-website');
+  const showPos = document.getElementById('show-pos');
+
+  // ✅ Edit buttons
+  document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      categoryForm.reset();
+
+      categoryId.value = this.dataset.id || '';
+      nameKu.value = this.dataset.nameKu || '';
+      nameAr.value = this.dataset.nameAr || '';
+      nameEn.value = this.dataset.nameEn || '';
+      descKu.value = this.dataset.descKu || '';
+      descAr.value = this.dataset.descAr || '';
+      descEn.value = this.dataset.descEn || '';
+      showWebsite.checked = this.dataset.showWebsite === '1';
+      showPos.checked = this.dataset.showPos === '1';
+
+      modalTitle.textContent = 'Edit Category';
+      modal.show();
     });
-});
+  });
 
-// Save category
-document.getElementById('categoryForm').addEventListener('submit', async function(e) {
+  // ✅ Add button
+  const addBtn = document.getElementById('btnAddCategory');
+  if (addBtn) {
+    addBtn.addEventListener('click', function () {
+      categoryForm.reset();
+      categoryId.value = '';
+      showWebsite.checked = true;
+      showPos.checked = true;
+      modalTitle.textContent = 'Add Category';
+    });
+  }
+
+  // ✅ Save (Add/Update)
+  categoryForm.addEventListener('submit', async function (e) {
     e.preventDefault();
 
-    const id = document.getElementById('category-id').value;
-    const data = {
-        name_ku: document.getElementById('name-ku').value,
-        name_ar: document.getElementById('name-ar').value,
-        name_en: document.getElementById('name-en').value,
-        description_ku: document.getElementById('desc-ku').value,
-        description_ar: document.getElementById('desc-ar').value,
-        description_en: document.getElementById('desc-en').value
+    const id = (categoryId.value || '').trim();
+    const payload = {
+      name_ku: (nameKu.value || '').trim(),
+      name_ar: (nameAr.value || '').trim(),
+      name_en: (nameEn.value || '').trim(),
+      description_ku: (descKu.value || '').trim(),
+      description_ar: (descAr.value || '').trim(),
+      description_en: (descEn.value || '').trim(),
+      show_on_website: !!showWebsite.checked,
+      show_on_pos: !!showPos.checked
     };
 
-    const url = id ? `/admin/api/category/${id}` : '/admin/api/category';
-    const method = id ? 'PUT' : 'POST';
+    const url = id ? `/admin/api/category/${id}` : `/admin/api/category`;
 
-    const response = await fetch(url, {
-        method,
+    try {
+      const res = await fetch(url, {
+        method: id ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+      });
 
-    if (response.ok) {
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && (data.success === true || res.status === 201)) {
         location.reload();
-    } else {
-        const result = await response.json();
-        alert(result.message || 'Error saving category');
+      } else {
+        alert(data.message || 'Save failed');
+        console.log('Save error:', data);
+      }
+    } catch (error) {
+      alert('Save failed: ' + error.message);
+      console.log(error);
     }
-});
+  });
 
-// Reset modal
-document.querySelector('[data-bs-target="#categoryModal"]').addEventListener('click', function() {
-    document.getElementById('modalTitle').textContent = '{% if current_lang == "ku" %}زیادکردنی پۆل{% elif current_lang == "ar" %}إضافة تصنيف{% else %}Add Category{% endif %}';
-    document.getElementById('categoryForm').reset();
-    document.getElementById('category-id').value = '';
+  // ✅ Delete buttons (THIS WAS MISSING)
+  document.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', async function (e) {
+      e.preventDefault();
+
+      const id = this.dataset.id;
+      if (!id) return;
+
+      if (!confirm('Delete this category?')) return;
+
+      try {
+        const res = await fetch(`/admin/api/category/${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin'
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (res.ok && data.success) {
+          location.reload();
+        } else {
+          // Common: 409 if category has products
+          alert(data.message || 'Delete failed');
+          console.log('Delete error:', res.status, data);
+        }
+      } catch (err) {
+        alert('Delete failed: ' + err.message);
+        console.log(err);
+      }
+    });
+  });
+
+  console.log('✅ Categories fully loaded!');
 });
 </script>
-{% endblock %}
+
+</body>
+</html>

@@ -13,7 +13,6 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     text-align: center;
   }
-
   .timer-display {
     font-size: 3rem;
     font-weight: 700;
@@ -26,7 +25,6 @@
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 1rem;
   }
-
   .product-card {
     background: white;
     border-radius: 12px;
@@ -36,13 +34,11 @@
     transition: all 0.3s ease;
     border: 2px solid transparent;
   }
-
   .product-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
     border-color: var(--primary-color);
   }
-
   .product-card img {
     width: 80px;
     height: 80px;
@@ -50,13 +46,11 @@
     border-radius: 10px;
     margin-bottom: 0.5rem;
   }
-
   .product-card h6 {
     font-size: 0.9rem;
     margin: 0.5rem 0;
     color: var(--secondary-color);
   }
-
   .product-card .price {
     color: var(--primary-color);
     font-weight: 700;
@@ -71,7 +65,6 @@
     padding: 0.5rem 0;
     margin-bottom: 1rem;
   }
-
   .category-tab {
     padding: 0.6rem 1.2rem;
     border-radius: 25px;
@@ -83,12 +76,10 @@
     white-space: nowrap;
     transition: all 0.3s ease;
   }
-
   .category-tab:hover {
     border-color: var(--primary-color);
     color: var(--primary-color);
   }
-
   .category-tab.active {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
     color: white;
@@ -103,7 +94,6 @@
     margin-bottom: 0.8rem;
     border: 1px solid #e9ecef;
   }
-
   .qty-control {
     display: flex;
     align-items: center;
@@ -112,7 +102,6 @@
     border-radius: 8px;
     padding: 0.3rem 0.5rem;
   }
-
   .qty-btn {
     width: 30px;
     height: 30px;
@@ -127,7 +116,6 @@
     cursor: pointer;
     transition: all 0.2s ease;
   }
-
   .qty-btn:hover {
     background: var(--primary-color);
     color: white;
@@ -138,13 +126,11 @@
     position: sticky;
     top: 100px;
   }
-
   .summary-row {
     display: flex;
     justify-content: space-between;
     padding: 0.5rem 0;
   }
-
   .total-amount {
     font-size: 1.8rem;
     font-weight: 700;
@@ -160,13 +146,8 @@
   }
 
   @media (max-width: 991px) {
-    .timer-display {
-      font-size: 2rem;
-    }
-
-    .product-grid {
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    }
+    .timer-display { font-size: 2rem; }
+    .product-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
   }
 </style>
 {% endblock %}
@@ -210,17 +191,10 @@
     <div class="search-card">
       <div class="row g-2">
         <div class="col-md-6">
-          <input type="text"
-                 id="barcodeInput"
-                 class="form-control"
-                 placeholder="🔍 امسح الباركود أو ابحث..."
-                 autofocus>
+          <input type="text" id="barcodeInput" class="form-control" placeholder="🔍 امسح الباركود أو ابحث..." autofocus>
         </div>
         <div class="col-md-6">
-          <input type="text"
-                 id="searchInput"
-                 class="form-control"
-                 placeholder="بحث بالاسم...">
+          <input type="text" id="searchInput" class="form-control" placeholder="بحث بالاسم...">
         </div>
       </div>
     </div>
@@ -237,25 +211,30 @@
       {% endfor %}
     </div>
 
-    <!-- Products Grid -->
+    <!-- Products Grid (✅ FIXED: images + div close + onclick safe) -->
     <div class="product-grid" id="productsGrid">
       {% for product in products %}
-      <div class="product-item" data-category="{{ product.category_id }}">
-        <div class="product-card" onclick="addToCart({{ product.id }}, '{{ product.name_ku }}', {{ product.price }})">
-          {% if product.image %}
-            <img src="{{ url_for('static', filename='images/products/' + product.image) }}" alt="{{ product.name_ku }}">
-          {% else %}
-            <div style="width: 80px; height: 80px; background: #f8f9fa; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem;">
-              <i class="fas fa-box fa-2x text-muted"></i>
-            </div>
-          {% endif %}
-          <h6>{{ product.name_ku }}</h6>
-          <div class="price">{{ '{:,.0f}'.format(product.price) }} IQD</div>
+        <div class="product-item" data-category="{{ product.category_id }}">
+          <div class="product-card"
+               onclick='addToCart({{ product.id }}, {{ product.name_ku | tojson }}, {{ product.price }})'>
+
+            {% if product.image %}
+              <img src="{{ url_for('static', filename='images/products/' ~ product.image) }}"
+                   alt="{{ product.name_ku }}">
+            {% else %}
+              <div style="width:80px;height:80px;background:#f8f9fa;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem;">
+                <i class="fas fa-box fa-2x text-muted"></i>
+              </div>
+            {% endif %}
+
+            <h6>{{ product.name_ku }}</h6>
+            <div class="price">{{ "{:,.0f}".format(product.price) }} IQD</div>
+          </div>
         </div>
-      </div>
       {% endfor %}
     </div>
-  </div>
+
+  </div><!-- ✅ FIXED: close col-lg-8 -->
 
   <!-- Right Side: Cart -->
   <div class="col-lg-4">
@@ -265,7 +244,6 @@
         الفاتورة
       </h5>
 
-      <!-- Stadium Time -->
       {% if session.session_type == 'stadium' %}
       <div class="alert alert-warning">
         <div class="d-flex justify-content-between align-items-center">
@@ -306,7 +284,14 @@
           {% endfor %}
         {% endfor %}
 
-        {% if not session.orders or not session.orders[0].items %}
+        {% set has_items = false %}
+        {% for order in session.orders %}
+          {% if order.items and order.items|length > 0 %}
+            {% set has_items = true %}
+          {% endif %}
+        {% endfor %}
+
+        {% if not has_items %}
         <div class="text-center text-muted py-4">
           <i class="fas fa-shopping-cart fa-3x mb-2 opacity-50"></i>
           <p class="mb-0">لا توجد منتجات</p>
@@ -314,7 +299,6 @@
         {% endif %}
       </div>
 
-      <!-- Summary -->
       <hr>
 
       {% if session.session_type == 'stadium' %}
@@ -356,14 +340,12 @@
         {% endif %}
       {% endif %}
 
-      <!-- Actions -->
       <div class="d-grid gap-2">
         <button class="btn btn-success btn-lg" onclick="closeSession()">
           <i class="fas fa-check-circle me-2"></i>
           إنهاء ودفع
         </button>
 
-        <!-- ✅ FIXED: Finish as Debt Button -->
         <button class="btn btn-warning w-100" onclick="openDebtModal()">
           <i class="fas fa-hand-holding-usd me-2"></i> إنهاء كدين
         </button>
@@ -372,6 +354,7 @@
           <i class="fas fa-arrow-right me-2"></i>
           رجوع
         </a>
+
         <button class="btn btn-outline-danger" onclick="cancelSession()">
           <i class="fas fa-times me-2"></i>
           إلغاء الجلسة
@@ -381,7 +364,7 @@
   </div>
 </div>
 
-<!-- ✅ FIXED: Debt Modal -->
+<!-- Debt Modal -->
 <div class="modal fade" id="debtModal" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content" id="debtForm" method="POST"
@@ -437,7 +420,6 @@
       <form action="{{ url_for('pos.close_session', session_id=session.id) }}" method="POST">
         <div class="modal-body">
           <div class="row g-4">
-            <!-- Summary -->
             <div class="col-md-6">
               <h6 class="mb-3">تفاصيل الفاتورة</h6>
               <div class="stat-card">
@@ -479,26 +461,18 @@
               </div>
             </div>
 
-            <!-- Payment Options -->
             <div class="col-md-6">
               <h6 class="mb-3">خيارات الدفع</h6>
 
               <div class="mb-3">
                 <label class="form-label">خصم يدوي (IQD)</label>
-                <input type="number"
-                       name="manual_discount"
-                       id="manualDiscountInput"
-                       class="form-control"
-                       value="0"
-                       min="0"
-                       onchange="updateModalTotals()">
+                <input type="number" name="manual_discount" id="manualDiscountInput"
+                       class="form-control" value="0" min="0" onchange="updateModalTotals()">
               </div>
 
               <div class="mb-3">
                 <label class="form-label">سبب الخصم (اختياري)</label>
-                <input type="text"
-                       name="discount_note"
-                       class="form-control"
+                <input type="text" name="discount_note" class="form-control"
                        placeholder="مثال: زبون دائم، عرض خاص...">
               </div>
 
@@ -538,12 +512,13 @@
 {% block extra_js %}
 <script>
 const sessionId = {{ session.id }};
-const sessionType = '{{ session.session_type }}';
-const startTime = new Date('{{ session.start_time.isoformat() }}');
+const sessionType = {{ session.session_type|tojson }};
+const startTime = new Date({{ session.start_time.isoformat()|tojson }});
 const pricePerHour = {{ stadium_price_per_hour if stadium_price_per_hour is not none else 40000 }};
-const sessionEndTimeStr = {{ ('"' ~ session.end_time.isoformat() ~ '"') if session.end_time else 'null' }};
+const sessionEndTimeStr = {{ (session.end_time.isoformat() if session.end_time else None)|tojson }};
 let isPlayFinished = sessionEndTimeStr !== null;
 const endTime = sessionEndTimeStr ? new Date(sessionEndTimeStr) : null;
+
 const discountPercentage = {{ settings.discount_percentage if settings else 0 }};
 const discountStartHour = {{ settings.discount_start_hour if settings else 12 }};
 const discountEndHour = {{ settings.discount_end_hour if settings else 16 }};
@@ -562,115 +537,134 @@ function updateTimer() {
 
   const now = new Date();
   const stopPoint = (isPlayFinished && endTime) ? endTime : now;
-  const diff = Math.floor((stopPoint - startTime) / 1000);
+  const diff = Math.max(0, Math.floor((stopPoint - startTime) / 1000));
 
   const hours = Math.floor(diff / 3600);
   const minutes = Math.floor((diff % 3600) / 60);
   const seconds = diff % 60;
 
-  document.getElementById('timer').textContent =
-    String(hours).padStart(2, '0') + ':' +
-    String(minutes).padStart(2, '0') + ':' +
-    String(seconds).padStart(2, '0');
+  const timerEl = document.getElementById('timer');
+  if (timerEl) {
+    timerEl.textContent =
+      String(hours).padStart(2, '0') + ':' +
+      String(minutes).padStart(2, '0') + ':' +
+      String(seconds).padStart(2, '0');
+  }
 
   const totalMinutes = hours * 60 + minutes;
   currentHours = Math.max(1, Math.ceil(totalMinutes / 60));
   currentTimePrice = currentHours * pricePerHour;
 
-  // Auto discount
   const startHour = startTime.getHours();
   currentAutoDiscount = 0;
 
+  const autoRow = document.getElementById('autoDiscountRow');
+  const autoAmount = document.getElementById('autoDiscountAmount');
+
   if (startHour >= discountStartHour && startHour < discountEndHour && discountPercentage > 0) {
     currentAutoDiscount = Math.round(currentTimePrice * (discountPercentage / 100));
-    document.getElementById('autoDiscountRow').classList.remove('d-none');
-    document.getElementById('autoDiscountAmount').textContent = '-' + formatNumber(currentAutoDiscount) + ' IQD';
+    if (autoRow) autoRow.classList.remove('d-none');
+    if (autoAmount) autoAmount.textContent = '-' + formatNumber(currentAutoDiscount) + ' IQD';
   } else {
-    document.getElementById('autoDiscountRow').classList.add('d-none');
+    if (autoRow) autoRow.classList.add('d-none');
   }
 
-  // Update displays
-  document.getElementById('playTimeText').textContent = currentHours + ' ساعة';
-  document.getElementById('playTimePrice').textContent = formatNumber(currentTimePrice) + ' IQD';
-  document.getElementById('timePriceSummary').textContent = formatNumber(currentTimePrice) + ' IQD';
+  const playTimeText = document.getElementById('playTimeText');
+  const playTimePrice = document.getElementById('playTimePrice');
+  const timePriceSummary = document.getElementById('timePriceSummary');
+  const totalAmount = document.getElementById('totalAmount');
 
-  // Total
+  if (playTimeText) playTimeText.textContent = currentHours + ' ساعة';
+  if (playTimePrice) playTimePrice.textContent = formatNumber(currentTimePrice) + ' IQD';
+  if (timePriceSummary) timePriceSummary.textContent = formatNumber(currentTimePrice) + ' IQD';
+
   const subtotal = currentTimePrice + ordersTotal;
   const grandTotal = Math.max(0, subtotal - currentAutoDiscount);
-  document.getElementById('totalAmount').textContent = formatNumber(grandTotal) + ' IQD';
+  if (totalAmount) totalAmount.textContent = formatNumber(grandTotal) + ' IQD';
 }
 
 if (sessionType === 'stadium') {
   updateTimer();
   setInterval(updateTimer, 1000);
 } else {
-  document.getElementById('totalAmount').textContent = formatNumber(ordersTotal) + ' IQD';
+  const totalAmount = document.getElementById('totalAmount');
+  if (totalAmount) totalAmount.textContent = formatNumber(ordersTotal) + ' IQD';
 }
 
 function updateModalTotals() {
-  const manualDiscount = parseInt(document.getElementById('manualDiscountInput').value) || 0;
+  const manualDiscount = parseInt(document.getElementById('manualDiscountInput')?.value || '0', 10) || 0;
   const subtotal = currentTimePrice + ordersTotal;
   const totalDiscount = currentAutoDiscount + manualDiscount;
   const grandTotal = Math.max(0, subtotal - totalDiscount);
 
-  document.getElementById('modalSubtotal').textContent = formatNumber(subtotal) + ' IQD';
-  document.getElementById('modalManualDiscount').textContent = '-' + formatNumber(manualDiscount) + ' IQD';
-  document.getElementById('modalTotal').textContent = formatNumber(grandTotal) + ' IQD';
+  const modalSubtotal = document.getElementById('modalSubtotal');
+  const modalManualDiscount = document.getElementById('modalManualDiscount');
+  const modalTotal = document.getElementById('modalTotal');
+  const manualRow = document.getElementById('modalManualDiscountRow');
 
-  if (manualDiscount > 0) {
-    document.getElementById('modalManualDiscountRow').classList.remove('d-none');
-  } else {
-    document.getElementById('modalManualDiscountRow').classList.add('d-none');
+  if (modalSubtotal) modalSubtotal.textContent = formatNumber(subtotal) + ' IQD';
+  if (modalManualDiscount) modalManualDiscount.textContent = '-' + formatNumber(manualDiscount) + ' IQD';
+  if (modalTotal) modalTotal.textContent = formatNumber(grandTotal) + ' IQD';
+
+  if (manualRow) {
+    if (manualDiscount > 0) manualRow.classList.remove('d-none');
+    else manualRow.classList.add('d-none');
   }
 }
 
-function addToCart(productId, productName, price) {
+function addToCart(productId) {
   fetch(`/pos/session/${sessionId}/add-item`, {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    body: `product_id=${productId}&quantity=1`
+    body: `product_id=${encodeURIComponent(productId)}&quantity=1`
   })
   .then(res => res.json())
   .then(data => {
     if (data.success) location.reload();
-    else alert(data.message);
-  });
+    else alert(data.message || 'حدث خطأ');
+  })
+  .catch(() => alert('حدث خطأ في الاتصال'));
 }
 
 function updateQty(itemId, newQty) {
   fetch(`/pos/session/${sessionId}/update-quantity`, {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-    body: `item_id=${itemId}&quantity=${newQty}`
+    body: `item_id=${encodeURIComponent(itemId)}&quantity=${encodeURIComponent(newQty)}`
   })
   .then(res => res.json())
-  .then(data => {
-    if (data.success) location.reload();
-  });
+  .then(data => { if (data.success) location.reload(); })
+  .catch(() => alert('حدث خطأ في الاتصال'));
 }
 
 function removeItem(itemId) {
   if (!confirm('حذف هذا المنتج؟')) return;
   fetch(`/pos/session/${sessionId}/remove-item/${itemId}`, { method: 'POST' })
     .then(res => res.json())
-    .then(data => {
-      if (data.success) location.reload();
-    });
+    .then(data => { if (data.success) location.reload(); })
+    .catch(() => alert('حدث خطأ في الاتصال'));
 }
 
 function closeSession() {
-  document.getElementById('playTimeMinutes').value = currentHours * 60;
-  document.getElementById('playTimePriceInput').value = currentTimePrice;
-  document.getElementById('autoDiscountInput').value = currentAutoDiscount;
+  const mins = document.getElementById('playTimeMinutes');
+  const price = document.getElementById('playTimePriceInput');
+  const auto = document.getElementById('autoDiscountInput');
+
+  if (mins) mins.value = currentHours * 60;
+  if (price) price.value = currentTimePrice;
+  if (auto) auto.value = currentAutoDiscount;
 
   if (sessionType === 'stadium') {
-    document.getElementById('modalPlayTime').textContent = formatNumber(currentTimePrice) + ' IQD';
-    document.getElementById('modalAutoDiscount').textContent = '-' + formatNumber(currentAutoDiscount) + ' IQD';
+    const modalPlay = document.getElementById('modalPlayTime');
+    const modalAuto = document.getElementById('modalAutoDiscount');
+    const modalAutoRow = document.getElementById('modalAutoDiscountRow');
 
-    if (currentAutoDiscount > 0) {
-      document.getElementById('modalAutoDiscountRow').classList.remove('d-none');
-    } else {
-      document.getElementById('modalAutoDiscountRow').classList.add('d-none');
+    if (modalPlay) modalPlay.textContent = formatNumber(currentTimePrice) + ' IQD';
+    if (modalAuto) modalAuto.textContent = '-' + formatNumber(currentAutoDiscount) + ' IQD';
+
+    if (modalAutoRow) {
+      if (currentAutoDiscount > 0) modalAutoRow.classList.remove('d-none');
+      else modalAutoRow.classList.add('d-none');
     }
   }
 
@@ -681,7 +675,8 @@ function closeSession() {
 function cancelSession() {
   if (!confirm('هل تريد إلغاء هذه الجلسة؟ سيتم حذف كل الطلبات!')) return;
   fetch(`/pos/session/${sessionId}/cancel`, { method: 'POST' })
-    .then(() => window.location.href = '/pos');
+    .then(() => window.location.href = '/pos')
+    .catch(() => alert('حدث خطأ أثناء الإلغاء'));
 }
 
 // Payment method selection
@@ -689,7 +684,8 @@ document.querySelectorAll('.payment-method').forEach(btn => {
   btn.addEventListener('click', function() {
     document.querySelectorAll('.payment-method').forEach(b => b.classList.remove('active'));
     this.classList.add('active');
-    document.getElementById('paymentMethod').value = this.dataset.method;
+    const pm = document.getElementById('paymentMethod');
+    if (pm) pm.value = this.dataset.method;
   });
 });
 
@@ -701,107 +697,108 @@ document.querySelectorAll('.category-tab').forEach(tab => {
 
     const category = this.dataset.category;
     document.querySelectorAll('.product-item').forEach(item => {
-      if (category === 'all' || item.dataset.category === category) {
-        item.style.display = 'block';
-      } else {
-        item.style.display = 'none';
-      }
+      item.style.display = (category === 'all' || item.dataset.category === category) ? 'block' : 'none';
     });
   });
 });
 
 // Search
-document.getElementById('searchInput').addEventListener('input', function() {
-  const search = this.value.toLowerCase();
-  document.querySelectorAll('.product-item').forEach(item => {
-    const name = item.querySelector('h6').textContent.toLowerCase();
-    item.style.display = name.includes(search) ? 'block' : 'none';
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+  searchInput.addEventListener('input', function() {
+    const search = this.value.toLowerCase();
+    document.querySelectorAll('.product-item').forEach(item => {
+      const name = item.querySelector('h6')?.textContent?.toLowerCase() || '';
+      item.style.display = name.includes(search) ? 'block' : 'none';
+    });
   });
-});
+}
 
 // Barcode scanner
-document.getElementById('barcodeInput').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const barcode = this.value.trim();
-    if (!barcode) return;
+const barcodeInput = document.getElementById('barcodeInput');
+if (barcodeInput) {
+  barcodeInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const barcode = this.value.trim();
+      if (!barcode) return;
 
-    fetch('/pos/scan-barcode', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({barcode: barcode})
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        addToCart(data.product.id, data.product.name_ku, data.product.price);
+      fetch('/pos/scan-barcode', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({barcode})
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          addToCart(data.product.id);
+          this.value = '';
+          this.focus();
+        } else {
+          alert(data.message || 'المنتج غير موجود!');
+          this.value = '';
+        }
+      })
+      .catch(() => {
         this.value = '';
-        this.focus();
-      } else {
-        alert('المنتج غير موجود!');
-        this.value = '';
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      this.value = '';
-    });
-  }
-});
+        alert('حدث خطأ في المسح');
+      });
+    }
+  });
+}
 
-// ========================================
-// ✅ DEBT MODAL FUNCTIONS (FIX FOR LAG)
-// ========================================
-
-// Open debt modal with calculated total
+// Debt modal
 function openDebtModal() {
-  // Calculate current total
   let totalAmount = ordersTotal;
-
   if (sessionType === 'stadium') {
     totalAmount += currentTimePrice;
     totalAmount -= currentAutoDiscount;
   }
 
-  // Update modal display
-  document.getElementById('debtTotalAmount').textContent = formatNumber(totalAmount);
+  const totalEl = document.getElementById('debtTotalAmount');
+  if (totalEl) totalEl.textContent = formatNumber(totalAmount);
 
-  // Clear form
-  document.getElementById('debtName').value = '';
-  document.getElementById('debtPhone').value = '';
-  document.getElementById('debtNote').value = '';
+  const nameEl = document.getElementById('debtName');
+  const phoneEl = document.getElementById('debtPhone');
+  const noteEl = document.getElementById('debtNote');
 
-  // Open modal
-  const modal = new bootstrap.Modal(document.getElementById('debtModal'));
-  modal.show();
+  if (nameEl) nameEl.value = '';
+  if (phoneEl) phoneEl.value = '';
+  if (noteEl) noteEl.value = '';
+
+  new bootstrap.Modal(document.getElementById('debtModal')).show();
 }
 
-// Handle form submission with loading state
-document.getElementById('debtForm').addEventListener('submit', function(e) {
-  const submitBtn = document.getElementById('submitDebtBtn');
-  const nameInput = document.getElementById('debtName');
+const debtForm = document.getElementById('debtForm');
+if (debtForm) {
+  debtForm.addEventListener('submit', function(e) {
+    const submitBtn = document.getElementById('submitDebtBtn');
+    const nameInput = document.getElementById('debtName');
 
-  // Validate name
-  if (!nameInput.value.trim()) {
-    e.preventDefault();
-    alert('الرجاء إدخال الاسم!');
-    nameInput.focus();
-    return false;
-  }
+    if (nameInput && !nameInput.value.trim()) {
+      e.preventDefault();
+      alert('الرجاء إدخال الاسم!');
+      nameInput.focus();
+      return false;
+    }
 
-  // Show loading state
-  submitBtn.disabled = true;
-  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
+    }
+    return true;
+  });
+}
 
-  // Allow form to submit normally
-  return true;
-});
-
-// Reset form when modal closes
-document.getElementById('debtModal').addEventListener('hidden.bs.modal', function() {
-  const submitBtn = document.getElementById('submitDebtBtn');
-  submitBtn.disabled = false;
-  submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>حفظ الدين';
-});
+const debtModalEl = document.getElementById('debtModal');
+if (debtModalEl) {
+  debtModalEl.addEventListener('hidden.bs.modal', function() {
+    const submitBtn = document.getElementById('submitDebtBtn');
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>حفظ الدين';
+    }
+  });
+}
 </script>
 {% endblock %}

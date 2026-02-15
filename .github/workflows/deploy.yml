@@ -15,4 +15,4 @@ jobs:
           username: deployer
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            sudo bash /usr/local/bin/deploy_padel.sh
+            /usr/local/bin/deploy_padel.sh

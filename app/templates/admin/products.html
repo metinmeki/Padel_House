@@ -14,6 +14,9 @@
   .visibility-box { background: #f8f9fa; border-radius: 8px; padding: 15px; border: 1px solid #e9ecef; }
   .visibility-box .form-check { margin-bottom: 0; }
   .img-ph { width:50px;height:50px;object-fit:cover; }
+
+  /* ✅ Stock badge */
+  .stock-badge { font-size: 12px; padding: 6px 10px; border-radius: 999px; font-weight: 700; }
 </style>
 {% endblock %}
 
@@ -115,6 +118,10 @@
               <th>کوردی</th>
               <th>{% if current_lang == 'ku' %}پۆل{% elif current_lang == 'ar' %}التصنيف{% else %}Category{% endif %}</th>
               <th>{% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %}</th>
+
+              <!-- ✅ NEW: Stock column -->
+              <th>{% if current_lang == 'ku' %}ئەنبار{% elif current_lang == 'ar' %}المخزون{% else %}Stock{% endif %}</th>
+
               <th>{% if current_lang == 'ku' %}باڕکۆد{% elif current_lang == 'ar' %}الباركود{% else %}Barcode{% endif %}</th>
               <th>{% if current_lang == 'ku' %}شوێن{% elif current_lang == 'ar' %}الظهور{% else %}Visibility{% endif %}</th>
               <th>{% if current_lang == 'ku' %}بار{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
@@ -143,6 +150,23 @@
                 {% endif %}
               </td>
               <td><strong style="color:#E57625;">{{ "{:,.0f}".format(product.price) }}</strong> {{ t('iqd') }}</td>
+
+              <!-- ✅ NEW: Stock display -->
+              <td>
+                {% set s = product.stock if product.stock is not none else 0 %}
+                {% if product.stock is none %}
+                  <span class="stock-badge bg-secondary text-white">∞</span>
+                {% else %}
+                  {% if s <= 0 %}
+                    <span class="stock-badge bg-danger text-white">{{ s }}</span>
+                  {% elif s < 5 %}
+                    <span class="stock-badge bg-warning text-dark">{{ s }}</span>
+                  {% else %}
+                    <span class="stock-badge bg-success text-white">{{ s }}</span>
+                  {% endif %}
+                {% endif %}
+              </td>
+
               <td>
                 {% if product.barcode %}
                   <code class="bg-light text-dark px-2 py-1 rounded" style="font-size: 11px;">{{ product.barcode }}</code>
@@ -170,7 +194,6 @@
                 {% endif %}
               </td>
               <td>
-                <!-- ✅ FIX: add data-name (needed by JS confirm message) + keep dashed attributes -->
                 <button class="btn btn-sm btn-outline-primary edit-product" type="button"
                         data-id="{{ product.id }}"
                         data-name="{{ product.name_ku or product.name_ar or product.name_en or ('#' ~ product.id) }}"
@@ -194,7 +217,6 @@
                   <i class="fas fa-power-off"></i>
                 </button>
 
-                <!-- ✅ FIX: your JS reads dataset.name, so we must provide data-name here too -->
                 <button class="btn btn-sm btn-outline-danger delete-product" type="button"
                         data-id="{{ product.id }}"
                         data-name="{{ product.name_ku or product.name_ar or product.name_en or ('#' ~ product.id) }}">
@@ -204,7 +226,8 @@
             </tr>
             {% else %}
             <tr>
-              <td colspan="9" class="text-center py-5">
+              <!-- ✅ colspan صار 10 بسبب عمود stock الجديد -->
+              <td colspan="10" class="text-center py-5">
                 <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
                 <p class="text-muted">{% if current_lang == 'ku' %}هیچ بەرهەمێک نییە{% elif current_lang == 'ar' %}لا توجد منتجات{% else %}No products found{% endif %}</p>
               </td>
@@ -477,7 +500,6 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-  // helper: normalize dataset bool
   function dsBool(v) {
     if (v === true || v === false) return v;
     const s = (v ?? "").toString().trim().toLowerCase();
@@ -507,7 +529,6 @@ document.addEventListener('DOMContentLoaded', function() {
     alert('{% if current_lang == "ku" %}باڕکۆد کۆپی کرا{% elif current_lang == "ar" %}تم نسخ الباركود{% else %}Barcode copied{% endif %}');
   }
 
-  // Filter by category (works with search together)
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -516,7 +537,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Search
   const searchInput = document.getElementById('searchProduct');
   if (searchInput) {
     searchInput.addEventListener('input', applyFilterAndSearch);
@@ -534,7 +554,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ✅ Add Product
   const addForm = document.getElementById('addProductForm');
   if (addForm) {
     addForm.addEventListener('submit', function(e) {
@@ -576,7 +595,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ✅ Edit Product - Open Modal
   document.querySelectorAll('.edit-product').forEach(btn => {
     btn.addEventListener('click', function() {
       document.getElementById('editProductId').value = this.dataset.id || '';
@@ -601,7 +619,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // ✅ Edit Product Submit
   const editForm = document.getElementById('editProductForm');
   if (editForm) {
     editForm.addEventListener('submit', function(e) {
@@ -624,7 +641,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Toggle Status
   document.querySelectorAll('.toggle-product').forEach(btn => {
     btn.addEventListener('click', function() {
       fetch(`/admin/api/product/${this.dataset.id}/toggle`, { method: 'POST', credentials: 'same-origin' })
@@ -634,7 +650,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // ✅ Delete (FIXED: proper DELETE request + fallback to your old _method style)
   document.querySelectorAll('.delete-product').forEach(btn => {
     btn.addEventListener('click', function() {
       const name = this.dataset.name || ('#' + this.dataset.id);
@@ -643,16 +658,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
       const id = this.dataset.id;
 
-      // Try real DELETE first (best)
       fetch(`/admin/api/product/${id}`, { method: 'DELETE', credentials: 'same-origin' })
         .then(async r => {
-          // some backends return empty body on DELETE
           const data = await r.json().catch(() => ({}));
           if (r.ok && (data.success === true || Object.keys(data).length === 0)) {
             location.reload();
             return;
           }
-          // fallback to your existing _method pattern if backend needs it
           return fetch(`/admin/api/product/${id}?_method=DELETE`, { method: 'POST', credentials: 'same-origin' })
             .then(r2 => r2.json())
             .then(d2 => { if (d2.success) location.reload(); else alert(d2.message || 'Delete failed'); });

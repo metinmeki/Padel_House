@@ -213,26 +213,47 @@
 
     <!-- Products Grid (✅ FIXED: images + div close + onclick safe) -->
     <div class="product-grid" id="productsGrid">
-      {% for product in products %}
-        <div class="product-item" data-category="{{ product.category_id }}">
-          <div class="product-card"
-               onclick='addToCart({{ product.id }}, {{ product.name_ku | tojson }}, {{ product.price }})'>
+  {% for product in products %}
+    {% set can_buy = (product.stock is none) or (product.stock > 0) %}
 
-            {% if product.image %}
-              <img src="{{ url_for('static', filename='images/products/' ~ product.image) }}"
-                   alt="{{ product.name_ku }}">
-            {% else %}
-              <div style="width:80px;height:80px;background:#f8f9fa;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem;">
-                <i class="fas fa-box fa-2x text-muted"></i>
-              </div>
-            {% endif %}
+    <div class="product-item" data-category="{{ product.category_id }}">
+      <div class="product-card {{ '' if can_buy else 'opacity-50' }}"
+           {% if can_buy %}
+             onclick="addToCart({{ product.id }})"
+           {% endif %}>
 
-            <h6>{{ product.name_ku }}</h6>
-            <div class="price">{{ "{:,.0f}".format(product.price) }} IQD</div>
+        {% if product.image %}
+          <img src="{{ url_for('static', filename='images/products/' ~ product.image) }}"
+               alt="{{ product.name_ku }}">
+        {% else %}
+          <div style="width:80px;height:80px;background:#f8f9fa;border-radius:10px;
+                      display:flex;align-items:center;justify-content:center;
+                      margin:0 auto 0.5rem;">
+            <i class="fas fa-box fa-2x text-muted"></i>
           </div>
-        </div>
-      {% endfor %}
+        {% endif %}
+
+        <h6>{{ product.name_ku }}</h6>
+        <div class="price">{{ "{:,.0f}".format(product.price) }} IQD</div>
+
+        {% if product.stock is not none %}
+          {% if product.stock <= 0 %}
+            <div class="mt-1">
+              <span class="badge bg-danger">غير متوفر</span>
+            </div>
+          {% else %}
+            <div class="mt-1">
+              <small class="text-muted">
+                المتبقي: <b>{{ product.stock }}</b>
+              </small>
+            </div>
+          {% endif %}
+        {% endif %}
+
+      </div>
     </div>
+  {% endfor %}
+</div>
 
   </div><!-- ✅ FIXED: close col-lg-8 -->
 

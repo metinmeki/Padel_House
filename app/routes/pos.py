@@ -16,22 +16,17 @@ import math
 import csv
 from io import StringIO
 
-# ✅ Define the blueprint FIRST
 pos_bp = Blueprint('pos', __name__, url_prefix='/pos')
 
 
 # ---------- Helper: حساب وقت اللعب والسعر تلقائياً ----------
 def compute_play_time_and_price(session: POSSession, settings: Settings):
     """
-    ✅ Stadium billing rules:
+    Stadium billing:
     - Minimum 1 hour
     - Round up (ceil)
-    - Price is PER HOUR (uses stadium.price_per_hour if exists else settings.price_per_hour else 40000)
-
-    ✅ NEW:
-    - If session.end_time exists while status is still 'active', we treat it as "play finished"
-      and freeze the calculation on end_time instead of now.
-    Returns ONLY: (minutes, play_price)
+    - Price per hour from stadium.price_per_hour else settings.price_per_hour else 40000
+    - If end_time exists while status == 'active' => freeze calc on end_time
     """
     if session.session_type != 'stadium':
         return 0, 0
@@ -39,8 +34,6 @@ def compute_play_time_and_price(session: POSSession, settings: Settings):
     if not session.start_time:
         session.start_time = datetime.now()
 
-    # ✅ If play already finished (we set end_time via finish-play button), use it
-    end_point = None
     if session.status == 'active' and session.end_time:
         end_point = session.end_time
     else:
@@ -49,10 +42,8 @@ def compute_play_time_and_price(session: POSSession, settings: Settings):
     minutes = int((end_point - session.start_time).total_seconds() // 60)
     minutes = max(0, minutes)
 
-    # ✅ billable hours: min 1, round up
     billable_hours = max(1, int(math.ceil(minutes / 60.0)))
 
-    # ✅ price per hour: stadium overrides settings
     price_per_hour = 0.0
     try:
         if session.stadium_id:
@@ -92,7 +83,7 @@ def index():
             "minutes": minutes,
             "price": price,
             "start_time": sess.start_time,
-            "end_time": sess.end_time,  # ✅ so you can show "finished" on home if needed
+            "end_time": sess.end_time,
         }
 
     return render_template(
@@ -138,7 +129,7 @@ def start_session():
                 flash('يوجد جلسة نشطة بالفعل لهذا الملعب.', 'info')
             return redirect(url_for('pos.session_detail', session_id=existing.id))
 
-        session = POSSession(
+        session_obj = POSSession(
             session_type='stadium',
             stadium_id=location_id_int,
             customer_name=customer_name,
@@ -161,7 +152,7 @@ def start_session():
                 flash('يوجد جلسة نشطة بالفعل لهذه الطاولة.', 'info')
             return redirect(url_for('pos.session_detail', session_id=existing.id))
 
-        session = POSSession(
+        session_obj = POSSession(
             session_type='table',
             table_id=location_id_int,
             customer_name=customer_name,
@@ -174,33 +165,32 @@ def start_session():
         flash('نوع جلسة غير صحيح!', 'error')
         return redirect(url_for('pos.index'))
 
-    db.session.add(session)
+    db.session.add(session_obj)
     db.session.commit()
 
     flash('تم بدء الجلسة بنجاح ✅', 'success')
-    return redirect(url_for('pos.session_detail', session_id=session.id))
+    return redirect(url_for('pos.session_detail', session_id=session_obj.id))
 
 
 # ==================== SESSION DETAILS ====================
 @pos_bp.route('/session/<int:session_id>')
 @login_required
 def session_detail(session_id):
-    session = POSSession.query.get_or_404(session_id)
+    session_obj = POSSession.query.get_or_404(session_id)
     products = Product.query.filter_by(is_active=True, show_in_pos=True).all()
     categories = Category.query.all()
     settings = Settings.query.first()
 
     stadium_price = None
-    if session.session_type == 'stadium' and session.stadium_id:
-        st = Stadium.query.get(session.stadium_id)
+    if session_obj.session_type == 'stadium' and session_obj.stadium_id:
+        st = Stadium.query.get(session_obj.stadium_id)
         stadium_price = float(st.price_per_hour or 0) if st else 0
 
-    # ✅ compute to show in page
-    play_minutes, play_price = compute_play_time_and_price(session, settings)
+    play_minutes, play_price = compute_play_time_and_price(session_obj, settings)
 
     return render_template(
         'pos/session.html',
-        session=session,
+        session=session_obj,
         products=products,
         categories=categories,
         settings=settings,
@@ -210,64 +200,60 @@ def session_detail(session_id):
     )
 
 
-# ==================== ✅ FINISH PLAY (NEW BUTTON) ====================
+# ==================== FINISH PLAY ====================
 @pos_bp.route('/session/<int:session_id>/finish-play', methods=['POST'])
 @login_required
 def finish_play(session_id):
-    """
-    ✅ NEW:
-    Stops the stadium timer WITHOUT closing payment.
-    - Sets session.end_time (while status stays 'active')
-    - Calculates and stores play_time_minutes + play_time_price (if fields exist)
-    """
-    session = POSSession.query.get_or_404(session_id)
+    session_obj = POSSession.query.get_or_404(session_id)
     settings = Settings.query.first()
 
-    if session.status != 'active':
+    if session_obj.status != 'active':
         flash('الجلسة ليست فعّالة', 'warning')
-        return redirect(url_for('pos.session_detail', session_id=session.id))
+        return redirect(url_for('pos.session_detail', session_id=session_obj.id))
 
-    if session.session_type != 'stadium':
+    if session_obj.session_type != 'stadium':
         flash('إنهاء اللعب متاح فقط للملاعب', 'warning')
-        return redirect(url_for('pos.session_detail', session_id=session.id))
+        return redirect(url_for('pos.session_detail', session_id=session_obj.id))
 
-    # ✅ if already finished, do nothing
-    if session.end_time:
+    if session_obj.end_time:
         flash('تم إنهاء اللعب مسبقاً ✅', 'info')
-        return redirect(url_for('pos.session_detail', session_id=session.id))
+        return redirect(url_for('pos.session_detail', session_id=session_obj.id))
 
-    session.end_time = datetime.now()
+    session_obj.end_time = datetime.now()
 
-    minutes, price = compute_play_time_and_price(session, settings)
+    minutes, price = compute_play_time_and_price(session_obj, settings)
 
-    # store if your model has these columns
-    if hasattr(session, "play_time_minutes"):
-        session.play_time_minutes = minutes
-    if hasattr(session, "play_time_price"):
-        session.play_time_price = price
+    if hasattr(session_obj, "play_time_minutes"):
+        session_obj.play_time_minutes = minutes
+    if hasattr(session_obj, "play_time_price"):
+        session_obj.play_time_price = price
 
-    # ✅ recalc totals
-    session.calculate_total()
+    session_obj.calculate_total()
     db.session.commit()
 
     flash('تم إنهاء وقت اللعب ✅ (يمكنك الآن إضافة منتجات ثم إنهاء الدفع)', 'success')
-    return redirect(url_for('pos.session_detail', session_id=session.id))
+    return redirect(url_for('pos.session_detail', session_id=session_obj.id))
 
 
 # ==================== ADD ITEM ====================
 @pos_bp.route('/session/<int:session_id>/add-item', methods=['POST'])
 @login_required
 def add_item(session_id):
-    session = POSSession.query.get_or_404(session_id)
-    if session.status != 'active':
+    session_obj = POSSession.query.get_or_404(session_id)
+    if session_obj.status != 'active':
         return jsonify({'success': False, 'message': 'الجلسة مغلقة!'})
 
     product_id = request.form.get('product_id')
-    quantity = int(request.form.get('quantity', 1))
+    quantity = int(request.form.get('quantity', 1) or 1)
+    quantity = max(1, quantity)
 
     product = Product.query.get(product_id)
     if not product:
         return jsonify({'success': False, 'message': 'المنتج غير موجود!'})
+
+    # ✅ STOCK CHECK
+    if product.stock is not None and product.stock < quantity:
+        return jsonify({'success': False, 'message': f'المخزون غير كافي! المتبقي: {product.stock}'})
 
     current_order = POSOrder.query.filter_by(session_id=session_id, status='pending').first()
     if not current_order:
@@ -286,8 +272,12 @@ def add_item(session_id):
             price=product.price
         ))
 
+    # ✅ DECREASE STOCK IMMEDIATELY (so POS + Store see updated stock)
+    if product.stock is not None:
+        product.stock -= quantity
+
     current_order.calculate_total()
-    session.calculate_total()
+    session_obj.calculate_total()
     db.session.commit()
 
     return jsonify({'success': True, 'message': 'تم إضافة المنتج ✅'})
@@ -297,14 +287,22 @@ def add_item(session_id):
 @pos_bp.route('/session/<int:session_id>/remove-item/<int:item_id>', methods=['POST'])
 @login_required
 def remove_item(session_id, item_id):
-    session = POSSession.query.get_or_404(session_id)
+    session_obj = POSSession.query.get_or_404(session_id)
+    if session_obj.status != 'active':
+        return jsonify({'success': False, 'message': 'الجلسة مغلقة!'})
+
     item = POSOrderItem.query.get_or_404(item_id)
+    product = item.product
+
+    # ✅ RETURN STOCK
+    if product and product.stock is not None:
+        product.stock += int(item.quantity or 0)
 
     order = item.order
     db.session.delete(item)
 
     order.calculate_total()
-    session.calculate_total()
+    session_obj.calculate_total()
     db.session.commit()
 
     return jsonify({'success': True})
@@ -314,19 +312,38 @@ def remove_item(session_id, item_id):
 @pos_bp.route('/session/<int:session_id>/update-quantity', methods=['POST'])
 @login_required
 def update_quantity(session_id):
-    session = POSSession.query.get_or_404(session_id)
+    session_obj = POSSession.query.get_or_404(session_id)
+    if session_obj.status != 'active':
+        return jsonify({'success': False, 'message': 'الجلسة مغلقة!'})
+
     item_id = request.form.get('item_id')
-    quantity = int(request.form.get('quantity', 1))
+    new_qty = int(request.form.get('quantity', 1) or 1)
 
     item = POSOrderItem.query.get_or_404(item_id)
+    product = item.product
 
-    if quantity <= 0:
+    old_qty = int(item.quantity or 0)
+
+    # new_qty <= 0 => حذف + رجوع مخزون
+    if new_qty <= 0:
+        if product and product.stock is not None:
+            product.stock += old_qty
         db.session.delete(item)
     else:
-        item.quantity = quantity
+        delta = new_qty - old_qty  # + يعني زاد بيع => ننقص مخزون، - يعني رجع مخزون
+        if delta > 0:
+            if product and product.stock is not None and product.stock < delta:
+                return jsonify({'success': False, 'message': f'المخزون غير كافي! المتبقي: {product.stock}'})
+            if product and product.stock is not None:
+                product.stock -= delta
+        elif delta < 0:
+            if product and product.stock is not None:
+                product.stock += (-delta)
+
+        item.quantity = new_qty
 
     item.order.calculate_total()
-    session.calculate_total()
+    session_obj.calculate_total()
     db.session.commit()
 
     return jsonify({'success': True})
@@ -336,124 +353,114 @@ def update_quantity(session_id):
 @pos_bp.route('/session/<int:session_id>/close', methods=['POST'])
 @login_required
 def close_session(session_id):
-    session = POSSession.query.get_or_404(session_id)
+    session_obj = POSSession.query.get_or_404(session_id)
     settings = Settings.query.first()
 
     payment_method = request.form.get('payment_method', 'cash')
     manual_discount = float(request.form.get('manual_discount', 0) or 0)
     discount_note = (request.form.get('discount_note') or '').strip()
 
-    session.payment_method = payment_method
-    session.manual_discount = manual_discount
-    session.discount_note = discount_note
+    session_obj.payment_method = payment_method
+    session_obj.manual_discount = manual_discount
+    session_obj.discount_note = discount_note
 
-    # ✅ If play already finished using the button, do NOT override end_time/play_time
-    # Otherwise, set end_time now and compute normally.
-    if session.session_type == 'stadium':
-        already_has_fixed_play = bool(getattr(session, "play_time_price", 0) or 0) and bool(session.end_time)
-
+    # time calc
+    if session_obj.session_type == 'stadium':
+        already_has_fixed_play = bool(getattr(session_obj, "play_time_price", 0) or 0) and bool(session_obj.end_time)
         if not already_has_fixed_play:
-            session.end_time = datetime.now()
-            play_minutes, play_price = compute_play_time_and_price(session, settings)
-            if hasattr(session, "play_time_minutes"):
-                session.play_time_minutes = play_minutes
-            if hasattr(session, "play_time_price"):
-                session.play_time_price = play_price
+            session_obj.end_time = datetime.now()
+            play_minutes, play_price = compute_play_time_and_price(session_obj, settings)
+            if hasattr(session_obj, "play_time_minutes"):
+                session_obj.play_time_minutes = play_minutes
+            if hasattr(session_obj, "play_time_price"):
+                session_obj.play_time_price = play_price
         else:
-            # still ensure end_time exists
-            if not session.end_time:
-                session.end_time = datetime.now()
-
+            if not session_obj.end_time:
+                session_obj.end_time = datetime.now()
     else:
-        session.end_time = datetime.now()
+        session_obj.end_time = datetime.now()
 
-    # ✅ time-discount only (percentage + time window based on start hour)
+    # auto discount (time window)
     discount_percentage = int(getattr(settings, "discount_percentage", 0) or 0)
     discount_start = int(getattr(settings, "discount_start_hour", 12) or 12)
     discount_end = int(getattr(settings, "discount_end_hour", 16) or 16)
 
     auto_discount = 0
     try:
-        play_price_for_discount = int(getattr(session, "play_time_price", 0) or 0)
-        start_hour = session.start_time.hour if session.start_time else datetime.now().hour
+        play_price_for_discount = int(getattr(session_obj, "play_time_price", 0) or 0)
+        start_hour = session_obj.start_time.hour if session_obj.start_time else datetime.now().hour
         in_window = (start_hour >= discount_start and start_hour < discount_end)
         if in_window and discount_percentage > 0 and play_price_for_discount > 0:
             auto_discount = int(round(play_price_for_discount * (discount_percentage / 100.0), 0))
     except Exception:
         auto_discount = 0
 
-    if hasattr(session, "auto_discount"):
-        session.auto_discount = auto_discount
+    if hasattr(session_obj, "auto_discount"):
+        session_obj.auto_discount = auto_discount
 
-    session.status = 'paid'
-    for order in session.orders:
+    # ✅ IMPORTANT:
+    # نحن خصمنا المخزون عند add_item / update_quantity / remove_item
+    # لذلك هنا لا نخصم مخزون مرة ثانية.
+    for order in session_obj.orders:
         order.status = 'delivered'
 
-    session.calculate_total()
+    session_obj.status = 'paid'
+    session_obj.calculate_total()
     db.session.commit()
 
     flash('تم إغلاق الجلسة بنجاح ✅', 'success')
-    return redirect(url_for('pos.receipt', session_id=session.id))
+    return redirect(url_for('pos.receipt', session_id=session_obj.id))
 
 
-# ==================== ✅ FINISH SESSION AS DEBT ====================
+# ==================== FINISH SESSION AS DEBT ====================
 @pos_bp.route('/session/<int:session_id>/finish-as-debt', methods=['POST'])
 @login_required
 def finish_session_as_debt(session_id):
-    """
-    ✅ Convert active session to manual debt instead of payment
-    """
-    session = POSSession.query.get_or_404(session_id)
+    session_obj = POSSession.query.get_or_404(session_id)
     settings = Settings.query.first()
 
-    if session.status != 'active':
+    if session_obj.status != 'active':
         flash('الجلسة ليست نشطة!', 'warning')
-        return redirect(url_for('pos.session_detail', session_id=session.id))
+        return redirect(url_for('pos.session_detail', session_id=session_obj.id))
 
-    # Get debt info from form
     name = (request.form.get('name') or '').strip()
     phone = (request.form.get('phone') or '').strip() or None
     note = (request.form.get('note') or '').strip() or None
 
     if not name:
         flash('الاسم مطلوب!', 'danger')
-        return redirect(url_for('pos.session_detail', session_id=session.id))
+        return redirect(url_for('pos.session_detail', session_id=session_obj.id))
 
     try:
-        # ✅ Calculate final totals
-        if session.session_type == 'stadium':
-            if not session.end_time:
-                session.end_time = datetime.now()
+        # time calc
+        if session_obj.session_type == 'stadium':
+            if not session_obj.end_time:
+                session_obj.end_time = datetime.now()
 
-            play_minutes, play_price = compute_play_time_and_price(session, settings)
-
-            if hasattr(session, "play_time_minutes"):
-                session.play_time_minutes = play_minutes
-            if hasattr(session, "play_time_price"):
-                session.play_time_price = play_price
+            play_minutes, play_price = compute_play_time_and_price(session_obj, settings)
+            if hasattr(session_obj, "play_time_minutes"):
+                session_obj.play_time_minutes = play_minutes
+            if hasattr(session_obj, "play_time_price"):
+                session_obj.play_time_price = play_price
         else:
-            session.end_time = datetime.now()
+            session_obj.end_time = datetime.now()
 
-        # Calculate total amount
-        session.calculate_total()
-        total_amount = int(session.total_amount or 0)
+        session_obj.calculate_total()
+        total_amount = int(session_obj.total_amount or 0)
 
         if total_amount <= 0:
             flash('لا يمكن تسجيل دين بمبلغ صفر!', 'warning')
-            return redirect(url_for('pos.session_detail', session_id=session.id))
+            return redirect(url_for('pos.session_detail', session_id=session_obj.id))
 
-        # Build debt note with session details
         debt_note_parts = []
         if note:
             debt_note_parts.append(note)
 
-        # Add session info
-        location_name = session.get_location_name()
-        debt_note_parts.append(f"جلسة POS #{session.id} ({location_name})")
+        location_name = session_obj.get_location_name()
+        debt_note_parts.append(f"جلسة POS #{session_obj.id} ({location_name})")
 
-        # Add items if any
         items_list = []
-        for order in session.orders:
+        for order in session_obj.orders:
             for item in order.items:
                 try:
                     pname = item.product.name_ku or item.product.name_ar or "منتج"
@@ -466,7 +473,10 @@ def finish_session_as_debt(session_id):
 
         final_note = " | ".join(debt_note_parts)
 
-        # ✅ Create manual debt
+        # ✅ لا نخصم المخزون هنا (لأنه انخصم مسبقاً عند add_item)
+        for order in session_obj.orders:
+            order.status = 'delivered'
+
         debt = ManualDebt(
             name=name,
             phone=phone,
@@ -478,13 +488,8 @@ def finish_session_as_debt(session_id):
         )
         db.session.add(debt)
 
-        # ✅ Mark session as paid with debt method
-        session.status = 'paid'
-        session.payment_method = 'debt'
-
-        # Mark orders as delivered
-        for order in session.orders:
-            order.status = 'delivered'
+        session_obj.status = 'paid'
+        session_obj.payment_method = 'debt'
 
         db.session.commit()
 
@@ -494,17 +499,27 @@ def finish_session_as_debt(session_id):
     except Exception as e:
         db.session.rollback()
         flash(f'خطأ في تسجيل الدين: {str(e)}', 'danger')
-        return redirect(url_for('pos.session_detail', session_id=session.id))
+        return redirect(url_for('pos.session_detail', session_id=session_obj.id))
 
 
 # ==================== CANCEL SESSION ====================
 @pos_bp.route('/session/<int:session_id>/cancel', methods=['POST'])
 @login_required
 def cancel_session(session_id):
-    session = POSSession.query.get_or_404(session_id)
-    for order in session.orders:
+    session_obj = POSSession.query.get_or_404(session_id)
+
+    # ✅ restore stock for all items (because stock was reserved at add_item)
+    for order in session_obj.orders:
+        for item in order.items:
+            try:
+                product = item.product
+                if product and product.stock is not None:
+                    product.stock += int(item.quantity or 0)
+            except Exception:
+                pass
         db.session.delete(order)
-    db.session.delete(session)
+
+    db.session.delete(session_obj)
     db.session.commit()
 
     flash('تم إلغاء الجلسة!', 'info')
@@ -515,14 +530,14 @@ def cancel_session(session_id):
 @pos_bp.route('/receipt/<int:session_id>')
 @login_required
 def receipt(session_id):
-    session = POSSession.query.get_or_404(session_id)
+    session_obj = POSSession.query.get_or_404(session_id)
     settings = Settings.query.first()
 
     all_items = []
-    for order in session.orders:
+    for order in session_obj.orders:
         all_items.extend(order.items)
 
-    return render_template('pos/receipt.html', session=session, items=all_items, settings=settings)
+    return render_template('pos/receipt.html', session=session_obj, items=all_items, settings=settings)
 
 
 # ==================== QUICK SALE ====================
@@ -544,35 +559,49 @@ def quick_checkout():
     if not items:
         return jsonify({'success': False, 'message': 'السلة فارغة!'})
 
-    session = POSSession(
+    # stock check first
+    for it in items:
+        product = Product.query.get(it.get('product_id'))
+        if not product:
+            continue
+        qty = max(1, int(it.get('quantity', 1) or 1))
+        if product.stock is not None and product.stock < qty:
+            return jsonify({'success': False, 'message': f'المخزون غير كافي لـ {product.name_ku}! المتبقي: {product.stock}'}), 400
+
+    session_obj = POSSession(
         session_type='takeaway',
         status='paid',
         payment_method=payment_method,
         start_time=datetime.now(),
         end_time=datetime.now()
     )
-    db.session.add(session)
+    db.session.add(session_obj)
     db.session.flush()
 
-    order = POSOrder(session_id=session.id, status='delivered')
+    order = POSOrder(session_id=session_obj.id, status='delivered')
     db.session.add(order)
     db.session.flush()
 
     for it in items:
         product = Product.query.get(it.get('product_id'))
         if product:
+            qty = max(1, int(it.get('quantity', 1) or 1))
+
             db.session.add(POSOrderItem(
                 order_id=order.id,
                 product_id=product.id,
-                quantity=int(it.get('quantity', 1)),
+                quantity=qty,
                 price=product.price
             ))
 
+            if product.stock is not None:
+                product.stock -= qty
+
     order.calculate_total()
-    session.calculate_total()
+    session_obj.calculate_total()
     db.session.commit()
 
-    return jsonify({'success': True, 'session_id': session.id, 'total': session.total_amount})
+    return jsonify({'success': True, 'session_id': session_obj.id, 'total': session_obj.total_amount})
 
 
 @pos_bp.route('/quick-sale/debt', methods=['POST'])
@@ -586,16 +615,25 @@ def quick_sale_debt():
 
     if not name:
         return jsonify({'success': False, 'message': 'الاسم مطلوب'}), 400
-
     if not items:
         return jsonify({'success': False, 'message': 'السلة فارغة!'}), 400
 
-    total = 0
-    lines = []
+    # stock check first
     for it in items:
         pid = it.get('product_id')
-        qty = int(it.get('quantity') or 1)
-        qty = max(1, qty)
+        qty = max(1, int(it.get('quantity') or 1))
+        product = Product.query.get(pid)
+        if not product:
+            continue
+        if product.stock is not None and product.stock < qty:
+            return jsonify({'success': False, 'message': f'المخزون غير كافي لـ {product.name_ku}! المتبقي: {product.stock}'}), 400
+
+    total = 0
+    lines = []
+
+    for it in items:
+        pid = it.get('product_id')
+        qty = max(1, int(it.get('quantity') or 1))
 
         product = Product.query.get(pid)
         if not product:
@@ -604,6 +642,9 @@ def quick_sale_debt():
         price = int(product.price or 0)
         total += price * qty
         lines.append(f"{product.name_ku} x{qty}")
+
+        if product.stock is not None:
+            product.stock -= qty
 
     if total <= 0:
         return jsonify({'success': False, 'message': 'لا يمكن تسجيل دين بمبلغ 0'}), 400
@@ -638,8 +679,6 @@ def scan_barcode():
         barcode = (request.json.get('barcode') or '').strip()
     else:
         barcode = (request.form.get('barcode') or '').strip()
-
-    print(f"🔍 BARCODE SCAN: Received '{barcode}'")
 
     if not barcode:
         return jsonify({'success': False, 'message': 'الباركود فارغ! / Empty barcode'})

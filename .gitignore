@@ -1,0 +1,14 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Database
+instance/*.db
+
+# Uploaded files
+app/static/images/products/*
+app/static/barcodes/*
+
+# OS files
+.DS_Store
+Thumbs.db

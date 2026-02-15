@@ -816,47 +816,61 @@ def update_product(product_id):
         return jsonify({'success': False, 'message': 'المنتج غير موجود'}), 404
 
     try:
+        # ---------- FORM (FormData) ----------
         if request.form:
+            # Text fields
             if 'name_ku' in request.form:
-                product.name_ku = request.form['name_ku']
+                product.name_ku = (request.form.get('name_ku') or '').strip()
             if 'name_ar' in request.form:
-                product.name_ar = request.form['name_ar']
+                product.name_ar = (request.form.get('name_ar') or '').strip() or None
             if 'name_en' in request.form:
-                product.name_en = request.form['name_en']
+                product.name_en = (request.form.get('name_en') or '').strip() or None
 
             if 'description_ku' in request.form:
-                product.description_ku = request.form['description_ku']
+                product.description_ku = (request.form.get('description_ku') or '').strip() or None
             if 'description_ar' in request.form:
-                product.description_ar = request.form['description_ar']
+                product.description_ar = (request.form.get('description_ar') or '').strip() or None
             if 'description_en' in request.form:
-                product.description_en = request.form['description_en']
+                product.description_en = (request.form.get('description_en') or '').strip() or None
 
+            # Numbers / category
             if 'category_id' in request.form:
                 try:
-                    product.category_id = int(request.form['category_id']) if request.form['category_id'] else None
+                    product.category_id = int(request.form.get('category_id')) if request.form.get('category_id') else None
                 except (ValueError, TypeError):
                     product.category_id = None
+
             if 'price' in request.form:
                 try:
-                    product.price = int(request.form['price'])
+                    product.price = int(request.form.get('price') or 0)
                 except (ValueError, TypeError):
                     pass
+
             if 'stock' in request.form:
-                try:
-                    product.stock = int(request.form['stock'])
-                except (ValueError, TypeError):
+                # NOTE: allow "none" => None means unlimited (if your system uses that)
+                stock_raw = request.form.get('stock')
+                if stock_raw is None or str(stock_raw).strip() == "":
                     pass
+                else:
+                    try:
+                        product.stock = int(stock_raw)
+                    except (ValueError, TypeError):
+                        pass
 
-            product.is_active = request.form.get('is_active') == 'true'
-            product.show_in_website = request.form.get('show_in_website') == 'true'
-            product.show_in_pos = request.form.get('show_in_pos') == 'true'
+            # ✅✅✅ FIXED BOOLEAN PARSING (your JS sends 1/0)
+            product.is_active = to_bool(request.form.get('is_active'), default=bool(product.is_active))
+            product.show_in_website = to_bool(request.form.get('show_in_website'), default=bool(product.show_in_website))
+            product.show_in_pos = to_bool(request.form.get('show_in_pos'), default=bool(product.show_in_pos))
 
+            # Barcode
             if 'barcode' in request.form:
-                product.barcode = request.form['barcode'].strip() or None
+                product.barcode = (request.form.get('barcode') or '').strip() or None
 
+            # Image
             if 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename and allowed_file(file.filename):
+                    # delete old
                     if product.image:
                         old_image_path = os.path.join(UPLOAD_FOLDER, product.image)
                         if os.path.exists(old_image_path):
@@ -866,40 +880,49 @@ def update_product(product_id):
                                 pass
                     product.image = save_product_image(file)
 
+        # ---------- JSON ----------
         elif request.is_json:
             data = request.json or {}
+
             if 'name_ku' in data:
-                product.name_ku = data['name_ku']
+                product.name_ku = (data.get('name_ku') or '').strip()
             if 'name_ar' in data:
-                product.name_ar = data['name_ar']
+                product.name_ar = (data.get('name_ar') or '').strip() or None
             if 'name_en' in data:
-                product.name_en = data['name_en']
+                product.name_en = (data.get('name_en') or '').strip() or None
+
             if 'description_ku' in data:
-                product.description_ku = data['description_ku']
+                product.description_ku = (data.get('description_ku') or '').strip() or None
             if 'description_ar' in data:
-                product.description_ar = data['description_ar']
+                product.description_ar = (data.get('description_ar') or '').strip() or None
             if 'description_en' in data:
-                product.description_en = data['description_en']
+                product.description_en = (data.get('description_en') or '').strip() or None
+
             if 'category_id' in data:
-                product.category_id = data['category_id']
+                product.category_id = data.get('category_id')
+
             if 'price' in data:
                 try:
-                    product.price = int(data['price'])
+                    product.price = int(data.get('price') or 0)
                 except (ValueError, TypeError):
                     pass
+
             if 'stock' in data:
                 try:
-                    product.stock = int(data['stock'])
+                    product.stock = int(data.get('stock'))
                 except (ValueError, TypeError):
                     pass
+
+            # ✅ FIXED JSON BOOLS TOO
             if 'is_active' in data:
-                product.is_active = data['is_active']
+                product.is_active = bool(data.get('is_active'))
             if 'show_in_website' in data:
-                product.show_in_website = data['show_in_website']
+                product.show_in_website = bool(data.get('show_in_website'))
             if 'show_in_pos' in data:
-                product.show_in_pos = data['show_in_pos']
+                product.show_in_pos = bool(data.get('show_in_pos'))
+
             if 'barcode' in data:
-                product.barcode = data['barcode']
+                product.barcode = (data.get('barcode') or '').strip() or None
 
         db.session.commit()
         return jsonify({'success': True, 'message': 'تم تحديث المنتج بنجاح'})

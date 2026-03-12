@@ -13,6 +13,7 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     text-align: center;
   }
+
   .timer-display {
     font-size: 3rem;
     font-weight: 700;
@@ -25,6 +26,11 @@
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 1rem;
   }
+
+  .product-item {
+    display: block;
+  }
+
   .product-card {
     background: white;
     border-radius: 12px;
@@ -33,12 +39,15 @@
     cursor: pointer;
     transition: all 0.3s ease;
     border: 2px solid transparent;
+    user-select: none;
   }
+
   .product-card:hover {
     transform: translateY(-5px);
     box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
     border-color: var(--primary-color);
   }
+
   .product-card img {
     width: 80px;
     height: 80px;
@@ -46,11 +55,13 @@
     border-radius: 10px;
     margin-bottom: 0.5rem;
   }
+
   .product-card h6 {
     font-size: 0.9rem;
     margin: 0.5rem 0;
     color: var(--secondary-color);
   }
+
   .product-card .price {
     color: var(--primary-color);
     font-weight: 700;
@@ -65,6 +76,7 @@
     padding: 0.5rem 0;
     margin-bottom: 1rem;
   }
+
   .category-tab {
     padding: 0.6rem 1.2rem;
     border-radius: 25px;
@@ -76,10 +88,12 @@
     white-space: nowrap;
     transition: all 0.3s ease;
   }
+
   .category-tab:hover {
     border-color: var(--primary-color);
     color: var(--primary-color);
   }
+
   .category-tab.active {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
     color: white;
@@ -94,6 +108,7 @@
     margin-bottom: 0.8rem;
     border: 1px solid #e9ecef;
   }
+
   .qty-control {
     display: flex;
     align-items: center;
@@ -102,6 +117,7 @@
     border-radius: 8px;
     padding: 0.3rem 0.5rem;
   }
+
   .qty-btn {
     width: 30px;
     height: 30px;
@@ -116,6 +132,7 @@
     cursor: pointer;
     transition: all 0.2s ease;
   }
+
   .qty-btn:hover {
     background: var(--primary-color);
     color: white;
@@ -126,11 +143,13 @@
     position: sticky;
     top: 100px;
   }
+
   .summary-row {
     display: flex;
     justify-content: space-between;
     padding: 0.5rem 0;
   }
+
   .total-amount {
     font-size: 1.8rem;
     font-weight: 700;
@@ -146,8 +165,13 @@
   }
 
   @media (max-width: 991px) {
-    .timer-display { font-size: 2rem; }
-    .product-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+    .timer-display {
+      font-size: 2rem;
+    }
+
+    .product-grid {
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
   }
 </style>
 {% endblock %}
@@ -191,7 +215,7 @@
     <div class="search-card">
       <div class="row g-2">
         <div class="col-md-6">
-          <input type="text" id="barcodeInput" class="form-control" placeholder="🔍 امسح الباركود أو ابحث..." autofocus>
+          <input type="text" id="barcodeInput" class="form-control" placeholder="🔍 امسح الباركود أو ابحث...">
         </div>
         <div class="col-md-6">
           <input type="text" id="searchInput" class="form-control" placeholder="بحث بالاسم...">
@@ -201,61 +225,62 @@
 
     <!-- Categories -->
     <div class="category-tabs">
-      <button class="category-tab active" data-category="all">
+      <button type="button" class="category-tab active" data-category="all">
         <i class="fas fa-th me-1"></i>الكل
       </button>
       {% for category in categories %}
-        <button class="category-tab" data-category="{{ category.id }}">
+        <button type="button" class="category-tab" data-category="{{ category.id }}">
           {{ category.name_ku }}
         </button>
       {% endfor %}
     </div>
 
-    <!-- Products Grid (✅ FIXED: images + div close + onclick safe) -->
+    <!-- Products Grid -->
     <div class="product-grid" id="productsGrid">
-  {% for product in products %}
-    {% set can_buy = (product.stock is none) or (product.stock > 0) %}
+      {% for product in products %}
+        {% set can_buy = (product.stock is none) or (product.stock > 0) %}
 
-    <div class="product-item" data-category="{{ product.category_id }}">
-      <div class="product-card {{ '' if can_buy else 'opacity-50' }}"
-           {% if can_buy %}
-             onclick="addToCart({{ product.id }})"
-           {% endif %}>
+        <div class="product-item" data-category="{{ product.category_id }}">
+          <div class="product-card {{ '' if can_buy else 'opacity-50' }}"
+               {% if can_buy %}
+                 role="button"
+                 tabindex="0"
+                 onclick="addToCart({{ product.id }})"
+                 onkeydown="handleProductKey(event, {{ product.id }})"
+               {% endif %}>
 
-        {% if product.image %}
-          <img src="{{ url_for('static', filename='images/products/' ~ product.image) }}"
-               alt="{{ product.name_ku }}">
-        {% else %}
-          <div style="width:80px;height:80px;background:#f8f9fa;border-radius:10px;
-                      display:flex;align-items:center;justify-content:center;
-                      margin:0 auto 0.5rem;">
-            <i class="fas fa-box fa-2x text-muted"></i>
+            {% if product.image %}
+              <img src="{{ url_for('static', filename='images/products/' ~ product.image) }}"
+                   alt="{{ product.name_ku }}">
+            {% else %}
+              <div style="width:80px;height:80px;background:#f8f9fa;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem;">
+                <i class="fas fa-box fa-2x text-muted"></i>
+              </div>
+            {% endif %}
+
+            <h6>{{ product.name_ku }}</h6>
+            <div class="price">{{ "{:,.0f}".format(product.price) }} IQD</div>
+
+            {% if product.stock is not none %}
+              {% if product.stock <= 0 %}
+                <div class="mt-1">
+                  <span class="badge bg-danger">غير متوفر</span>
+                </div>
+              {% else %}
+                <div class="mt-1">
+                  <small class="text-muted">
+                    المتبقي: <b>{{ product.stock }}</b>
+                  </small>
+                </div>
+              {% endif %}
+            {% endif %}
+
           </div>
-        {% endif %}
-
-        <h6>{{ product.name_ku }}</h6>
-        <div class="price">{{ "{:,.0f}".format(product.price) }} IQD</div>
-
-        {% if product.stock is not none %}
-          {% if product.stock <= 0 %}
-            <div class="mt-1">
-              <span class="badge bg-danger">غير متوفر</span>
-            </div>
-          {% else %}
-            <div class="mt-1">
-              <small class="text-muted">
-                المتبقي: <b>{{ product.stock }}</b>
-              </small>
-            </div>
-          {% endif %}
-        {% endif %}
-
-      </div>
+        </div>
+      {% endfor %}
     </div>
-  {% endfor %}
-</div>
 
-  </div><!-- ✅ FIXED: close col-lg-8 -->
+  </div>
 
   <!-- Right Side: Cart -->
   <div class="col-lg-4">
@@ -280,39 +305,34 @@
 
       <!-- Cart Items -->
       <div style="max-height: 40vh; overflow-y: auto; margin-bottom: 1rem;">
+        {% set ns = namespace(has_items=false) %}
         {% for order in session.orders %}
           {% for item in order.items %}
-          <div class="cart-item" id="item-{{ item.id }}">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-              <div>
-                <h6 class="mb-0">{{ item.product.name_ku }}</h6>
-                <small class="text-muted">{{ '{:,.0f}'.format(item.price) }} × {{ item.quantity }}</small>
+            {% set ns.has_items = true %}
+            <div class="cart-item" id="item-{{ item.id }}">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                  <h6 class="mb-0">{{ item.product.name_ku }}</h6>
+                  <small class="text-muted">{{ '{:,.0f}'.format(item.price) }} × {{ item.quantity }}</small>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem({{ item.id }})">
+                  <i class="fas fa-trash"></i>
+                </button>
               </div>
-              <button class="btn btn-sm btn-outline-danger" onclick="removeItem({{ item.id }})">
-                <i class="fas fa-trash"></i>
-              </button>
-            </div>
 
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="qty-control">
-                <button class="qty-btn" onclick="updateQty({{ item.id }}, {{ item.quantity - 1 }})">-</button>
-                <span style="min-width: 30px; text-align: center;">{{ item.quantity }}</span>
-                <button class="qty-btn" onclick="updateQty({{ item.id }}, {{ item.quantity + 1 }})">+</button>
+              <div class="d-flex justify-content-between align-items-center">
+                <div class="qty-control">
+                  <button type="button" class="qty-btn" onclick="updateQty({{ item.id }}, {{ item.quantity - 1 }})">-</button>
+                  <span style="min-width: 30px; text-align: center;">{{ item.quantity }}</span>
+                  <button type="button" class="qty-btn" onclick="updateQty({{ item.id }}, {{ item.quantity + 1 }})">+</button>
+                </div>
+                <strong style="color: var(--primary-color);">{{ '{:,.0f}'.format(item.price * item.quantity) }} IQD</strong>
               </div>
-              <strong style="color: var(--primary-color);">{{ '{:,.0f}'.format(item.price * item.quantity) }} IQD</strong>
             </div>
-          </div>
           {% endfor %}
         {% endfor %}
 
-        {% set has_items = false %}
-        {% for order in session.orders %}
-          {% if order.items and order.items|length > 0 %}
-            {% set has_items = true %}
-          {% endif %}
-        {% endfor %}
-
-        {% if not has_items %}
+        {% if not ns.has_items %}
         <div class="text-center text-muted py-4">
           <i class="fas fa-shopping-cart fa-3x mb-2 opacity-50"></i>
           <p class="mb-0">لا توجد منتجات</p>
@@ -362,12 +382,12 @@
       {% endif %}
 
       <div class="d-grid gap-2">
-        <button class="btn btn-success btn-lg" onclick="closeSession()">
+        <button type="button" class="btn btn-success btn-lg" onclick="closeSession()">
           <i class="fas fa-check-circle me-2"></i>
           إنهاء ودفع
         </button>
 
-        <button class="btn btn-warning w-100" onclick="openDebtModal()">
+        <button type="button" class="btn btn-warning w-100" onclick="openDebtModal()">
           <i class="fas fa-hand-holding-usd me-2"></i> إنهاء كدين
         </button>
 
@@ -376,7 +396,7 @@
           رجوع
         </a>
 
-        <button class="btn btn-outline-danger" onclick="cancelSession()">
+        <button type="button" class="btn btn-outline-danger" onclick="cancelSession()">
           <i class="fas fa-times me-2"></i>
           إلغاء الجلسة
         </button>
@@ -543,14 +563,54 @@ const endTime = sessionEndTimeStr ? new Date(sessionEndTimeStr) : null;
 const discountPercentage = {{ settings.discount_percentage if settings else 0 }};
 const discountStartHour = {{ settings.discount_start_hour if settings else 12 }};
 const discountEndHour = {{ settings.discount_end_hour if settings else 16 }};
-const ordersTotal = {{ session.get_orders_total() }};
+let ordersTotal = {{ session.get_orders_total() }};
 
 let currentTimePrice = 0;
 let currentHours = 0;
 let currentAutoDiscount = 0;
+let activeCategory = 'all';
+let lastScanned = '';
+let lastScanAt = 0;
 
 function formatNumber(num) {
   return (Number(num || 0)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function saveScrollPosition() {
+  sessionStorage.setItem('pos_session_scroll_y', String(window.scrollY || window.pageYOffset || 0));
+}
+
+function restoreScrollPosition() {
+  const savedY = sessionStorage.getItem('pos_session_scroll_y');
+  if (savedY !== null) {
+    requestAnimationFrame(() => {
+      window.scrollTo(0, parseInt(savedY, 10) || 0);
+      sessionStorage.removeItem('pos_session_scroll_y');
+    });
+  }
+}
+
+function reloadKeepScroll() {
+  saveScrollPosition();
+  window.location.reload();
+}
+
+function handleProductKey(event, productId) {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault();
+    addToCart(productId);
+  }
+}
+
+function applyFilters() {
+  const search = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+
+  document.querySelectorAll('.product-item').forEach(item => {
+    const categoryMatch = activeCategory === 'all' || item.dataset.category === activeCategory;
+    const name = item.querySelector('h6')?.textContent?.toLowerCase() || '';
+    const searchMatch = !search || name.includes(search);
+    item.style.display = (categoryMatch && searchMatch) ? 'block' : 'none';
+  });
 }
 
 function updateTimer() {
@@ -634,6 +694,8 @@ function updateModalTotals() {
 }
 
 function addToCart(productId) {
+  saveScrollPosition();
+
   fetch(`/pos/session/${sessionId}/add-item`, {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -641,28 +703,42 @@ function addToCart(productId) {
   })
   .then(res => res.json())
   .then(data => {
-    if (data.success) location.reload();
-    else alert(data.message || 'حدث خطأ');
+    if (data.success) {
+      reloadKeepScroll();
+    } else {
+      alert(data.message || 'حدث خطأ');
+    }
   })
   .catch(() => alert('حدث خطأ في الاتصال'));
 }
 
 function updateQty(itemId, newQty) {
+  saveScrollPosition();
+
   fetch(`/pos/session/${sessionId}/update-quantity`, {
     method: 'POST',
     headers: {'Content-Type': 'application/x-www-form-urlencoded'},
     body: `item_id=${encodeURIComponent(itemId)}&quantity=${encodeURIComponent(newQty)}`
   })
   .then(res => res.json())
-  .then(data => { if (data.success) location.reload(); })
+  .then(data => {
+    if (data.success) reloadKeepScroll();
+    else alert(data.message || 'حدث خطأ');
+  })
   .catch(() => alert('حدث خطأ في الاتصال'));
 }
 
 function removeItem(itemId) {
   if (!confirm('حذف هذا المنتج؟')) return;
+
+  saveScrollPosition();
+
   fetch(`/pos/session/${sessionId}/remove-item/${itemId}`, { method: 'POST' })
     .then(res => res.json())
-    .then(data => { if (data.success) location.reload(); })
+    .then(data => {
+      if (data.success) reloadKeepScroll();
+      else alert(data.message || 'حدث خطأ');
+    })
     .catch(() => alert('حدث خطأ في الاتصال'));
 }
 
@@ -695,12 +771,12 @@ function closeSession() {
 
 function cancelSession() {
   if (!confirm('هل تريد إلغاء هذه الجلسة؟ سيتم حذف كل الطلبات!')) return;
+
   fetch(`/pos/session/${sessionId}/cancel`, { method: 'POST' })
     .then(() => window.location.href = '/pos')
     .catch(() => alert('حدث خطأ أثناء الإلغاء'));
 }
 
-// Payment method selection
 document.querySelectorAll('.payment-method').forEach(btn => {
   btn.addEventListener('click', function() {
     document.querySelectorAll('.payment-method').forEach(b => b.classList.remove('active'));
@@ -710,44 +786,45 @@ document.querySelectorAll('.payment-method').forEach(btn => {
   });
 });
 
-// Category filter
 document.querySelectorAll('.category-tab').forEach(tab => {
-  tab.addEventListener('click', function() {
+  tab.addEventListener('click', function(e) {
+    e.preventDefault();
     document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
     this.classList.add('active');
-
-    const category = this.dataset.category;
-    document.querySelectorAll('.product-item').forEach(item => {
-      item.style.display = (category === 'all' || item.dataset.category === category) ? 'block' : 'none';
-    });
+    activeCategory = this.dataset.category;
+    applyFilters();
   });
 });
 
-// Search
 const searchInput = document.getElementById('searchInput');
 if (searchInput) {
   searchInput.addEventListener('input', function() {
-    const search = this.value.toLowerCase();
-    document.querySelectorAll('.product-item').forEach(item => {
-      const name = item.querySelector('h6')?.textContent?.toLowerCase() || '';
-      item.style.display = name.includes(search) ? 'block' : 'none';
-    });
+    applyFilters();
   });
 }
 
-// Barcode scanner
 const barcodeInput = document.getElementById('barcodeInput');
 if (barcodeInput) {
-  barcodeInput.addEventListener('keypress', function(e) {
+  barcodeInput.addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
       const barcode = this.value.trim();
       if (!barcode) return;
 
+      const now = Date.now();
+      if (barcode === lastScanned && (now - lastScanAt) < 300) {
+        this.value = '';
+        return;
+      }
+      lastScanned = barcode;
+      lastScanAt = now;
+
+      saveScrollPosition();
+
       fetch('/pos/scan-barcode', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({barcode})
+        body: JSON.stringify({ barcode })
       })
       .then(res => res.json())
       .then(data => {
@@ -768,7 +845,6 @@ if (barcodeInput) {
   });
 }
 
-// Debt modal
 function openDebtModal() {
   let totalAmount = ordersTotal;
   if (sessionType === 'stadium') {
@@ -821,5 +897,8 @@ if (debtModalEl) {
     }
   });
 }
+
+restoreScrollPosition();
+applyFilters();
 </script>
 {% endblock %}

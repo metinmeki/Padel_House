@@ -13,16 +13,23 @@ from app.models.category import Category
 from app.models.order import Order, OrderItem
 from app.models.user import User
 from app.models.expense import Expense
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, time
 import os
 import random
 import io
+from app.models.coach import Coach
+from app.models.coach_training_request import CoachTrainingRequest
 
 # Notifications
 from app.services.notify import notify_admins
 from sqlalchemy import func
 from app.models.notification import Notification
 from app.models.manual_debt import ManualDebt
+from app.services.tapane_service import (
+    sync_booking_to_tapane,
+    sync_booking_status_to_tapane,
+    sync_tapane_bookings_to_local,
+)
 
 # Services
 from app.services.google_sheets import send_booking_to_sheet
@@ -31,17 +38,7 @@ from app.services.barcode_service import BarcodeService, XPrinterService
 # ✅ Activity log
 from app.models.activity_log import ActivityLog
 from app.services.activity_service import log_activity
-def to_bool(value, default=False):
-    """
-    Convert different checkbox/form values to boolean.
-    Accepts: on/true/1/yes/y
-    """
-    if value is None:
-        return default
-    if isinstance(value, bool):
-        return value
-    v = str(value).strip().lower()
-    return v in ("1", "true", "yes", "y", "on")
+
 # POS
 try:
     from app.models.pos_session import POSSession
@@ -53,6 +50,17 @@ try:
     from app.utils.image_tools import compress_product_image
 except Exception:
     compress_product_image = None
+
+
+# ✅ Single definition of to_bool
+def to_bool(value, default=False):
+    """Convert different checkbox/form values to boolean. Accepts: on/true/1/yes/y"""
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    v = str(value).strip().lower()
+    return v in ("1", "true", "yes", "y", "on")
 
 
 def generate_product_barcode():
@@ -73,12 +81,97 @@ def generate_product_barcode():
 
 
 admin_bp = Blueprint('admin', __name__)
+
+
 @admin_bp.route('/api/debug/ping', methods=['GET'])
 @login_required
 def debug_ping():
     return jsonify({"ok": True, "msg": "admin blueprint works"}), 200
+
+
 UPLOAD_FOLDER = 'app/static/images/products'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+
+COACH_UPLOAD_FOLDER = 'app/static/images/coaches'
+
+
+def save_coach_image(file):
+    """
+    Saves coach image in /static/images/coaches as optimized .webp
+    If compress_product_image is not available, fallback to normal save.
+    Returns path like: images/coaches/20260309123000_coach-name.webp
+    """
+    os.makedirs(COACH_UPLOAD_FOLDER, exist_ok=True)
+
+    filename = secure_filename(file.filename)
+    base = os.path.splitext(filename)[0]
+    stamp = datetime.now().strftime('%Y%m%d%H%M%S')
+
+    # temp original
+    temp_name = f"temp_{stamp}_{filename}"
+    temp_path = os.path.join(COACH_UPLOAD_FOLDER, temp_name)
+    file.save(temp_path)
+
+    # final optimized name
+    final_name = f"{stamp}_{base}.webp"
+    final_path = os.path.join(COACH_UPLOAD_FOLDER, final_name)
+
+    # compress if available
+    if compress_product_image:
+        try:
+            out_path = compress_product_image(
+                input_path=temp_path,
+                output_path=final_path,
+                max_size=(1200, 1200),
+                quality=82,
+                to_webp=True
+            )
+            try:
+                os.remove(temp_path)
+            except Exception:
+                pass
+
+            return f"images/coaches/{os.path.basename(out_path)}"
+        except Exception:
+            pass
+
+    # fallback normal save
+    fallback_name = f"{stamp}_{filename}"
+    fallback_path = os.path.join(COACH_UPLOAD_FOLDER, fallback_name)
+    try:
+        os.replace(temp_path, fallback_path)
+    except Exception:
+        fallback_name = temp_name
+
+    return f"images/coaches/{fallback_name}"
+
+
+def delete_coach_image(image_path):
+    """
+    Deletes coach image from static folder safely.
+    image_path example: images/coaches/abc.webp
+    """
+    if not image_path:
+        return
+
+    image_path = str(image_path).strip()
+
+    # do not delete shared/default images
+    protected = {
+        'images/coming-soon.jpg',
+        'images/coach.jpg',
+        'images/blackcourt.jpg'
+    }
+    if image_path in protected:
+        return
+
+    full_path = os.path.join('app/static', image_path.replace('images/', 'images/', 1))
+
+    if os.path.exists(full_path):
+        try:
+            os.remove(full_path)
+        except Exception:
+            pass
 
 
 def allowed_file(filename):
@@ -132,14 +225,6 @@ def save_product_image(file):
         fallback_name = temp_name
     return fallback_name
 
-def to_bool(v, default=False):
-    """Convert common HTML/JS truthy values to bool safely."""
-    if v is None:
-        return default
-    if isinstance(v, bool):
-        return v
-    s = str(v).strip().lower()
-    return s in ("1", "true", "on", "yes", "y")
 
 def super_admin_required(f):
     @wraps(f)
@@ -175,19 +260,95 @@ def permission_required(permission_attr: str):
 
 
 @admin_bp.app_context_processor
-def inject_pending_count():
-    if current_user.is_authenticated:
-        pending_bookings_count = Booking.query.filter_by(status='pending').count()
-        return {'pending_bookings_count': pending_bookings_count}
-    return {'pending_bookings_count': 0}
+def inject_admin_counts():
+    if not current_user.is_authenticated:
+        return {
+            'pending_bookings_count': 0,
+            'pending_orders_count': 0,
+            'new_training_requests_count': 0
+        }
+
+    pending_bookings_count = Booking.query.filter_by(status='pending').count()
+    pending_orders_count = Order.query.filter_by(status='pending').count()
+    new_training_requests_count = CoachTrainingRequest.query.filter_by(status='new').count()
+
+    return {
+        'pending_bookings_count': pending_bookings_count,
+        'pending_orders_count': pending_orders_count,
+        'new_training_requests_count': new_training_requests_count
+    }
 
 
-@admin_bp.app_context_processor
-def inject_pending_orders_count():
-    if current_user.is_authenticated:
-        pending_orders_count = Order.query.filter_by(status='pending').count()
-        return {'pending_orders_count': pending_orders_count}
-    return {'pending_orders_count': 0}
+@admin_bp.route('/tapane/sync-bookings', methods=['POST', 'GET'])
+@login_required
+@permission_required('can_manage_bookings')
+def sync_tapane_bookings():
+    """
+    Manual sync: pull bookings from Tapane inbound API into local DB.
+    Optional query params:
+      - date=YYYY-MM-DD
+      - field_id=1   OR multiple field_id values via repeated query params
+    """
+    try:
+        date_filter = (request.values.get('date') or '').strip()
+
+        field_ids = request.values.getlist('field_id')
+        if not field_ids:
+            single_field = (request.values.get('field_id') or '').strip()
+            if single_field:
+                field_ids = [single_field]
+
+        ok, result = sync_tapane_bookings_to_local(
+            date=date_filter or None,
+            field_ids=field_ids or None,
+            page_size=100
+        )
+
+        if not ok:
+            message = result.get('error') or 'Tapane sync failed'
+            if request.is_json:
+                return jsonify({'success': False, 'message': message, 'result': result}), 500
+
+            flash(f'فشل مزامنة Tapane: {message}', 'danger')
+            return redirect(url_for('admin.manage_bookings', source='tapane'))
+
+        created_count = int(result.get('created', 0))
+        updated_count = int(result.get('updated', 0))
+        seen_count = int(result.get('seen', 0))
+        errors = result.get('errors', [])
+
+        msg = f'تمت مزامنة Tapane بنجاح ✅ | Seen: {seen_count} | Created: {created_count} | Updated: {updated_count}'
+        if errors:
+            msg += f' | Errors: {len(errors)}'
+
+        try:
+            log_activity(
+                action="sync_tapane_bookings",
+                entity_type="booking",
+                entity_id=None,
+                title="Synced Tapane bookings",
+                note=msg,
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        if request.is_json:
+            return jsonify({
+                'success': True,
+                'message': msg,
+                'result': result
+            }), 200
+
+        flash(msg, 'success')
+        return redirect(url_for('admin.manage_bookings', source='tapane'))
+
+    except Exception as e:
+        if request.is_json:
+            return jsonify({'success': False, 'message': str(e)}), 500
+
+        flash(f'خطأ أثناء مزامنة Tapane: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_bookings', source='tapane'))
 
 
 # ===== ADMIN HOME - Smart Redirect =====
@@ -284,8 +445,200 @@ def dashboard():
 
 
 # ========================================
+# ===== COACH TRAINING REQUESTS ==========
+# ========================================
+
+@admin_bp.route('/training-requests')
+@login_required
+@permission_required('can_manage_bookings')
+def manage_training_requests():
+    from sqlalchemy import or_
+    status_filter = request.args.get('status', 'all').strip()
+    coach_filter = request.args.get('coach_id', 'all').strip()
+    search_q = request.args.get('q', '').strip()
+
+    query = CoachTrainingRequest.query
+
+    if status_filter != 'all':
+        query = query.filter(CoachTrainingRequest.status == status_filter)
+
+    if coach_filter != 'all':
+        try:
+            query = query.filter(CoachTrainingRequest.coach_id == int(coach_filter))
+        except (ValueError, TypeError):
+            pass
+
+    if search_q:
+        like = f"%{search_q}%"
+        query = query.filter(
+            or_(
+                CoachTrainingRequest.full_name.ilike(like),
+                CoachTrainingRequest.phone.ilike(like)
+            )
+        )
+
+    requests_list = query.order_by(CoachTrainingRequest.created_at.desc()).all()
+    coaches = Coach.query.order_by(Coach.id.asc()).all()
+
+    return render_template(
+        'admin/training_requests.html',
+        requests_list=requests_list,
+        coaches=coaches,
+        current_status=status_filter,
+        current_coach=coach_filter,
+        current_q=search_q
+    )
+
+
+@admin_bp.route('/api/training-request/<int:request_id>/status', methods=['POST'])
+@login_required
+@permission_required('can_manage_bookings')
+def update_training_request_status(request_id):
+    training_request = CoachTrainingRequest.query.get(request_id)
+
+    if not training_request:
+        return jsonify({'success': False, 'message': 'طلب التدريب غير موجود'}), 404
+
+    data = request.json or {}
+    new_status = (data.get('status') or '').strip().lower()
+
+    allowed_statuses = ['new', 'contacted', 'scheduled', 'cancelled']
+    if new_status not in allowed_statuses:
+        return jsonify({'success': False, 'message': 'حالة غير صالحة'}), 400
+
+    old_status = training_request.status
+    training_request.status = new_status
+
+    db.session.commit()
+
+    try:
+        log_activity(
+            action="update_training_request_status",
+            entity_type="coach_training_request",
+            entity_id=training_request.id,
+            title="Updated training request status",
+            note=f"{training_request.full_name} | Old: {old_status} -> New: {new_status}",
+            payment_method="system"
+        )
+    except Exception as e:
+        print("❌ Activity log error:", e)
+
+    return jsonify({
+        'success': True,
+        'message': 'تم تحديث حالة طلب التدريب بنجاح',
+        'request_id': training_request.id,
+        'old_status': old_status,
+        'new_status': new_status
+    })
+
+
+@admin_bp.route('/api/training-request/<int:request_id>', methods=['DELETE'])
+@login_required
+@permission_required('can_manage_bookings')
+def delete_training_request(request_id):
+    training_request = CoachTrainingRequest.query.get(request_id)
+
+    if not training_request:
+        return jsonify({'success': False, 'message': 'طلب التدريب غير موجود'}), 404
+
+    try:
+        rid = training_request.id
+        name = training_request.full_name
+
+        db.session.delete(training_request)
+        db.session.commit()
+
+        try:
+            log_activity(
+                action="delete_training_request",
+                entity_type="coach_training_request",
+                entity_id=rid,
+                title="Deleted training request",
+                note=f"{name}",
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        return jsonify({'success': True, 'message': 'تم حذف طلب التدريب بنجاح'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+
+
+# ========================================
 # ===== PENDING BOOKINGS MANAGEMENT =====
 # ========================================
+
+def _map_local_status_to_external_event(status: str):
+    status = (status or '').strip().lower()
+    mapping = {
+        'pending': 'booking.created',
+        'confirmed': 'booking.accepted',
+        'completed': 'booking.completed',
+        'cancelled': 'booking.cancelled'
+    }
+    return mapping.get(status)
+
+
+def _sync_booking_after_admin_status_change(booking, target_status):
+    """
+    Sync booking/status to Tapane after admin changes.
+    Returns: (tapane_synced: bool, tapane_error: str|None)
+    """
+    tapane_synced = False
+    tapane_error = None
+
+    try:
+        # Website booking:
+        # - On first confirm => create/sync booking to Tapane
+        # - Later status changes => sync status if external booking exists
+        if booking.source == 'website':
+            if target_status == 'confirmed':
+                if booking.external_booking_id:
+                    ok, result = sync_booking_status_to_tapane(booking, target_status)
+                else:
+                    ok, result = sync_booking_to_tapane(booking)
+            else:
+                if booking.external_booking_id:
+                    ok, result = sync_booking_status_to_tapane(booking, target_status)
+                else:
+                    return False, None
+
+        # Tapane booking:
+        # - Always send status update back to Tapane if we have external_booking_id
+        elif booking.source == 'tapane':
+            if booking.external_booking_id:
+                ok, result = sync_booking_status_to_tapane(booking, target_status)
+            else:
+                return False, "Missing external_booking_id for Tapane booking"
+
+        else:
+            return False, None
+
+        tapane_synced = bool(ok)
+
+        if not ok:
+            tapane_error = str(result)
+            print("❌ Tapane sync failed:", result)
+            return tapane_synced, tapane_error
+
+        # Mark local sync info
+        if hasattr(booking, 'last_synced_at'):
+            booking.last_synced_at = datetime.utcnow()
+
+        mapped_external = _map_local_status_to_external_event(target_status)
+        if mapped_external and hasattr(booking, 'external_status'):
+            booking.external_status = mapped_external
+
+        db.session.commit()
+        return tapane_synced, None
+
+    except Exception as e:
+        tapane_error = str(e)
+        print("❌ Tapane sync error:", e)
+        return False, tapane_error
+
 
 @admin_bp.route('/pending-bookings')
 @login_required
@@ -306,15 +659,22 @@ def approve_booking(booking_id):
     if booking.status != 'pending':
         return jsonify({'success': False, 'message': 'هذا الحجز ليس معلقاً'}), 400
 
-    # ✅ Approve
+    # ✅ Approve locally first
     booking.status = 'confirmed'
     booking.confirmed_at = datetime.utcnow()
     if hasattr(booking, 'confirmed_by'):
         booking.confirmed_by = current_user.id
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'خطأ قاعدة البيانات: {str(e)}'}), 500
 
-    # ✅ Notify (approved)
+    # ✅ Sync with Tapane (website + tapane bookings)
+    tapane_synced, tapane_error = _sync_booking_after_admin_status_change(booking, 'confirmed')
+
+    # ✅ Notify
     try:
         notify_admins(
             title="Booking approved ✅",
@@ -336,6 +696,7 @@ def approve_booking(booking_id):
                 booking.sheet_sent_at = datetime.utcnow()
             if hasattr(booking, 'sheet_last_error'):
                 booking.sheet_last_error = None
+
             db.session.commit()
 
         except Exception as e:
@@ -351,7 +712,11 @@ def approve_booking(booking_id):
                 'message': f'تم قبول الحجز ✅ لكن حدث خطأ أثناء الإرسال إلى Google Sheets: {err}',
                 'booking_id': booking.id,
                 'new_status': 'confirmed',
-                'sheet_sent': False
+                'sheet_sent': False,
+                'tapane_synced': tapane_synced,
+                'tapane_error': tapane_error,
+                'external_booking_id': booking.external_booking_id,
+                'external_status': booking.external_status
             }), 200
 
     # ✅ LOG IT
@@ -373,7 +738,11 @@ def approve_booking(booking_id):
         'message': f'تم قبول حجز {booking.customer_name} بنجاح ✅',
         'booking_id': booking.id,
         'new_status': 'confirmed',
-        'sheet_sent': True
+        'sheet_sent': True,
+        'tapane_synced': tapane_synced,
+        'tapane_error': tapane_error,
+        'external_booking_id': booking.external_booking_id,
+        'external_status': booking.external_status
     })
 
 
@@ -390,8 +759,12 @@ def reject_booking(booking_id):
     data = request.json or {}
     rejection_reason = (data.get('reason') or '').strip()
 
-    # ✅ reject
+    # ✅ Reject locally first
     booking.status = 'cancelled'
+    booking.confirmed_at = None
+    if hasattr(booking, 'confirmed_by'):
+        booking.confirmed_by = None
+
     if hasattr(booking, 'rejection_reason'):
         booking.rejection_reason = rejection_reason or None
 
@@ -399,9 +772,16 @@ def reject_booking(booking_id):
         existing_notes = booking.notes or ''
         booking.notes = f"{existing_notes}\n[رفض] سبب الرفض: {rejection_reason}".strip()
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'خطأ قاعدة البيانات: {str(e)}'}), 500
 
-    # ✅ Notify (SAFE)
+    # ✅ Sync rejection to Tapane too
+    tapane_synced, tapane_error = _sync_booking_after_admin_status_change(booking, 'cancelled')
+
+    # ✅ Notify
     try:
         notify_admins(
             title="Booking rejected ❌",
@@ -430,12 +810,17 @@ def reject_booking(booking_id):
         'success': True,
         'message': f'تم رفض حجز {booking.customer_name} ❌',
         'booking_id': booking.id,
-        'new_status': 'cancelled'
+        'new_status': 'cancelled',
+        'tapane_synced': tapane_synced,
+        'tapane_error': tapane_error,
+        'external_booking_id': booking.external_booking_id,
+        'external_status': booking.external_status
     })
 
 
 # ===== MANAGE BOOKINGS =====
 from sqlalchemy import or_
+
 
 @admin_bp.route('/bookings')
 @login_required
@@ -443,6 +828,7 @@ from sqlalchemy import or_
 def manage_bookings():
     status_filter = request.args.get('status', 'all')
     stadium_filter = request.args.get('stadium', 'all')
+    source_filter = request.args.get('source', 'all')
     date_filter = request.args.get('date', '').strip()
     search_q = request.args.get('q', '').strip()
 
@@ -458,6 +844,11 @@ def manage_bookings():
             query = query.filter(Booking.stadium_id == int(stadium_filter))
         except (ValueError, TypeError):
             pass
+
+    # source
+    if source_filter and source_filter != 'all':
+        if source_filter in ['website', 'tapane']:
+            query = query.filter(Booking.source == source_filter)
 
     # date (YYYY-MM-DD)
     if date_filter:
@@ -486,6 +877,7 @@ def manage_bookings():
         stadiums=stadiums,
         current_status=status_filter,
         current_stadium=stadium_filter,
+        current_source=source_filter,
         current_date=date_filter,
         current_q=search_q
     )
@@ -521,27 +913,46 @@ def update_booking_status(booking_id):
         if hasattr(booking, 'confirmed_by'):
             booking.confirmed_by = current_user.id
 
-    # ✅ If cancelled (important: free slot again + keep phone/name)
+    # ✅ If cancelled
     if new_status == 'cancelled':
-        # clear approval info so it's not treated as approved anymore
         booking.confirmed_at = None
         if hasattr(booking, 'confirmed_by'):
             booking.confirmed_by = None
 
-        # save reason in notes (optional)
         if reason:
             existing_notes = booking.notes or ''
             booking.notes = f"{existing_notes}\n[إلغاء بعد التأكيد] السبب: {reason}".strip()
 
-    db.session.commit()
+        if hasattr(booking, 'rejection_reason') and reason:
+            booking.rejection_reason = reason
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
+
+    # ✅ Sync all applicable changes with Tapane
+    tapane_synced, tapane_error = _sync_booking_after_admin_status_change(booking, new_status)
 
     return jsonify({
         'success': True,
         'message': f'تم تحديث الحجز إلى {new_status}',
         'booking_id': booking.id,
         'old_status': old_status,
-        'new_status': new_status
+        'new_status': new_status,
+        'tapane_synced': tapane_synced,
+        'tapane_error': tapane_error,
+        'external_booking_id': booking.external_booking_id,
+        'external_status': booking.external_status
     })
+
+
+@admin_bp.route('/api/booking/<int:booking_id>', methods=['GET'])
+@login_required
+def get_booking_api(booking_id):
+    booking = Booking.query.get_or_404(booking_id)
+    return jsonify(booking.to_dict())
 
 
 @admin_bp.route('/api/booking/<int:booking_id>', methods=['DELETE'])
@@ -560,9 +971,155 @@ def delete_booking(booking_id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
-# ========================================
-# ===== PRODUCTS MANAGEMENT =====
-# ========================================
+@admin_bp.route('/coaches')
+@login_required
+@permission_required('can_manage_bookings')
+def manage_coaches():
+    coaches = Coach.query.order_by(Coach.created_at.desc()).all()
+    return render_template('admin/coaches.html', coaches=coaches)
+
+
+@admin_bp.route('/coaches/add', methods=['POST'])
+@login_required
+@permission_required('can_manage_bookings')
+def add_coach():
+    try:
+        name = (request.form.get('name') or '').strip()
+        bio = (request.form.get('bio') or '').strip() or None
+        status = (request.form.get('status') or Coach.STATUS_AVAILABLE).strip()
+        is_active = to_bool(request.form.get('is_active'), default=True)
+
+        if not name:
+            flash('اسم المدرب مطلوب', 'danger')
+            return redirect(url_for('admin.manage_coaches'))
+
+        if status not in [Coach.STATUS_AVAILABLE, Coach.STATUS_COMING_SOON]:
+            status = Coach.STATUS_AVAILABLE
+
+        coach = Coach(
+            name=name,
+            bio=bio,
+            status=status,
+            is_active=is_active
+        )
+
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename and allowed_file(file.filename):
+                coach.image = save_coach_image(file)
+
+        db.session.add(coach)
+        db.session.commit()
+
+        try:
+            log_activity(
+                action="add_coach",
+                entity_type="coach",
+                entity_id=coach.id,
+                title="Added coach",
+                note=f"{coach.name} | Status: {coach.status}",
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        flash('تمت إضافة المدرب بنجاح ✅', 'success')
+        return redirect(url_for('admin.manage_coaches'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'خطأ: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_coaches'))
+
+
+@admin_bp.route('/coaches/<int:coach_id>/edit', methods=['POST'])
+@login_required
+@permission_required('can_manage_bookings')
+def edit_coach(coach_id):
+    coach = Coach.query.get_or_404(coach_id)
+
+    try:
+        coach.name = (request.form.get('name') or coach.name).strip()
+        coach.bio = (request.form.get('bio') or '').strip() or None
+
+        status = (request.form.get('status') or coach.status).strip()
+        if status in [Coach.STATUS_AVAILABLE, Coach.STATUS_COMING_SOON]:
+            coach.status = status
+
+        coach.is_active = to_bool(request.form.get('is_active'), default=bool(coach.is_active))
+
+        remove_image = to_bool(request.form.get('remove_image'), default=False)
+
+        if remove_image and coach.image:
+            delete_coach_image(coach.image)
+            coach.image = None
+
+        if 'image' in request.files:
+            file = request.files['image']
+            if file and file.filename and allowed_file(file.filename):
+                if coach.image:
+                    delete_coach_image(coach.image)
+                coach.image = save_coach_image(file)
+
+        db.session.commit()
+
+        try:
+            log_activity(
+                action="update_coach",
+                entity_type="coach",
+                entity_id=coach.id,
+                title="Updated coach",
+                note=f"{coach.name} | Status: {coach.status}",
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        flash('تم تحديث المدرب بنجاح ✅', 'success')
+        return redirect(url_for('admin.manage_coaches'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'خطأ: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_coaches'))
+
+
+@admin_bp.route('/coaches/<int:coach_id>/delete', methods=['POST'])
+@login_required
+@permission_required('can_manage_bookings')
+def delete_coach(coach_id):
+    coach = Coach.query.get_or_404(coach_id)
+
+    try:
+        cid = coach.id
+        cname = coach.name
+
+        if coach.image:
+            delete_coach_image(coach.image)
+
+        db.session.delete(coach)
+        db.session.commit()
+
+        try:
+            log_activity(
+                action="delete_coach",
+                entity_type="coach",
+                entity_id=cid,
+                title="Deleted coach",
+                note=cname,
+                payment_method="system"
+            )
+        except Exception as e:
+            print("❌ Activity log error:", e)
+
+        flash('تم حذف المدرب بنجاح ✅', 'success')
+        return redirect(url_for('admin.manage_coaches'))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'خطأ: {str(e)}', 'danger')
+        return redirect(url_for('admin.manage_coaches'))
+
 
 # ========================================
 # ===== PRODUCTS MANAGEMENT =====
@@ -572,7 +1129,6 @@ def delete_booking(booking_id):
 @login_required
 @permission_required('can_manage_products')
 def manage_products():
-    # ✅ Admin should show ALL products (even hidden), just show badges in UI
     products = Product.query.order_by(Product.created_at.desc()).all()
     categories = Category.query.filter_by(is_active=True).all()
     return render_template('admin/products.html', products=products, categories=categories)
@@ -582,6 +1138,8 @@ def manage_products():
 @login_required
 def add_product_api():
     """API endpoint for adding products via AJAX (FormData)"""
+    print(">>> add_product_api route HIT")
+
     try:
         name_ku = (request.form.get('name_ku') or '').strip()
         name_ar = (request.form.get('name_ar') or '').strip() or None
@@ -591,25 +1149,33 @@ def add_product_api():
         description_ar = (request.form.get('description_ar') or '').strip() or None
         description_en = (request.form.get('description_en') or '').strip() or None
 
+        cost_price = request.form.get('cost_price', 0)
         price = request.form.get('price')
         stock = request.form.get('stock', 0)
         category_id = request.form.get('category_id')
 
-        # ✅ IMPORTANT: these are your DB columns
-        # ✅ FormData must send 1/0 (we will fix JS below)
         show_in_website = to_bool(request.form.get('show_in_website'), default=False)
         show_in_pos = to_bool(request.form.get('show_in_pos'), default=False)
+        is_active = to_bool(request.form.get('is_active'), default=True)
 
         if not name_ku or not price:
-            return jsonify({'success': False, 'message': 'ناو و نرخ پێویستن / الاسم والسعر مطلوبان'}), 400
+            return jsonify({
+                'success': False,
+                'message': 'ناو و نرخ پێویستن / الاسم والسعر مطلوبان'
+            }), 400
 
         try:
-            price_int = int(price)
+            cost_price_int = int(str(cost_price).replace(',', '').strip() or 0)
+        except (ValueError, TypeError):
+            cost_price_int = 0
+
+        try:
+            price_int = int(str(price).replace(',', '').strip() or 0)
         except (ValueError, TypeError):
             price_int = 0
 
         try:
-            stock_int = int(stock or 0)
+            stock_int = int(str(stock).replace(',', '').strip() or 0)
         except (ValueError, TypeError):
             stock_int = 0
 
@@ -620,15 +1186,13 @@ def add_product_api():
             description_ku=description_ku,
             description_ar=description_ar,
             description_en=description_en,
+            cost_price=cost_price_int,
             price=price_int,
             stock=stock_int,
             category_id=int(category_id) if category_id else None,
-
-            # ✅ correct
             show_in_website=show_in_website,
             show_in_pos=show_in_pos,
-
-            is_active=True
+            is_active=is_active
         )
 
         if 'image' in request.files:
@@ -647,21 +1211,19 @@ def add_product_api():
 
         db.session.commit()
 
-        # ✅ LOG
         try:
             log_activity(
                 action="add_product",
                 entity_type="product",
                 entity_id=product.id,
                 title="Added product",
-                note=f"{product.name_ku or product.name_ar or product.name_en} | Price: {product.price}",
+                note=f"{product.name_ku or product.name_ar or product.name_en} | Cost: {product.cost_price} | Price: {product.price}",
                 amount=int(product.price or 0),
                 payment_method="store"
             )
         except Exception as e:
             print("❌ Activity log error:", e)
 
-        # ✅ Optional print
         if to_bool(request.form.get('print_label'), default=False):
             try:
                 XPrinterService.print_barcode_label(
@@ -682,17 +1244,20 @@ def add_product_api():
                 'name_ar': product.name_ar,
                 'name_en': product.name_en,
                 'barcode': product.barcode,
+                'cost_price': product.cost_price,
                 'price': product.price,
                 'stock': product.stock,
                 'category_id': product.category_id,
                 'image': product.image,
                 'show_in_website': product.show_in_website,
                 'show_in_pos': product.show_in_pos,
+                'is_active': product.is_active,
             }
         }), 201
 
     except Exception as e:
         db.session.rollback()
+        print("❌ add_product_api ERROR:", str(e))
         return jsonify({'success': False, 'message': f'هەڵە / خطأ: {str(e)}'}), 500
 
 
@@ -714,8 +1279,6 @@ def add_product():
             price=int(request.form.get('price', 0)),
             stock=int(request.form.get('stock', 0)),
             category_id=request.form.get('category_id') or None,
-
-            # ✅ FIX: accept on/true/1/yes (default False if missing)
             show_in_website=to_bool(request.form.get('show_in_website'), default=False),
             show_in_pos=to_bool(request.form.get('show_in_pos'), default=False),
         )
@@ -733,7 +1296,6 @@ def add_product():
 
         db.session.commit()
 
-        # ✅ LOG IT
         try:
             log_activity(
                 action="add_product",
@@ -808,6 +1370,7 @@ def get_barcode_image(product_id):
         return jsonify({'error': str(e)}), 500
 
 
+# ✅ FIX: update_product only handles PUT/POST (no DELETE)
 @admin_bp.route('/api/product/<int:product_id>', methods=['PUT', 'POST'])
 @login_required
 def update_product(product_id):
@@ -818,7 +1381,6 @@ def update_product(product_id):
     try:
         # ---------- FORM (FormData) ----------
         if request.form:
-            # Text fields
             if 'name_ku' in request.form:
                 product.name_ku = (request.form.get('name_ku') or '').strip()
             if 'name_ar' in request.form:
@@ -833,12 +1395,17 @@ def update_product(product_id):
             if 'description_en' in request.form:
                 product.description_en = (request.form.get('description_en') or '').strip() or None
 
-            # Numbers / category
             if 'category_id' in request.form:
                 try:
                     product.category_id = int(request.form.get('category_id')) if request.form.get('category_id') else None
                 except (ValueError, TypeError):
                     product.category_id = None
+
+            if 'cost_price' in request.form:
+                try:
+                    product.cost_price = int(request.form.get('cost_price') or 0)
+                except (ValueError, TypeError):
+                    pass
 
             if 'price' in request.form:
                 try:
@@ -847,30 +1414,23 @@ def update_product(product_id):
                     pass
 
             if 'stock' in request.form:
-                # NOTE: allow "none" => None means unlimited (if your system uses that)
                 stock_raw = request.form.get('stock')
-                if stock_raw is None or str(stock_raw).strip() == "":
-                    pass
-                else:
+                if stock_raw is not None and str(stock_raw).strip() != "":
                     try:
                         product.stock = int(stock_raw)
                     except (ValueError, TypeError):
                         pass
 
-            # ✅✅✅ FIXED BOOLEAN PARSING (your JS sends 1/0)
             product.is_active = to_bool(request.form.get('is_active'), default=bool(product.is_active))
             product.show_in_website = to_bool(request.form.get('show_in_website'), default=bool(product.show_in_website))
             product.show_in_pos = to_bool(request.form.get('show_in_pos'), default=bool(product.show_in_pos))
 
-            # Barcode
             if 'barcode' in request.form:
                 product.barcode = (request.form.get('barcode') or '').strip() or None
 
-            # Image
             if 'image' in request.files:
                 file = request.files['image']
                 if file and file.filename and allowed_file(file.filename):
-                    # delete old
                     if product.image:
                         old_image_path = os.path.join(UPLOAD_FOLDER, product.image)
                         if os.path.exists(old_image_path):
@@ -901,6 +1461,12 @@ def update_product(product_id):
             if 'category_id' in data:
                 product.category_id = data.get('category_id')
 
+            if 'cost_price' in data:
+                try:
+                    product.cost_price = int(data.get('cost_price') or 0)
+                except (ValueError, TypeError):
+                    pass
+
             if 'price' in data:
                 try:
                     product.price = int(data.get('price') or 0)
@@ -913,7 +1479,6 @@ def update_product(product_id):
                 except (ValueError, TypeError):
                     pass
 
-            # ✅ FIXED JSON BOOLS TOO
             if 'is_active' in data:
                 product.is_active = bool(data.get('is_active'))
             if 'show_in_website' in data:
@@ -932,12 +1497,14 @@ def update_product(product_id):
         return jsonify({'success': False, 'message': str(e)}), 500
 
 
+# ✅ FIX: delete_product has its own unique route /api/product/<id>/delete
 from sqlalchemy import text
 
-@admin_bp.route('/api/product/<int:product_id>', methods=['DELETE', 'POST'])
+
+@admin_bp.route('/api/product/<int:product_id>/delete', methods=['DELETE', 'POST'])
 @login_required
 def delete_product(product_id):
-    print("🔥 DELETE/POST HIT product_id =", product_id)
+    print("🔥 DELETE HIT product_id =", product_id)
 
     product = Product.query.get(product_id)
     if not product:
@@ -972,18 +1539,12 @@ def delete_product(product_id):
         print("❌ delete error:", e)
         return jsonify({'success': False, 'message': str(e)}), 500
 
+
 @admin_bp.route('/api/order/<int:order_id>', methods=['GET'])
 @login_required
 def get_order_api(order_id):
     order = Order.query.get_or_404(order_id)
     return jsonify(order.to_dict())
-
-
-@admin_bp.route('/api/booking/<int:booking_id>', methods=['GET'])
-@login_required
-def get_booking_api(booking_id):
-    booking = Booking.query.get_or_404(booking_id)
-    return jsonify(booking.to_dict())
 
 
 @admin_bp.route('/api/product/<int:product_id>/toggle', methods=['POST'])
@@ -1029,10 +1590,6 @@ def regenerate_barcode(product_id):
 # ===== CATEGORIES MANAGEMENT =====
 # ========================================
 
-# ========================================
-# ===== CATEGORIES MANAGEMENT =====
-# ========================================
-
 @admin_bp.route('/categories')
 @login_required
 def manage_categories():
@@ -1065,8 +1622,6 @@ def add_category():
             description_ar=data.get('description_ar') or None,
             description_en=data.get('description_en') or None,
             is_active=True,
-
-            # ✅ NEW (defaults to True if not sent)
             show_on_website=bool(data.get('show_on_website', True)),
             show_on_pos=bool(data.get('show_on_pos', True)),
         )
@@ -1074,7 +1629,6 @@ def add_category():
         db.session.add(category)
         db.session.commit()
 
-        # ✅ LOG
         try:
             log_activity(
                 action="add_category",
@@ -1109,7 +1663,6 @@ def update_category(category_id):
     data = request.get_json() or {}
 
     try:
-        # Names
         if 'name_ku' in data:
             category.name_ku = data['name_ku']
         if 'name_ar' in data:
@@ -1117,7 +1670,6 @@ def update_category(category_id):
         if 'name_en' in data:
             category.name_en = data['name_en'] or None
 
-        # Descriptions ✅ (your old PUT didn’t update these)
         if 'description_ku' in data:
             category.description_ku = data['description_ku'] or None
         if 'description_ar' in data:
@@ -1125,11 +1677,9 @@ def update_category(category_id):
         if 'description_en' in data:
             category.description_en = data['description_en'] or None
 
-        # Active
         if 'is_active' in data:
             category.is_active = bool(data['is_active'])
 
-        # ✅ NEW visibility flags
         if 'show_on_website' in data:
             category.show_on_website = bool(data['show_on_website'])
         if 'show_on_pos' in data:
@@ -1137,7 +1687,6 @@ def update_category(category_id):
 
         db.session.commit()
 
-        # ✅ LOG
         try:
             log_activity(
                 action="update_category",
@@ -1178,7 +1727,6 @@ def delete_category(category_id):
         db.session.delete(category)
         db.session.commit()
 
-        # ✅ LOG
         try:
             log_activity(
                 action="delete_category",
@@ -1207,20 +1755,17 @@ def delete_category(category_id):
 def manage_orders():
     status_filter = request.args.get('status', 'all')
     delivery_filter = request.args.get('delivery', 'all')
-    date_filter = (request.args.get('date') or '').strip()   # YYYY-MM-DD
-    q = (request.args.get('q') or '').strip()                # name or phone
+    date_filter = (request.args.get('date') or '').strip()
+    q = (request.args.get('q') or '').strip()
 
     query = Order.query
 
-    # ✅ Status filter
     if status_filter and status_filter != 'all':
         query = query.filter(Order.status == status_filter)
 
-    # ✅ Delivery method filter
     if delivery_filter and delivery_filter != 'all':
         query = query.filter(Order.delivery_method == delivery_filter)
 
-    # ✅ Date filter (by created_at DAY)
     if date_filter:
         try:
             d = datetime.strptime(date_filter, '%Y-%m-%d').date()
@@ -1230,7 +1775,6 @@ def manage_orders():
         except ValueError:
             pass
 
-    # ✅ Search filter (name OR phone)
     if q:
         like = f"%{q}%"
         query = query.filter(or_(
@@ -1281,7 +1825,6 @@ def update_order_status(order_id):
     order.status = new_status
     db.session.commit()
 
-    # ✅ Notify on important statuses (SAFE)
     try:
         if new_status == 'confirmed' and old_status != 'confirmed':
             notify_admins(
@@ -1290,7 +1833,6 @@ def update_order_status(order_id):
                 url=f"/admin/order/{order.id}",
                 ntype="order_confirmed"
             )
-
         elif new_status == 'cancelled' and old_status != 'cancelled':
             notify_admins(
                 title="Order cancelled ❌",
@@ -1298,17 +1840,14 @@ def update_order_status(order_id):
                 url=f"/admin/order/{order.id}",
                 ntype="order_cancelled"
             )
-
     except Exception as e:
         print("❌ Notification error:", e)
 
-    # ✅ Send to Google Sheets ONLY ONCE when confirmed
     if new_status == 'confirmed' and old_status != 'confirmed':
         sheet_already_sent = bool(getattr(order, "sheet_sent", False))
 
         if not sheet_already_sent:
             try:
-                # Build items string
                 items_list = []
                 for it in (order.items or []):
                     pname = "-"
@@ -1342,7 +1881,6 @@ def update_order_status(order_id):
                     order.sheet_last_error = str(e)
                     db.session.commit()
 
-    # ✅ LOG IT
     try:
         log_activity(
             action="update_order_status",
@@ -1379,7 +1917,6 @@ def delete_order(order_id):
         db.session.delete(order)
         db.session.commit()
 
-        # ✅ LOG
         try:
             log_activity(
                 action="delete_order",
@@ -1433,7 +1970,6 @@ def add_stadium():
         db.session.add(stadium)
         db.session.commit()
 
-        # ✅ LOG
         try:
             log_activity(
                 action="add_stadium",
@@ -1478,7 +2014,6 @@ def update_stadium(stadium_id):
 
         db.session.commit()
 
-        # ✅ LOG
         try:
             log_activity(
                 action="update_stadium",
@@ -1515,7 +2050,6 @@ def delete_stadium(stadium_id):
         db.session.delete(stadium)
         db.session.commit()
 
-        # ✅ LOG
         try:
             log_activity(
                 action="delete_stadium",
@@ -1604,7 +2138,6 @@ def manage_settings():
 
             db.session.commit()
 
-            # ✅ LOG
             try:
                 log_activity(
                     action="update_settings",
@@ -1649,7 +2182,6 @@ def manage_users():
 @login_required
 @super_admin_required
 def add_user_form():
-    """Handle form-based user creation"""
     username = request.form.get('username')
     password = request.form.get('password')
     role = request.form.get('role', 'admin')
@@ -1706,7 +2238,6 @@ def add_user_form():
 @login_required
 @super_admin_required
 def edit_user(user_id):
-    """Handle form-based user editing"""
     user = User.query.get_or_404(user_id)
 
     username = request.form.get('username')
@@ -1723,15 +2254,12 @@ def edit_user(user_id):
 
         user.username = username
 
-        # Only update role if not editing yourself
         if user.id != current_user.id and role:
             user.role = role
 
-        # Update password if provided
         if password:
             user.set_password(password)
 
-        # ✅ Update permissions
         user.can_manage_bookings = request.form.get('can_manage_bookings') == 'on'
         user.can_manage_products = request.form.get('can_manage_products') == 'on'
         user.can_manage_orders = request.form.get('can_manage_orders') == 'on'
@@ -1767,7 +2295,6 @@ def edit_user(user_id):
 @login_required
 @super_admin_required
 def delete_user_form(user_id):
-    """Handle form-based user deletion"""
     if user_id == current_user.id:
         flash('You cannot delete yourself!', 'danger')
         return redirect(url_for('admin.manage_users'))
@@ -1804,7 +2331,6 @@ def delete_user_form(user_id):
 @login_required
 @super_admin_required
 def add_user():
-    """API endpoint for adding users via AJAX"""
     data = request.json or {}
 
     if not data.get('username') or not data.get('password'):
@@ -1855,7 +2381,6 @@ def add_user():
 @login_required
 @super_admin_required
 def update_user(user_id):
-    """API endpoint for updating users"""
     user = User.query.get(user_id)
     if not user:
         return jsonify({'success': False, 'message': 'User not found'}), 404
@@ -1871,14 +2396,12 @@ def update_user(user_id):
         if data.get('password'):
             user.set_password(data['password'])
 
-        # Update role only if not editing yourself
         if user.id != current_user.id and 'role' in data:
             user.role = data['role']
 
         if 'is_active' in data:
             user.is_active = bool(data['is_active'])
 
-        # ✅ Update permissions from API
         if 'can_manage_bookings' in data:
             user.can_manage_bookings = bool(data['can_manage_bookings'])
         if 'can_manage_products' in data:
@@ -1919,7 +2442,6 @@ def update_user(user_id):
 @login_required
 @super_admin_required
 def toggle_user(user_id):
-    """Toggle user active status"""
     user = User.query.get(user_id)
     if not user:
         return jsonify({'success': False, 'message': 'User not found'}), 404
@@ -1954,7 +2476,6 @@ def toggle_user(user_id):
 @login_required
 @super_admin_required
 def delete_user(user_id):
-    """API endpoint for deleting users"""
     if user_id == current_user.id:
         return jsonify({'success': False, 'message': 'Cannot delete yourself'}), 403
 
@@ -2114,26 +2635,13 @@ def api_notifications_mark_read(notif_id):
 
 
 # ========================================
-# ===== UNIFIED REPORTS (Website + POS) =====
+# ===== REPORTS =====
 # ========================================
-
-# ========================================
-# ===== UPDATED REPORTS WITH EXPENSES =====
-# ========================================
-# Replace your existing reports() function in admin.py with this:
-
-# ========================================
-# ===== UPDATED REPORTS WITH EXPENSES =====
-# ========================================
-# Replace your existing reports() function in admin.py with this:
 
 @admin_bp.route('/reports')
 @login_required
 @permission_required('can_view_reports')
 def reports():
-    """Unified reports page showing website bookings, store orders, POS sessions, Manual Debts + EXPENSES"""
-
-    # Get date range
     from_date_str = request.args.get('from')
     to_date_str = request.args.get('to')
 
@@ -2189,7 +2697,6 @@ def reports():
 
         active_pos_sessions = POSSession.query.filter_by(status='active').count()
 
-    # ===== TOTAL REVENUE =====
     total_revenue = booking_revenue + order_revenue + pos_revenue
 
     # ===== MANUAL DEBTS =====
@@ -2205,7 +2712,7 @@ def reports():
         max(0, (d.amount or 0) - (d.paid_amount or 0)) for d in manual_debts
     )
 
-    # ✅ ===== EXPENSES (NEW) =====
+    # ===== EXPENSES =====
     expenses = Expense.query.filter(
         Expense.date >= from_date,
         Expense.date <= to_date
@@ -2214,7 +2721,6 @@ def reports():
     expense_count = len(expenses)
     total_expenses = sum((e.amount or 0) for e in expenses)
 
-    # Expenses by category
     expense_by_category = {}
     for exp in expenses:
         cat = exp.get_category_name()
@@ -2222,11 +2728,9 @@ def reports():
             expense_by_category[cat] = 0
         expense_by_category[cat] += exp.amount
 
-    # Expenses by payment method
     expense_cash = sum((e.amount or 0) for e in expenses if e.payment_method == 'cash')
     expense_card = sum((e.amount or 0) for e in expenses if e.payment_method == 'card')
 
-    # ✅ ===== NET PROFIT (NEW) =====
     net_profit = total_revenue - total_expenses
 
     # ===== TODAY'S ACTIVITY LOG =====
@@ -2242,49 +2746,34 @@ def reports():
         'admin/reports.html',
         from_date=from_date.strftime('%Y-%m-%d'),
         to_date=to_date.strftime('%Y-%m-%d'),
-
-        # Bookings
         total_bookings=total_bookings,
         booking_revenue=booking_revenue,
-
-        # Store Orders
         total_orders=total_orders,
         order_revenue=order_revenue,
-
-        # POS
         total_pos_sessions=total_pos_sessions,
         active_pos_sessions=active_pos_sessions,
         pos_revenue=pos_revenue,
         pos_cash=pos_cash,
         pos_card=pos_card,
-
-        # Total Revenue
         total_revenue=total_revenue,
-
-        # Activity Log
         activities=activities,
-
-        # Debts
         manual_debts=manual_debts,
         manual_debt_count=manual_debt_count,
         manual_debt_total=manual_debt_total,
         manual_debt_paid_total=manual_debt_paid_total,
         manual_debt_remaining_total=manual_debt_remaining_total,
-
-        # ✅ Expenses (NEW)
         expenses=expenses,
         expense_count=expense_count,
         total_expenses=total_expenses,
         expense_by_category=expense_by_category,
         expense_cash=expense_cash,
         expense_card=expense_card,
-
-        # ✅ Net Profit (NEW)
         net_profit=net_profit
     )
 
+
 # ========================================
-# ===== MANUAL DEBTS (ديون يدوية) =====
+# ===== MANUAL DEBTS =====
 # ========================================
 
 @admin_bp.route("/manual-debts/add", methods=["POST"])
@@ -2308,14 +2797,12 @@ def add_manual_debt():
             flash("المبلغ يجب أن يكون أكبر من صفر", "danger")
             return redirect(url_for("admin.reports"))
 
-        # date
         date_str = request.form.get("date")
         try:
             debt_date = datetime.strptime(date_str, "%Y-%m-%d").date()
         except (ValueError, TypeError):
             debt_date = date.today()
 
-        # keep filter dates after add
         from_date = request.form.get("from")
         to_date = request.form.get("to")
 
@@ -2339,10 +2826,33 @@ def add_manual_debt():
         db.session.rollback()
         flash(f"خطأ: {str(e)}", "danger")
         return redirect(url_for("admin.reports"))
+
+
+@admin_bp.route("/manual-debts/<int:debt_id>/mark-paid", methods=["GET"])
+@login_required
+@permission_required('can_view_reports')
+def mark_manual_debt_paid_route(debt_id):
+    try:
+        from_date = request.args.get("from")
+        to_date = request.args.get("to")
+
+        d = ManualDebt.query.get_or_404(debt_id)
+        d.paid_amount = int(d.amount or 0)
+        d.status = "paid"
+        db.session.commit()
+
+        flash("تم تسديد الدين ✅", "success")
+        return redirect(url_for("admin.reports", **{'from': from_date, 'to': to_date} if from_date and to_date else {}))
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f"خطأ: {str(e)}", "danger")
+        return redirect(url_for("admin.reports"))
+
+
 # ========================================
 # ===== EXPENSES MANAGEMENT =====
 # ========================================
-# Add this to your admin.py file after the manual_debts routes
 
 from app.models.expense import Expense
 
@@ -2353,7 +2863,6 @@ from app.models.expense import Expense
 def manage_expenses():
     """صفحة إدارة المصاريف"""
 
-    # Get filters
     from_date_str = request.args.get('from')
     to_date_str = request.args.get('to')
     category_filter = request.args.get('category', 'all')
@@ -2368,7 +2877,6 @@ def manage_expenses():
     if from_date > to_date:
         from_date, to_date = to_date, from_date
 
-    # Build query
     query = Expense.query.filter(
         Expense.date >= from_date,
         Expense.date <= to_date
@@ -2379,7 +2887,6 @@ def manage_expenses():
 
     expenses = query.order_by(Expense.date.desc(), Expense.id.desc()).all()
 
-    # Calculate totals by category
     category_totals = {}
     total_amount = 0
 
@@ -2390,7 +2897,6 @@ def manage_expenses():
         category_totals[cat] += exp.amount
         total_amount += exp.amount
 
-    # Get categories
     categories = Expense.get_categories()
 
     return render_template(
@@ -2404,10 +2910,6 @@ def manage_expenses():
         current_category=category_filter
     )
 
-
-# ========================================
-# ===== EXPENSES MANAGEMENT =====
-# ========================================
 
 @admin_bp.route('/expenses/add', methods=['POST'])
 @login_required
@@ -2469,9 +2971,12 @@ def add_expense():
         from_date = request.form.get('from')
         to_date = request.form.get('to')
 
-        return redirect(url_for('admin.reports',
-                                **{'from': from_date, 'to': to_date}
-                                if from_date and to_date else {}))
+        return redirect(
+            url_for(
+                'admin.reports',
+                **({'from': from_date, 'to': to_date} if from_date and to_date else {})
+            )
+        )
 
     except Exception as e:
         db.session.rollback()
@@ -2479,6 +2984,144 @@ def add_expense():
         return redirect(url_for('admin.reports'))
 
 
+@admin_bp.route('/api/live-dashboard', methods=['GET'])
+@login_required
+def admin_live_dashboard():
+    total_bookings = Booking.query.count()
+
+    pending_bookings_count = Booking.query.filter_by(status='pending').count()
+    pending_orders_count = Order.query.filter_by(status='pending').count()
+    new_training_requests_count = CoachTrainingRequest.query.filter_by(status='new').count()
+
+    unread_notifications_count = Notification.query.filter(
+        ((Notification.user_id == None) | (Notification.user_id == current_user.id)),
+        Notification.is_read == False
+    ).count()
+
+    today_bookings = Booking.query.filter(
+        Booking.date == date.today()
+    ).count()
+
+    today_revenue = db.session.query(
+        db.func.sum(Booking.final_price)
+    ).filter(
+        Booking.status.in_(['confirmed', 'completed']),
+        Booking.date == date.today()
+    ).scalar() or 0
+
+    total_orders = Order.query.count()
+
+    store_revenue = db.session.query(
+        db.func.sum(Order.total_price)
+    ).filter(
+        Order.status.in_(['confirmed', 'completed', 'delivered'])
+    ).scalar() or 0
+
+    total_products = Product.query.filter_by(is_active=True).count()
+
+    return jsonify({
+        'success': True,
+        'counts': {
+            'pending_bookings': pending_bookings_count,
+            'pending_orders': pending_orders_count,
+            'new_training_requests': new_training_requests_count,
+            'unread_notifications': unread_notifications_count
+        },
+        'stats': {
+            'total_bookings': total_bookings,
+            'today_bookings': today_bookings,
+            'today_revenue': float(today_revenue or 0),
+            'total_orders': total_orders,
+            'store_revenue': float(store_revenue or 0),
+            'total_products': total_products
+        }
+    })
+
+
+@admin_bp.route('/dashboard/live-data')
+@login_required
+def dashboard_live_data():
+    if current_user.role != 'super_admin':
+        if not getattr(current_user, 'can_access_dashboard', False):
+            return jsonify({
+                'success': False,
+                'message': 'Unauthorized'
+            }), 403
+
+    today = date.today()
+    start_of_day = datetime.combine(today, time.min)
+    end_of_day = datetime.combine(today, time.max)
+
+    today_bookings = Booking.query.filter(
+        Booking.date == today
+    ).count()
+
+    pending_bookings = Booking.query.filter_by(status='pending').count()
+
+    today_orders = Order.query.filter(
+        Order.created_at >= start_of_day,
+        Order.created_at <= end_of_day
+    ).count()
+
+    today_revenue = db.session.query(
+        func.coalesce(func.sum(Booking.final_price), 0)
+    ).filter(
+        Booking.status.in_(['confirmed', 'completed']),
+        Booking.date == today
+    ).scalar() or 0
+
+    recent_bookings = Booking.query.order_by(Booking.created_at.desc()).limit(8).all()
+    recent_orders = Order.query.order_by(Order.created_at.desc()).limit(8).all()
+
+    start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    end = start + timedelta(days=1)
+
+    today_logs = ActivityLog.query.filter(
+        ActivityLog.created_at >= start,
+        ActivityLog.created_at < end
+    ).order_by(ActivityLog.created_at.desc()).limit(20).all()
+
+    return jsonify({
+        'success': True,
+        'today_bookings': today_bookings,
+        'pending_bookings': pending_bookings,
+        'today_orders': today_orders,
+        'today_revenue': float(today_revenue or 0),
+        'recent_bookings': [
+            {
+                'id': b.id,
+                'customer_name': b.customer_name,
+                'stadium_name': b.stadium.name if getattr(b, 'stadium', None) else '-',
+                'date': str(b.date) if b.date else '-',
+                'status': b.status or 'pending'
+            }
+            for b in recent_bookings
+        ],
+        'recent_orders': [
+            {
+                'id': o.id,
+                'customer_name': o.customer_name,
+                'total_price': float(o.total_price or 0),
+                'status': o.status or 'pending'
+            }
+            for o in recent_orders
+        ],
+        'today_logs': [
+            {
+                'id': log.id,
+                'time': log.created_at.strftime('%H:%M:%S') if log.created_at else '-',
+                'title': log.title,
+                'note': log.note,
+                'action': log.action,
+                'entity_type': log.entity_type,
+                'entity_id': log.entity_id,
+                'payment_method': log.payment_method,
+                'username': log.user.username if getattr(log, 'user', None) else '-',
+                'amount': float(log.amount) if log.amount is not None else None
+            }
+            for log in today_logs
+        ]
+    }), 200
 
 
 @admin_bp.route('/expenses/<int:expense_id>/edit', methods=['POST'])
@@ -2489,7 +3132,6 @@ def edit_expense(expense_id):
     expense = Expense.query.get_or_404(expense_id)
 
     try:
-        # Get form data
         date_str = request.form.get('date')
         category = (request.form.get('category') or '').strip()
         amount_str = request.form.get('amount', '0')
@@ -2497,7 +3139,6 @@ def edit_expense(expense_id):
         payment_method = request.form.get('payment_method', 'cash')
         reference_number = (request.form.get('reference_number') or '').strip() or None
 
-        # Validate
         if not category:
             flash('الرجاء اختيار فئة المصروف', 'danger')
             return redirect(url_for('admin.manage_expenses'))
@@ -2511,13 +3152,11 @@ def edit_expense(expense_id):
             flash('المبلغ يجب أن يكون أكبر من صفر', 'danger')
             return redirect(url_for('admin.manage_expenses'))
 
-        # Parse date
         try:
             expense_date = datetime.strptime(date_str, '%Y-%m-%d').date()
         except (ValueError, TypeError):
             expense_date = expense.date
 
-        # Update expense
         expense.date = expense_date
         expense.category = category
         expense.amount = amount
@@ -2528,7 +3167,6 @@ def edit_expense(expense_id):
 
         db.session.commit()
 
-        # ✅ LOG IT
         try:
             log_activity(
                 action="edit_expense",
@@ -2544,14 +3182,16 @@ def edit_expense(expense_id):
 
         flash('تم تحديث المصروف بنجاح ✅', 'success')
 
-        # Keep filters
         from_date = request.form.get('from')
         to_date = request.form.get('to')
         category_filter = request.form.get('category_filter', 'all')
 
-        return redirect(url_for('admin.manage_expenses',
-                                **{'from': from_date, 'to': to_date, 'category': category_filter}
-                                if from_date and to_date else {}))
+        return redirect(
+            url_for(
+                'admin.manage_expenses',
+                **({'from': from_date, 'to': to_date, 'category': category_filter} if from_date and to_date else {})
+            )
+        )
 
     except Exception as e:
         db.session.rollback()
@@ -2574,7 +3214,6 @@ def delete_expense(expense_id):
         db.session.delete(expense)
         db.session.commit()
 
-        # ✅ LOG IT
         try:
             log_activity(
                 action="delete_expense",
@@ -2590,37 +3229,18 @@ def delete_expense(expense_id):
 
         flash('تم حذف المصروف بنجاح ✅', 'success')
 
-        # Keep filters
         from_date = request.args.get('from')
         to_date = request.args.get('to')
         category_filter = request.args.get('category', 'all')
 
-        return redirect(url_for('admin.manage_expenses',
-                                **{'from': from_date, 'to': to_date, 'category': category_filter}
-                                if from_date and to_date else {}))
+        return redirect(
+            url_for(
+                'admin.manage_expenses',
+                **({'from': from_date, 'to': to_date, 'category': category_filter} if from_date and to_date else {})
+            )
+        )
 
     except Exception as e:
         db.session.rollback()
         flash(f'خطأ: {str(e)}', 'danger')
         return redirect(url_for('admin.manage_expenses'))
-
-@admin_bp.route("/manual-debts/<int:debt_id>/mark-paid", methods=["GET"])
-@login_required
-@permission_required('can_view_reports')
-def mark_manual_debt_paid(debt_id):
-    try:
-        from_date = request.args.get("from")
-        to_date = request.args.get("to")
-
-        d = ManualDebt.query.get_or_404(debt_id)
-        d.paid_amount = int(d.amount or 0)
-        d.status = "paid"
-        db.session.commit()
-
-        flash("تم تسديد الدين ✅", "success")
-        return redirect(url_for("admin.reports", **{'from': from_date, 'to': to_date} if from_date and to_date else {}))
-
-    except Exception as e:
-        db.session.rollback()
-        flash(f"خطأ: {str(e)}", "danger")
-        return redirect(url_for("admin.reports"))

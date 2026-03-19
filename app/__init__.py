@@ -15,23 +15,26 @@ migrate = Migrate()
 
 
 def create_app(config_name='development'):
-    app = Flask(__name__)
+    app = Flask(__name__, instance_relative_config=True)
 
     # ---------------- SECURITY CONFIG ----------------
-    # ✅ STRONG SECRET KEY - Change this in production!
     app.config['SECRET_KEY'] = os.getenv(
         'SECRET_KEY',
-        secrets.token_hex(32)  # Auto-generate strong key if not in .env
+        secrets.token_hex(32)
     )
 
     # ---------------- DB CONFIG ----------------
+    # Always use the real SQLite database inside /instance
+    os.makedirs(app.instance_path, exist_ok=True)
+    instance_db_path = os.path.join(app.instance_path, 'padel_house.db')
+
     if config_name == 'production':
         app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
             'DATABASE_URL',
-            'sqlite:///padel_house.db'
+            f'sqlite:///{instance_db_path}'
         )
     else:
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///padel_house.db'
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{instance_db_path}'
 
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['SESSION_PERMANENT'] = True
@@ -52,12 +55,22 @@ def create_app(config_name='development'):
     from app.routes.auth import auth_bp
     from app.routes.pos import pos_bp
 
+    # إذا أضفت Tapane route فعلًا، فعّل هذين السطرين
+    try:
+        from app.routes.tapane import tapane_bp
+        has_tapane = True
+    except Exception:
+        has_tapane = False
+
     app.register_blueprint(main_bp)
     app.register_blueprint(booking_bp, url_prefix='/booking')
     app.register_blueprint(store_bp, url_prefix='/store')
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(auth_bp, url_prefix='/auth')
     app.register_blueprint(pos_bp, url_prefix='/pos')
+
+    if has_tapane:
+        app.register_blueprint(tapane_bp, url_prefix='/tapane')
 
     # ---------------- USER LOADER ----------------
     from app.models.user import User
@@ -72,25 +85,20 @@ def create_app(config_name='development'):
 
     @app.before_request
     def ensure_language():
-        # ✅ Set English as the default language for first-time visitors
         if 'lang' not in session:
             session['lang'] = 'en'
 
     @app.context_processor
     def inject_globals():
         settings = Settings.query.first()
-        current_lang = session.get('lang', 'en')  # ✅ Default is English
+        current_lang = session.get('lang', 'en')
 
         def t(key):
             return get_translation(key, current_lang)
 
         language_flags = {'ku': '🇮🇶', 'ar': '🇸🇦', 'en': '🇬🇧'}
         language_names = {'ku': 'کوردی', 'ar': 'العربية', 'en': 'English'}
-
-        # ✅ Show English first in the language list
         languages = ['en', 'ar', 'ku']
-
-        # ✅ RTL only for Kurdish/Arabic
         is_rtl = current_lang in ['ku', 'ar']
 
         return {
@@ -146,7 +154,7 @@ def create_app(config_name='development'):
             db.session.commit()
             print('✅ تم إنشاء الملاعب')
 
-        # Tables (10 طاولات)
+        # Tables
         from app.models.table import Table
         if not Table.query.first():
             for i in range(1, 11):
@@ -164,7 +172,7 @@ def create_app(config_name='development'):
             admin = User(
                 username='admin',
                 email='admin@padelhouse.iq',
-                is_admin=True  # ✅ Added is_admin flag
+                is_admin=True
             )
             admin.set_password('admin123')
             db.session.add(admin)
@@ -172,5 +180,7 @@ def create_app(config_name='development'):
             print('✅ تم إنشاء Super Admin')
         else:
             print('ℹ️ Super Admin already exists')
+
+        print(f"📦 Using database: {app.config['SQLALCHEMY_DATABASE_URI']}")
 
     return app

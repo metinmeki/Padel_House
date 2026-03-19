@@ -14,15 +14,12 @@
   .visibility-box { background: #f8f9fa; border-radius: 8px; padding: 15px; border: 1px solid #e9ecef; }
   .visibility-box .form-check { margin-bottom: 0; }
   .img-ph { width:50px;height:50px;object-fit:cover; }
-
-  /* ✅ Stock badge */
   .stock-badge { font-size: 12px; padding: 6px 10px; border-radius: 999px; font-weight: 700; }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-  <!-- Header -->
   <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
       <h1 class="h3 mb-0">
@@ -45,7 +42,6 @@
     </div>
   </div>
 
-  <!-- Stats -->
   <div class="row g-3 mb-4">
     <div class="col-md-3 col-6">
       <div class="card border-0 shadow-sm stat-card">
@@ -85,7 +81,6 @@
     </div>
   </div>
 
-  <!-- Filter -->
   <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-2">
       <div class="d-flex flex-wrap gap-2 align-items-center">
@@ -106,7 +101,6 @@
     </div>
   </div>
 
-  <!-- Products Table -->
   <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
       <div class="table-responsive">
@@ -117,11 +111,10 @@
               <th>{% if current_lang == 'ku' %}وێنە{% elif current_lang == 'ar' %}الصورة{% else %}Image{% endif %}</th>
               <th>کوردی</th>
               <th>{% if current_lang == 'ku' %}پۆل{% elif current_lang == 'ar' %}التصنيف{% else %}Category{% endif %}</th>
-              <th>{% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %}</th>
-
-              <!-- ✅ NEW: Stock column -->
+              <th>{% if current_lang == 'ku' %}سعر التكلفة{% elif current_lang == 'ar' %}سعر التكلفة{% else %}Cost Price{% endif %}</th>
+              <th>{% if current_lang == 'ku' %}سعر البيع{% elif current_lang == 'ar' %}سعر البيع{% else %}Selling Price{% endif %}</th>
+              <th>{% if current_lang == 'ku' %}الربح{% elif current_lang == 'ar' %}الربح{% else %}Profit{% endif %}</th>
               <th>{% if current_lang == 'ku' %}ئەنبار{% elif current_lang == 'ar' %}المخزون{% else %}Stock{% endif %}</th>
-
               <th>{% if current_lang == 'ku' %}باڕکۆد{% elif current_lang == 'ar' %}الباركود{% else %}Barcode{% endif %}</th>
               <th>{% if current_lang == 'ku' %}شوێن{% elif current_lang == 'ar' %}الظهور{% else %}Visibility{% endif %}</th>
               <th>{% if current_lang == 'ku' %}بار{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
@@ -149,9 +142,15 @@
                   <span class="text-muted">-</span>
                 {% endif %}
               </td>
-              <td><strong style="color:#E57625;">{{ "{:,.0f}".format(product.price) }}</strong> {{ t('iqd') }}</td>
 
-              <!-- ✅ NEW: Stock display -->
+              <td><strong>{{ "{:,.0f}".format(product.cost_price or 0) }}</strong> {{ t('iqd') }}</td>
+              <td><strong style="color:#E57625;">{{ "{:,.0f}".format(product.price) }}</strong> {{ t('iqd') }}</td>
+              <td>
+                <strong class="{% if (product.price or 0) - (product.cost_price or 0) >= 0 %}text-success{% else %}text-danger{% endif %}">
+                  {{ "{:,.0f}".format((product.price or 0) - (product.cost_price or 0)) }}
+                </strong> {{ t('iqd') }}
+              </td>
+
               <td>
                 {% set s = product.stock if product.stock is not none else 0 %}
                 {% if product.stock is none %}
@@ -178,6 +177,7 @@
                   <span class="text-muted">-</span>
                 {% endif %}
               </td>
+
               <td>
                 {% if product.show_in_website %}
                   <span class="badge bg-info" title="{% if current_lang == 'ku' %}ماڵپەڕ{% elif current_lang == 'ar' %}الموقع{% else %}Website{% endif %}">🌐</span>
@@ -186,6 +186,7 @@
                   <span class="badge bg-dark" title="POS">💻</span>
                 {% endif %}
               </td>
+
               <td>
                 {% if product.is_active %}
                   <span class="badge bg-success">{% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}مفعل{% else %}Active{% endif %}</span>
@@ -193,6 +194,7 @@
                   <span class="badge bg-secondary">{% if current_lang == 'ku' %}ناچالاک{% elif current_lang == 'ar' %}معطل{% else %}Inactive{% endif %}</span>
                 {% endif %}
               </td>
+
               <td>
                 <button class="btn btn-sm btn-outline-primary edit-product" type="button"
                         data-id="{{ product.id }}"
@@ -204,6 +206,7 @@
                         data-desc-ar="{{ product.description_ar or '' }}"
                         data-desc-en="{{ product.description_en or '' }}"
                         data-category-id="{{ product.category_id or '' }}"
+                        data-cost-price="{{ product.cost_price or 0 }}"
                         data-price="{{ product.price }}"
                         data-stock="{{ product.stock }}"
                         data-is-active="{{ 'true' if product.is_active else 'false' }}"
@@ -226,8 +229,7 @@
             </tr>
             {% else %}
             <tr>
-              <!-- ✅ colspan صار 10 بسبب عمود stock الجديد -->
-              <td colspan="10" class="text-center py-5">
+              <td colspan="12" class="text-center py-5">
                 <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
                 <p class="text-muted">{% if current_lang == 'ku' %}هیچ بەرهەمێک نییە{% elif current_lang == 'ar' %}لا توجد منتجات{% else %}No products found{% endif %}</p>
               </td>
@@ -255,7 +257,7 @@
       <form id="addProductForm" enctype="multipart/form-data">
         <div class="modal-body">
           <div class="row mb-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label">{% if current_lang == 'ku' %}پۆل{% elif current_lang == 'ar' %}التصنيف{% else %}Category{% endif %} <span class="text-danger">*</span></label>
               <select class="form-select" name="category_id" id="addCategoryId" required>
                 <option value="">-- {% if current_lang == 'ku' %}پۆل هەڵبژێرە{% elif current_lang == 'ar' %}اختر التصنيف{% else %}Select Category{% endif %} --</option>
@@ -264,11 +266,15 @@
                 {% endfor %}
               </select>
             </div>
-            <div class="col-md-4">
-              <label class="form-label">{% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %} ({{ t('iqd') }}) <span class="text-danger">*</span></label>
-              <input type="number" class="form-control" name="price" required min="0" placeholder="50000">
+            <div class="col-md-3">
+              <label class="form-label">{% if current_lang == 'ku' %}سعر التكلفة{% elif current_lang == 'ar' %}سعر التكلفة{% else %}Cost Price{% endif %} ({{ t('iqd') }})</label>
+              <input type="number" class="form-control" name="cost_price" min="0" value="0" placeholder="200">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+              <label class="form-label">{% if current_lang == 'ku' %}سعر البيع{% elif current_lang == 'ar' %}سعر البيع{% else %}Selling Price{% endif %} ({{ t('iqd') }}) <span class="text-danger">*</span></label>
+              <input type="number" class="form-control" name="price" required min="0" placeholder="250">
+            </div>
+            <div class="col-md-3">
               <label class="form-label">{% if current_lang == 'ku' %}ئەنبار{% elif current_lang == 'ar' %}المخزون{% else %}Stock{% endif %}</label>
               <input type="number" class="form-control" name="stock" value="0" min="0">
             </div>
@@ -386,7 +392,7 @@
         <input type="hidden" name="product_id" id="editProductId">
         <div class="modal-body">
           <div class="row mb-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label">{% if current_lang == 'ku' %}پۆل{% elif current_lang == 'ar' %}التصنيف{% else %}Category{% endif %} <span class="text-danger">*</span></label>
               <select class="form-select" name="category_id" id="editCategoryId" required>
                 <option value="">-- {% if current_lang == 'ku' %}پۆل هەڵبژێرە{% elif current_lang == 'ar' %}اختر التصنيف{% else %}Select Category{% endif %} --</option>
@@ -395,11 +401,15 @@
                 {% endfor %}
               </select>
             </div>
-            <div class="col-md-4">
-              <label class="form-label">{% if current_lang == 'ku' %}نرخ{% elif current_lang == 'ar' %}السعر{% else %}Price{% endif %} <span class="text-danger">*</span></label>
+            <div class="col-md-3">
+              <label class="form-label">{% if current_lang == 'ku' %}سعر التكلفة{% elif current_lang == 'ar' %}سعر التكلفة{% else %}Cost Price{% endif %}</label>
+              <input type="number" class="form-control" name="cost_price" id="editCostPrice" min="0">
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">{% if current_lang == 'ku' %}سعر البيع{% elif current_lang == 'ar' %}سعر البيع{% else %}Selling Price{% endif %} <span class="text-danger">*</span></label>
               <input type="number" class="form-control" name="price" id="editPrice" required min="0">
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
               <label class="form-label">{% if current_lang == 'ku' %}ئەنبار{% elif current_lang == 'ar' %}المخزون{% else %}Stock{% endif %}</label>
               <input type="number" class="form-control" name="stock" id="editStock" min="0">
             </div>
@@ -608,6 +618,7 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('editDescEn').value = this.dataset.descEn || '';
 
       document.getElementById('editCategoryId').value = this.dataset.categoryId || '';
+      document.getElementById('editCostPrice').value = this.dataset.costPrice || 0;
       document.getElementById('editPrice').value = this.dataset.price || 0;
       document.getElementById('editStock').value = this.dataset.stock || 0;
 

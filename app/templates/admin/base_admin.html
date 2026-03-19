@@ -38,7 +38,6 @@
             overflow-y: auto;
         }
 
-        /* Sidebar Scrollbar */
         .sidebar::-webkit-scrollbar {
             width: 6px;
         }
@@ -56,7 +55,6 @@
             background: var(--primary-color);
         }
 
-        /* User Profile Section */
         .user-profile {
             padding: 15px 20px;
             margin: 0 10px 20px 10px;
@@ -116,7 +114,6 @@
             border: 1px solid var(--primary-color);
         }
 
-        /* Sidebar Navigation */
         .sidebar .nav-link {
             color: rgba(255,255,255,0.7);
             padding: 12px 20px;
@@ -144,7 +141,6 @@
             width: 24px;
         }
 
-        /* Pending Badge Animation */
         .pending-badge {
             animation: pulse 2s infinite;
         }
@@ -155,7 +151,6 @@
             100% { transform: scale(1); }
         }
 
-        /* Super Admin Only Styling */
         .super-admin-section {
             background: rgba(102, 126, 234, 0.1);
             border-{% if is_rtl %}right{% else %}left{% endif %}: 3px solid #667eea;
@@ -165,7 +160,6 @@
             background: rgba(102, 126, 234, 0.15);
         }
 
-        /* Section Dividers */
         .sidebar hr {
             border-color: rgba(255,255,255,0.1);
             margin: 15px 20px;
@@ -177,7 +171,6 @@
             min-height: 100vh;
         }
 
-        /* Notification Bell */
         .notification-bell {
             position: relative;
         }
@@ -196,7 +189,6 @@
             font-size: 0.7rem;
         }
 
-        /* Cards */
         .stat-card {
             background: #fff;
             border-radius: 12px;
@@ -227,7 +219,6 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
         }
 
-        /* Status Badges */
         .badge-pending {
             background-color: #ffc107;
             color: #000;
@@ -248,7 +239,6 @@
             color: #fff;
         }
 
-        /* Mobile Responsive */
         @media (max-width: 768px) {
             .sidebar {
                 transform: translateX({% if is_rtl %}100%{% else %}-100%{% endif %});
@@ -265,13 +255,11 @@
 <body>
 
 <aside class="sidebar">
-    <!-- Logo Section -->
     <div class="text-center mb-4">
         <h4 style="color: var(--primary-color); font-weight: 700;">{{ t('site_name') }}</h4>
         <small class="text-white-50">{{ t('admin') }}</small>
     </div>
 
-    <!-- User Profile Section -->
     <div class="user-profile">
         <div class="d-flex align-items-center">
             <div class="user-avatar me-3">
@@ -300,10 +288,8 @@
         </div>
     </div>
 
-    <!-- Navigation Menu -->
     <ul class="nav flex-column px-3">
 
-        <!-- Dashboard -->
         {% if current_user.role == 'super_admin' or current_user.can_access_dashboard %}
         <li class="nav-item">
             <a href="{{ url_for('admin.dashboard') }}"
@@ -313,11 +299,11 @@
         </li>
         {% endif %}
 
-        <!-- Pending Bookings -->
         {% if current_user.role == 'super_admin' or current_user.can_manage_bookings %}
         <li class="nav-item">
             <a href="{{ url_for('admin.pending_bookings') }}"
                class="nav-link {% if 'pending' in request.endpoint %}active{% endif %}"
+               id="pendingBookingsNav"
                style="{% if pending_bookings_count > 0 %}background: rgba(255,193,7,0.2); border-{% if is_rtl %}right{% else %}left{% endif %}: 3px solid #ffc107;{% endif %}">
                 <span>
                     <i class="fas fa-clock me-2"></i>
@@ -325,14 +311,14 @@
                     {% elif current_lang == 'ar' %}الحجوزات المعلقة
                     {% else %}Pending Bookings{% endif %}
                 </span>
-                {% if pending_bookings_count > 0 %}
-                <span class="badge bg-danger pending-badge">{{ pending_bookings_count }}</span>
-                {% endif %}
+                <span id="pendingBookingsBadge"
+                      class="badge bg-danger pending-badge {% if pending_bookings_count <= 0 %}d-none{% endif %}">
+                    {{ pending_bookings_count }}
+                </span>
             </a>
         </li>
         {% endif %}
 
-        <!-- Bookings -->
         {% if current_user.role == 'super_admin' or current_user.can_manage_bookings %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manage_bookings') }}"
@@ -342,19 +328,65 @@
         </li>
         {% endif %}
 
-        <!-- Orders -->
+        {% if current_user.role == 'super_admin' or current_user.can_manage_bookings %}
+        <li class="nav-item">
+            <a href="{{ url_for('admin.manage_training_requests') }}"
+               class="nav-link {% if request.endpoint == 'admin.manage_training_requests' %}active{% endif %}"
+               id="trainingRequestsNav">
+                <span>
+                    <i class="fas fa-user-tie me-2"></i>
+                    {% if current_lang == 'ku' %}داواکارییەکانی ڕاهێنان
+                    {% elif current_lang == 'ar' %}طلبات التدريب
+                    {% else %}Training Requests{% endif %}
+                </span>
+                <span id="trainingRequestsBadge"
+                      class="badge bg-danger ms-auto {% if new_training_requests_count <= 0 %}d-none{% endif %}">
+                    {{ new_training_requests_count }}
+                </span>
+            </a>
+        </li>
+        {% endif %}
+
+        {% if current_user.role == 'super_admin' or current_user.can_manage_bookings %}
+<li class="nav-item">
+    <a href="{{ url_for('admin.manage_coaches') }}"
+       class="nav-link {% if request.endpoint == 'admin.manage_coaches' %}active{% endif %}">
+        <span>
+            <i class="fas fa-user-tie me-2"></i>
+            {% if current_lang == 'ku' %}ڕاهێنەران
+            {% elif current_lang == 'ar' %}المدربون
+            {% else %}Coaches{% endif %}
+        </span>
+    </a>
+</li>
+{% endif %}
+
+
+
+
+
+
+
+
+
+
         {% if current_user.role == 'super_admin' or current_user.can_manage_orders %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manage_orders') }}"
                class="nav-link {% if 'order' in request.endpoint and 'orders' in request.endpoint %}active{% endif %}">
-                <span><i class="fas fa-shopping-bag me-2"></i>{{ t('orders') }}</span>
+                <span>
+                    <i class="fas fa-shopping-bag me-2"></i>{{ t('orders') }}
+                </span>
+                <span id="pendingOrdersBadge"
+                      class="badge bg-danger ms-auto {% if pending_orders_count <= 0 %}d-none{% endif %}">
+                    {{ pending_orders_count }}
+                </span>
             </a>
         </li>
         {% endif %}
 
         <hr>
 
-        <!-- Products Section -->
         {% if current_user.role == 'super_admin' or current_user.can_manage_products %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manage_products') }}"
@@ -376,7 +408,6 @@
         </li>
         {% endif %}
 
-        <!-- Stadiums -->
         {% if current_user.role == 'super_admin' or current_user.can_manage_stadiums %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manage_stadiums') }}"
@@ -388,7 +419,6 @@
 
         <hr>
 
-        <!-- Expenses -->
         {% if current_user.role == 'super_admin' or current_user.can_view_reports %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manage_expenses') }}"
@@ -402,7 +432,6 @@
             </a>
         </li>
 
-        <!-- Reports -->
         <li class="nav-item">
             <a href="{{ url_for('admin.reports') }}"
                class="nav-link {% if 'report' in request.endpoint %}active{% endif %}">
@@ -413,7 +442,6 @@
 
         <hr>
 
-        <!-- Settings -->
         {% if current_user.role == 'super_admin' or current_user.can_manage_settings %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manage_settings') }}"
@@ -423,7 +451,6 @@
         </li>
         {% endif %}
 
-        <!-- Users - Super Admin Only -->
         {% if current_user.role == 'super_admin' %}
         <li class="nav-item">
             <a href="{{ url_for('admin.manage_users') }}"
@@ -441,7 +468,6 @@
 
         <hr>
 
-        <!-- View Site -->
         <li class="nav-item">
             <a href="{{ url_for('main.index') }}" class="nav-link" target="_blank">
                 <span>
@@ -453,7 +479,6 @@
             </a>
         </li>
 
-        <!-- Logout -->
         <li class="nav-item">
             <a href="{{ url_for('auth.logout') }}" class="nav-link text-danger">
                 <span><i class="fas fa-sign-out-alt me-2"></i>{{ t('logout') }}</span>
@@ -462,10 +487,13 @@
 
     </ul>
 </aside>
-
+<li>
+<a href="{{ url_for('admin.manage_coaches') }}">
+🏆 Coaches
+</a>
+</li>
 <div class="main-content">
 
-    <!-- Top Bar with Notifications -->
     <div class="d-flex justify-content-end mb-3">
         <div class="dropdown notification-bell">
             <button class="btn btn-light position-relative"
@@ -490,7 +518,6 @@
         </div>
     </div>
 
-    <!-- Flash Messages -->
     {% with messages = get_flashed_messages(with_categories=True) %}
       {% if messages %}
         <div class="container-fluid mt-2">
@@ -505,15 +532,11 @@
       {% endif %}
     {% endwith %}
 
-    <!-- Main Content -->
     {% block content %}{% endblock %}
 </div>
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Notifications Script -->
-<!-- Notifications ONLY -->
 <script>
 document.addEventListener('DOMContentLoaded', () => {
   async function loadNotifications() {
@@ -534,6 +557,75 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    function setBadgeValue(elementId, value) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+
+        if (value > 0) {
+            el.textContent = value;
+            el.classList.remove('d-none');
+        } else {
+            el.classList.add('d-none');
+        }
+    }
+
+    function setText(elementId, value) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.textContent = value;
+    }
+
+    function formatNumber(num) {
+        try {
+            return new Intl.NumberFormat().format(num || 0);
+        } catch (e) {
+            return String(num || 0);
+        }
+    }
+
+    async function refreshAdminLiveData() {
+        try {
+            const response = await fetch('/admin/api/live-dashboard', {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+            if (!data.success) return;
+
+            setBadgeValue('pendingBookingsBadge', data.counts.pending_bookings);
+            setBadgeValue('pendingOrdersBadge', data.counts.pending_orders);
+            setBadgeValue('trainingRequestsBadge', data.counts.new_training_requests);
+
+            const notifBadge = document.getElementById('notifBadge');
+            if (notifBadge) {
+                if (data.counts.unread_notifications > 0) {
+                    notifBadge.style.display = 'inline';
+                    notifBadge.textContent = data.counts.unread_notifications;
+                } else {
+                    notifBadge.style.display = 'none';
+                }
+            }
+
+            setText('statTotalBookings', formatNumber(data.stats.total_bookings));
+            setText('statTodayBookings', formatNumber(data.stats.today_bookings));
+            setText('statTodayRevenue', formatNumber(data.stats.today_revenue));
+            setText('statTotalOrders', formatNumber(data.stats.total_orders));
+            setText('statStoreRevenue', formatNumber(data.stats.store_revenue));
+            setText('statTotalProducts', formatNumber(data.stats.total_products));
+        } catch (error) {
+            console.log('Live admin refresh failed');
+        }
+    }
+
+    refreshAdminLiveData();
+    setInterval(refreshAdminLiveData, 5000);
+});
+</script>
 
 {% block extra_js %}{% endblock %}
 

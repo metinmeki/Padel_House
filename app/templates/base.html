@@ -1,4 +1,3 @@
-<!-- app/templates/base.html -->
 <!DOCTYPE html>
 <html lang="{{ current_lang }}" dir="{{ 'rtl' if is_rtl else 'ltr' }}">
 <head>
@@ -6,216 +5,474 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}{{ t('site_name') }}{% endblock %}</title>
 
-  <!-- Bootstrap 5 RTL/LTR -->
   {% if is_rtl %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
   {% else %}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   {% endif %}
 
-  <!-- Font Awesome -->
   <link rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
-        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
-        crossorigin="anonymous" referrerpolicy="no-referrer"/>
+        crossorigin="anonymous"/>
 
   <style>
     :root{
       --primary-color:#E57625;
       --secondary-color:#1a1a2e;
       --accent-color:#16213e;
-
-      --text-dark:#111827;
-      --text-muted:#6b7280;
-      --border-soft: rgba(17,24,39,.08);
-
-      --shadow-sm: 0 6px 16px rgba(0,0,0,.08);
-      --shadow-md: 0 14px 35px rgba(0,0,0,.10);
-
-      --radius: 16px;
-      --radius-sm: 12px;
+      --success-color:#1f9d55;
+      --success-soft:#eaf8f0;
+      --success-border:#bfe6ce;
+      --success-text:#14532d;
     }
-
-    {% if is_rtl %}
-    @import url('https://fonts.googleapis.com/earlyaccess/droidarabickufi.css');
-
-    * :not(.fa):not(.fas):not(.far):not(.fal):not(.fab):not(.fa-solid):not(.fa-regular):not(.fa-light):not(.fa-brands):not([class*="fa-"]) {
-      font-family: 'Droid Arabic Kufi', 'Geeza Pro', 'Arial', 'Tahoma', sans-serif !important;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      text-rendering: optimizeLegibility;
-    }
-
-    html, body{
-      font-family: 'Droid Arabic Kufi', 'Geeza Pro', 'Arial', 'Tahoma', sans-serif !important;
-      direction: rtl !important;
-      unicode-bidi: embed;
-    }
-
-    .fa, .fas, .far, .fal, .fab, .fa-solid, .fa-regular, .fa-light, .fa-brands, [class*="fa-"]{
-      font-family: "Font Awesome 6 Free","Font Awesome 6 Pro","Font Awesome 5 Free","Font Awesome 5 Pro" !important;
-      font-weight: 900 !important;
-      text-rendering: auto !important;
-      -webkit-font-smoothing: antialiased !important;
-      -moz-osx-font-smoothing: grayscale !important;
-      display: inline-block !important;
-    }
-    .fab, .fa-brands{
-      font-family: "Font Awesome 6 Brands","Font Awesome 5 Brands" !important;
-      font-weight: 400 !important;
-    }
-    {% else %}
-    html, body{
-      font-family: -apple-system,BlinkMacSystemFont,'Segoe UI','Roboto','Helvetica','Arial',sans-serif;
-    }
-    {% endif %}
 
     body{
       background:#f8f9fa;
-      color: var(--text-dark);
+      color:#111827;
       overflow-x:hidden;
-    }
-    main{min-height:55vh;}
-
-    {% if is_rtl %}
-    .me-1 { margin-right: 0 !important; margin-left: 0.25rem !important; }
-    .me-2 { margin-right: 0 !important; margin-left: 0.5rem !important; }
-    .me-3 { margin-right: 0 !important; margin-left: 1rem !important; }
-    .ms-1 { margin-left: 0 !important; margin-right: 0.25rem !important; }
-    .ms-2 { margin-left: 0 !important; margin-right: 0.5rem !important; }
-    .ms-3 { margin-left: 0 !important; margin-right: 1rem !important; }
-    .ms-auto { margin-left: 0 !important; margin-right: auto !important; }
-    .text-end { text-align: left !important; }
-    .text-start { text-align: right !important; }
-    .float-end { float: left !important; }
-    .float-start { float: right !important; }
-    {% endif %}
-
-    .btn-warning{
-      background-color: var(--primary-color);
-      border-color: var(--primary-color);
-      color:#fff;
-      font-weight:700;
-      border-radius:12px;
-      transition: transform .2s ease;
-    }
-    .btn-warning:hover{
-      background-color:#d4691f;
-      border-color:#d4691f;
-      color:#fff;
-      transform: translateY(-1px);
     }
 
     footer{
-      background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+      background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
       color:#fff;
     }
-    footer a{color:rgba(255,255,255,.82);text-decoration:none;}
+
+    footer a{color:rgba(255,255,255,.85);text-decoration:none;}
     footer a:hover{color:var(--primary-color);}
+
     .footer-social a{
-      display:inline-flex;align-items:center;justify-content:center;
-      width:44px;height:44px;border-radius:14px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:44px;height:44px;
+      border-radius:14px;
       background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.12);
+      transition: transform .18s ease, background .18s ease, border-color .18s ease;
+    }
+    .footer-social a:hover{
+      transform: translateY(-1px);
+      border-color: rgba(229,118,37,.35);
+      background: rgba(229,118,37,.08);
+    }
+
+    .footer-divider-pro{
+      height:1px;
+      margin-top:28px;
+      margin-bottom:18px;
+      border:0;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent);
+    }
+
+    .footer-brandbar{
+      display:flex;
+      justify-content:center;
+      padding-bottom: 6px;
+    }
+
+    .nova-credit-wrap{
+      display:flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nova-credit-text{
+      margin: 0;
+      font-size: 11px;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.45);
+      font-weight: 500;
+    }
+
+    .nova-lockup{
+      display:inline-flex;
+      align-items:center;
+      gap:12px;
+      padding: 10px 20px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: 0 18px 40px rgba(0,0,0,.18);
+      transition: transform .18s ease, border-color .18s ease, background .18s ease;
+    }
+
+    .nova-lockup:hover{
+      transform: translateY(-1px);
+      border-color: rgba(229,118,37,.35);
+      background: rgba(229,118,37,.07);
+    }
+
+    .nova-lockup-logo{
+      width: 40px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 12px;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
+    }
+
+    .nova-lockup-text{
+      display:flex;
+      align-items:baseline;
+      gap:8px;
+      line-height:1;
+      white-space: nowrap;
+    }
+
+    .nova-lockup-name{
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: 5px;
+      color:#fff;
+      transition: color .18s ease;
+    }
+
+    .nova-lockup-sub{
+      font-size: 12px;
+      letter-spacing: 2px;
+      opacity:.75;
+      color:#fff;
+    }
+
+    .nova-lockup-ict{
+      font-size: 10px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.45);
+      border-left: 1px solid rgba(255,255,255,.18);
+      padding-left: 10px;
+      white-space: nowrap;
+    }
+
+    .nova-lockup:hover .nova-lockup-name{
+      color: var(--primary-color);
+    }
+
+    .nova-lockup:hover .nova-lockup-ict{
+      color: rgba(229,118,37,.8);
+    }
+
+    .nova-glow{
+      width: 200px;
+      height: 2px;
+      margin: 12px auto 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, rgba(229,118,37,.75), transparent);
+      opacity: .85;
+    }
+
+    .site-flash-wrap{
+      padding-top: 24px;
+      padding-bottom: 6px;
+    }
+
+    .ph-flash-stack{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+    }
+
+    .ph-flash{
+      position:relative;
+      display:flex;
+      align-items:flex-start;
+      gap:14px;
+      padding:18px 20px;
+      border-radius:18px;
+      border:1px solid transparent;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+      backdrop-filter: blur(8px);
+      animation: phFlashIn .35s ease;
+    }
+
+    .ph-flash-success{
+      background: linear-gradient(135deg, var(--success-soft), #f4fbf7);
+      border-color: var(--success-border);
+      color: var(--success-text);
+    }
+
+    .ph-flash-warning{
+      background: linear-gradient(135deg, #fff7e6, #fffaf0);
+      border-color: #f6d48d;
+      color: #8a5a00;
+    }
+
+    .ph-flash-danger,
+    .ph-flash-error{
+      background: linear-gradient(135deg, #fdecec, #fff5f5);
+      border-color: #f3b5b5;
+      color: #8b1e1e;
+    }
+
+    .ph-flash-info{
+      background: linear-gradient(135deg, #eaf4ff, #f5faff);
+      border-color: #bfdcff;
+      color: #0f4c81;
+    }
+
+    .ph-flash-default{
+      background: #ffffff;
+      border-color: #e5e7eb;
+      color: #1f2937;
+    }
+
+    .ph-flash-icon{
+      flex: 0 0 44px;
+      width:44px;
+      height:44px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size:1.1rem;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.45);
+    }
+
+    .ph-flash-success .ph-flash-icon{
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color:#fff;
+    }
+
+    .ph-flash-warning .ph-flash-icon{
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color:#fff;
+    }
+
+    .ph-flash-danger .ph-flash-icon,
+    .ph-flash-error .ph-flash-icon{
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color:#fff;
+    }
+
+    .ph-flash-info .ph-flash-icon{
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color:#fff;
+    }
+
+    .ph-flash-default .ph-flash-icon{
+      background: linear-gradient(135deg, #6b7280, #4b5563);
+      color:#fff;
+    }
+
+    .ph-flash-body{
+      flex:1;
+      min-width:0;
+    }
+
+    .ph-flash-title{
+      font-size: 1rem;
+      font-weight: 800;
+      margin: 0 0 4px 0;
+      line-height: 1.2;
+    }
+
+    .ph-flash-text{
+      margin:0;
+      font-size: .98rem;
+      line-height:1.7;
+      opacity:.95;
+    }
+
+    .ph-flash-close{
+      border:none;
+      background:transparent;
+      color:inherit;
+      opacity:.55;
+      font-size:1.15rem;
+      line-height:1;
+      padding:4px;
+      cursor:pointer;
+      transition: opacity .2s ease, transform .2s ease;
+      margin-top:2px;
+    }
+
+    .ph-flash-close:hover{
+      opacity:1;
+      transform: scale(1.05);
+    }
+
+    @keyframes phFlashIn {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 768px){
+      .nova-lockup{
+        width: 100%;
+        justify-content:center;
+      }
+      .nova-lockup-ict{
+        display: none;
+      }
+
+      .ph-flash{
+        padding:16px;
+        border-radius:16px;
+      }
+
+      .ph-flash-icon{
+        width:40px;
+        height:40px;
+        flex-basis:40px;
+      }
+
+      .ph-flash-text{
+        font-size:.93rem;
+      }
     }
   </style>
+
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-1N25QX88G6"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-1N25QX88G6');
+  </script>
 
   {% block extra_css %}{% endblock %}
 </head>
 
 <body>
 
-  <!-- Loader -->
-  {% include "main/loader_onefile.html" %}
+{% include "main/loader_onefile.html" %}
+{% include "navbar.html" %}
 
-  <!-- ✅ Navbar -->
-  {% include "navbar.html" %}
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="container site-flash-wrap">
+        <div class="ph-flash-stack">
+          {% for category, message in messages %}
+            {% set flash_class = 'ph-flash-default' %}
+            {% set flash_icon = 'fa-solid fa-bell' %}
+            {% set flash_title = 'Notice' %}
 
-  <!-- Flash Messages -->
-  <div class="container mt-3">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-  </div>
+            {% if category == 'success' %}
+              {% set flash_class = 'ph-flash-success' %}
+              {% set flash_icon = 'fa-solid fa-circle-check' %}
+              {% set flash_title = 'Request Received Successfully' if current_lang == 'en' else ('تم استلام الطلب بنجاح' if current_lang == 'ar' else 'داواکاری بە سەرکەوتوویی وەرگیرا') %}
+            {% elif category == 'warning' or category == 'message' %}
+              {% set flash_class = 'ph-flash-warning' %}
+              {% set flash_icon = 'fa-solid fa-triangle-exclamation' %}
+              {% set flash_title = 'Important Notice' if current_lang == 'en' else ('تنبيه مهم' if current_lang == 'ar' else 'ئاگاداری گرنگ') %}
+            {% elif category == 'danger' or category == 'error' %}
+              {% set flash_class = 'ph-flash-danger' %}
+              {% set flash_icon = 'fa-solid fa-circle-xmark' %}
+              {% set flash_title = 'Something Went Wrong' if current_lang == 'en' else ('حدث خطأ' if current_lang == 'ar' else 'هەڵەیەک ڕوویدا') %}
+            {% elif category == 'info' %}
+              {% set flash_class = 'ph-flash-info' %}
+              {% set flash_icon = 'fa-solid fa-circle-info' %}
+              {% set flash_title = 'Information' if current_lang == 'en' else ('معلومة' if current_lang == 'ar' else 'زانیاری') %}
+            {% endif %}
 
-  <!-- Main Content -->
-  <main>
-    {% block content %}{% endblock %}
-  </main>
+            <div class="ph-flash {{ flash_class }}" data-auto-hide="true">
+              <div class="ph-flash-icon">
+                <i class="{{ flash_icon }}"></i>
+              </div>
 
-  <!-- Footer -->
-  <footer class="py-5 mt-5">
-    <div class="container">
-      <div class="row g-4">
-        <div class="col-lg-4">
-          <h4 style="color: var(--primary-color);">{{ t('site_name') }}</h4>
-          <p class="text-light opacity-75">{{ t('best_courts') }}</p>
+              <div class="ph-flash-body">
+                <div class="ph-flash-title">{{ flash_title }}</div>
+                <p class="ph-flash-text">{{ message }}</p>
+              </div>
 
-          <div class="d-flex gap-3 mt-3 footer-social">
-            <a href="https://www.instagram.com/padelhouse.iq?igsh=ZWdobmt0NGpjNzFw" class="text-white fs-5" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-            <a href="https://wa.me/9647500667676" class="text-white fs-5" aria-label="WhatsApp"><i class="fab fa-whatsapp"></i></a>
-          </div>
-        </div>
-
-        <div class="col-lg-4">
-          <h5 class="mb-3">{{ t('quick_links') }}</h5>
-          <ul class="list-unstyled">
-            <li class="mb-2"><a href="{{ url_for('main.index') }}">{{ t('home') }}</a></li>
-            <li class="mb-2"><a href="{{ url_for('booking.booking_page') }}">{{ t('booking') }}</a></li>
-            <li class="mb-2"><a href="{{ url_for('store.products') }}">{{ t('store') }}</a></li>
-          </ul>
-        </div>
-
-        <div class="col-lg-4">
-  <h5 class="mb-3">{{ t('contact_us') }}</h5>
-  <ul class="list-unstyled">
-    {% if settings %}
-      <li class="mb-2">
-        <i class="fab fa-whatsapp me-2" style="color: var(--primary-color);"></i>
-        <a href="https://wa.me/750667676" class="text-decoration-none text-light">
-          0750 066 7676
-        </a>
-      </li>
-
-      <li class="mb-2">
-        <i class="fas fa-envelope me-2" style="color: var(--primary-color);"></i>
-        {{ settings.email }}
-      </li>
-
-      <li class="mb-2">
-        <i class="fas fa-map-marker-alt me-2" style="color: var(--primary-color);"></i>
-        {{ settings.address }}
-      </li>
-    {% endif %}
-  </ul>
-</div>
-      <hr class="my-4 opacity-25">
-
-      <div class="row">
-        <div class="col-12">
-          <p class="mb-0 opacity-75">
-            &copy; 2026 {{ t('site_name') }}. {{ t('all_rights') }} —
-            Developed & Designed by
-            <a href="https://metinmeki.github.io/Nova-Soft-team/" target="_blank" class="text-decoration-none fw-semibold">
-              Nova Agency
-            </a>
-          </p>
+              <button type="button" class="ph-flash-close" aria-label="Close" onclick="this.closest('.ph-flash').remove()">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+          {% endfor %}
         </div>
       </div>
-    </div>
-    </div>
-  </footer>
+    {% endif %}
+  {% endwith %}
 
-  <!-- Bootstrap JS -->
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  {% block content %}{% endblock %}
+</main>
 
-  {% block extra_js %}{% endblock %}
+<footer class="py-5 mt-5">
+  <div class="container">
+    <div class="row g-4">
+
+      <div class="col-lg-4">
+        <h4 style="color: var(--primary-color);">{{ t('site_name') }}</h4>
+        <p class="text-light opacity-75">{{ t('best_courts') }}</p>
+
+        <div class="d-flex gap-3 mt-3 footer-social">
+          <a href="https://www.instagram.com/padelhouse.iq" aria-label="Instagram">
+            <i class="fab fa-instagram"></i>
+          </a>
+          <a href="https://wa.me/9647500667676" aria-label="WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+          </a>
+        </div>
+      </div>
+
+      <div class="col-lg-4">
+        <h5 class="mb-3">{{ t('quick_links') }}</h5>
+        <ul class="list-unstyled">
+          <li class="mb-2"><a href="{{ url_for('main.index') }}">{{ t('home') }}</a></li>
+          <li class="mb-2"><a href="{{ url_for('booking.booking_page') }}">{{ t('booking') }}</a></li>
+          <li class="mb-2"><a href="{{ url_for('store.products') }}">{{ t('store') }}</a></li>
+        </ul>
+      </div>
+
+      <div class="col-lg-4">
+        <h5 class="mb-3">{{ t('contact_us') }}</h5>
+        {% if settings %}
+          <p class="mb-2"><i class="fab fa-whatsapp me-2"></i>0750 066 7676</p>
+          <p class="mb-2"><i class="fas fa-envelope me-2"></i>{{ settings.email }}</p>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <hr class="footer-divider-pro">
+
+    <div class="footer-brandbar">
+      <div class="nova-credit-wrap">
+        <p class="nova-credit-text">Developed &amp; Powered by</p>
+        <a class="nova-lockup" href="https://metinmeki.github.io/Nova-Soft-team/" aria-label="NOVA Tech for ICT Solutions">
+          <img src="/static/images/Nova-Logo.jpeg" class="nova-lockup-logo" alt="Nova Logo">
+          <span class="nova-lockup-text">
+            <span class="nova-lockup-name">NOVA</span>
+            <span class="nova-lockup-sub">TECH</span>
+          </span>
+          <span class="nova-lockup-ict">for ICT Solutions</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="nova-glow"></div>
+
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const flashItems = document.querySelectorAll('.ph-flash[data-auto-hide="true"]');
+
+    flashItems.forEach((item) => {
+      setTimeout(() => {
+        item.style.transition = 'opacity .35s ease, transform .35s ease';
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(-8px)';
+        setTimeout(() => {
+          item.remove();
+        }, 350);
+      }, 5000);
+    });
+  });
+</script>
+
+{% block extra_js %}{% endblock %}
 </body>
 </html>

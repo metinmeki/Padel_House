@@ -1,0 +1,1001 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{% if current_lang == 'ku' %}ڕاهێنان - پادڵ هاوس{% elif current_lang == 'ar' %}التدريب - بادل هاوس{% else %}Training - Padel House{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --primary: #E57625;
+    --primary-light: #ff8c42;
+    --primary-dark: #c9621c;
+    --dark: #1a1a2e;
+    --darker: #0f0f1a;
+    --light: #f8f9fa;
+}
+
+.training-hero {
+    min-height: 75vh;
+    background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 50%, #16213e 100%);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    padding: 80px 0;
+}
+
+.training-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 100%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(229, 118, 37, 0.12) 0%, transparent 50%);
+}
+
+.training-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(229, 118, 37, 0.15);
+    border: 1px solid rgba(229, 118, 37, 0.3);
+    padding: 10px 20px;
+    border-radius: 50px;
+    color: var(--primary);
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 22px;
+    backdrop-filter: blur(10px);
+}
+
+.training-title {
+    font-size: clamp(2.7rem, 5vw, 4.5rem);
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 20px;
+}
+
+.training-title span {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.training-subtitle {
+    font-size: 1.12rem;
+    color: rgba(255,255,255,0.72);
+    max-width: 560px;
+    line-height: 1.8;
+    margin-bottom: 32px;
+}
+
+.btn-training-main {
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    border: none;
+    padding: 16px 34px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-radius: 14px;
+    color: #fff;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 12px 40px rgba(229, 118, 37, 0.35);
+    transition: all 0.3s ease;
+}
+
+.btn-training-main:hover {
+    transform: translateY(-4px);
+    color: #fff;
+    box-shadow: 0 18px 48px rgba(229, 118, 37, 0.45);
+}
+
+.training-image-wrap {
+    position: relative;
+    text-align: center;
+}
+
+.training-image-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 360px;
+    height: 360px;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, rgba(229, 118, 37, 0.25) 0%, transparent 70%);
+    filter: blur(55px);
+    z-index: 0;
+}
+
+.training-image {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 430px;
+    height: 480px;
+    object-fit: cover;
+    border-radius: 28px;
+    border: 3px solid rgba(229, 118, 37, 0.25);
+    box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+}
+
+.section {
+    padding: 95px 0;
+}
+
+.section-light {
+    background: #fff;
+}
+
+.section-gray {
+    background: var(--light);
+}
+
+.section-header {
+    text-align: center;
+    margin-bottom: 55px;
+}
+
+.section-badge {
+    display: inline-block;
+    background: rgba(229, 118, 37, 0.1);
+    color: var(--primary);
+    padding: 8px 20px;
+    border-radius: 30px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.section-title {
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 14px;
+}
+
+.section-subtitle {
+    font-size: 1.05rem;
+    color: #666;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.coaches-grid-card {
+    background: #fff;
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: 0 20px 70px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+    height: 100%;
+    position: relative;
+    transition: all 0.35s ease;
+}
+
+.coaches-grid-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 26px 80px rgba(229, 118, 37, 0.14);
+}
+
+.coach-card-image-wrap {
+    background: linear-gradient(135deg, var(--dark), var(--darker));
+    padding: 24px;
+    position: relative;
+}
+
+.coach-card-image {
+    width: 100%;
+    height: 360px;
+    object-fit: cover;
+    border-radius: 24px;
+    border: 2px solid rgba(229, 118, 37, 0.18);
+}
+
+.coach-card-image.coming {
+    filter: grayscale(100%);
+    opacity: 0.8;
+}
+
+.coach-coming-badge {
+    position: absolute;
+    top: 38px;
+    right: 38px;
+    background: linear-gradient(135deg, #ff9800, #ffb74d);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 30px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    box-shadow: 0 8px 22px rgba(255, 152, 0, 0.35);
+    z-index: 3;
+}
+
+.coach-card-body {
+    padding: 34px;
+}
+
+.coach-label {
+    display: inline-block;
+    background: rgba(229, 118, 37, 0.1);
+    color: var(--primary);
+    padding: 7px 16px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.coach-name {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--dark);
+    margin-bottom: 10px;
+}
+
+.coach-role {
+    font-size: 1.02rem;
+    color: #666;
+    margin-bottom: 18px;
+}
+
+.coach-description {
+    color: #666;
+    line-height: 1.9;
+    margin-bottom: 24px;
+}
+
+.coach-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.coach-info-item {
+    background: #f8f9fa;
+    border-radius: 18px;
+    padding: 18px 20px;
+    border: 1px solid #eee;
+}
+
+.coach-info-item span {
+    display: block;
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 6px;
+}
+
+.coach-info-item strong {
+    color: var(--dark);
+    font-size: 1rem;
+}
+
+.coach-price-box {
+    background: linear-gradient(135deg, rgba(229, 118, 37, 0.08), rgba(255, 140, 66, 0.08));
+    border: 1px solid rgba(229, 118, 37, 0.15);
+    border-radius: 22px;
+    padding: 22px;
+    margin-bottom: 24px;
+}
+
+.coach-price-label {
+    color: #888;
+    font-size: 0.92rem;
+    margin-bottom: 8px;
+}
+
+.coach-price {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.coach-price small {
+    font-size: 1rem;
+    color: #777;
+    font-weight: 600;
+}
+
+.coach-actions {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.btn-training-outline {
+    background: transparent;
+    border: 2px solid var(--primary);
+    color: var(--primary);
+    padding: 14px 28px;
+    border-radius: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-training-outline:hover {
+    background: var(--primary);
+    color: #fff;
+    transform: translateY(-3px);
+}
+
+.btn-training-disabled {
+    background: #e9ecef;
+    color: #777;
+    border: none;
+    padding: 16px 34px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+.feature-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 35px 28px;
+    text-align: center;
+    box-shadow: 0 10px 45px rgba(0,0,0,0.05);
+    border: 1px solid #eee;
+    height: 100%;
+    transition: all 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 22px 60px rgba(229, 118, 37, 0.12);
+}
+
+.feature-icon {
+    width: 84px;
+    height: 84px;
+    margin: 0 auto 20px;
+    border-radius: 22px;
+    background: linear-gradient(135deg, rgba(229, 118, 37, 0.12), rgba(229, 118, 37, 0.06));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feature-icon i {
+    font-size: 2rem;
+    color: var(--primary);
+}
+
+.feature-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 10px;
+}
+
+.feature-text {
+    color: #666;
+    line-height: 1.8;
+    margin: 0;
+}
+
+.cta-training {
+    background: linear-gradient(135deg, var(--dark), var(--darker));
+    position: relative;
+    overflow: hidden;
+}
+
+.cta-training::before {
+    content: '';
+    position: absolute;
+    top: -100px;
+    right: -100px;
+    width: 380px;
+    height: 380px;
+    background: radial-gradient(circle, rgba(229, 118, 37, 0.18), transparent 70%);
+    filter: blur(60px);
+}
+
+.cta-box {
+    position: relative;
+    z-index: 2;
+}
+
+.cta-title {
+    font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 18px;
+}
+
+.cta-text {
+    font-size: 1.12rem;
+    color: rgba(255,255,255,0.72);
+    max-width: 620px;
+    margin: 0 auto 30px;
+    line-height: 1.8;
+}
+
+.training-request-wrap {
+    max-width: 950px;
+    margin: 0 auto;
+}
+
+.training-request-card {
+    background: #fff;
+    border-radius: 30px;
+    padding: 40px;
+    box-shadow: 0 20px 70px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
+.training-form-label {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--dark);
+    margin-bottom: 10px;
+    display: block;
+}
+
+.training-form-control,
+.training-form-select,
+.training-form-textarea {
+    width: 100%;
+    border: 1.5px solid #e9ecef;
+    border-radius: 16px;
+    padding: 15px 18px;
+    font-size: 1rem;
+    color: var(--dark);
+    background: #fff;
+    transition: all 0.25s ease;
+    outline: none;
+}
+
+.training-form-control:focus,
+.training-form-select:focus,
+.training-form-textarea:focus {
+    border-color: rgba(229, 118, 37, 0.6);
+    box-shadow: 0 0 0 4px rgba(229, 118, 37, 0.10);
+}
+
+.training-form-textarea {
+    min-height: 140px;
+    resize: vertical;
+}
+
+.training-form-note {
+    margin-top: 18px;
+    font-size: 0.96rem;
+    color: #666;
+    line-height: 1.8;
+}
+
+.training-form-actions {
+    margin-top: 25px;
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.training-coach-hint {
+    background: linear-gradient(135deg, rgba(229, 118, 37, 0.08), rgba(255, 140, 66, 0.08));
+    border: 1px solid rgba(229, 118, 37, 0.16);
+    border-radius: 18px;
+    padding: 16px 18px;
+    color: #6b4a2e;
+    font-size: 0.95rem;
+    margin-top: 14px;
+}
+
+.training-package-preview {
+    margin-top: 14px;
+    background: linear-gradient(135deg, rgba(229, 118, 37, 0.08), rgba(255, 140, 66, 0.08));
+    border: 1px solid rgba(229, 118, 37, 0.16);
+    border-radius: 18px;
+    padding: 16px 18px;
+    color: #6b4a2e;
+    font-size: 0.95rem;
+    display: none;
+}
+
+.training-package-preview strong {
+    color: var(--dark);
+}
+
+@media (max-width: 992px) {
+    .coach-card-body {
+        padding: 28px;
+    }
+}
+
+@media (max-width: 768px) {
+    .training-hero {
+        min-height: auto;
+        padding: 70px 0;
+    }
+
+    .training-image {
+        height: 360px;
+    }
+
+    .coach-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .coach-actions {
+        flex-direction: column;
+    }
+
+    .btn-training-main,
+    .btn-training-outline,
+    .btn-training-disabled {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .coach-coming-badge {
+        top: 32px;
+        right: 32px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="training-hero">
+    <div class="container">
+        <div class="row align-items-center g-5">
+            <div class="col-lg-6">
+                <div class="training-badge">
+                    <i class="fas fa-user-tie"></i>
+                    {% if current_lang == 'ku' %}ڕاهێنەرانی پڕۆفیشناڵ{% elif current_lang == 'ar' %}مدربون محترفون{% else %}Professional Coaches{% endif %}
+                </div>
+
+                <h1 class="training-title">
+                    {% if current_lang == 'ku' %}بەرەوپێشبردنی<br><span>ئاستی یاریت</span>{% elif current_lang == 'ar' %}طوّر مستواك مع<br><span>مدربينا المحترفين</span>{% else %}Improve Your Game With Our<br><span>Professional Coaches</span>{% endif %}
+                </h1>
+
+                <p class="training-subtitle">
+                    {% if current_lang == 'ku' %}
+                    لە پادڵ هاوس ڕاهێنەری جیاوازمان هەیە. هەڵبژاردنی گونجاو بکە و داواکارییەکەت بنێرە.
+                    {% elif current_lang == 'ar' %}
+                    في بادل هاوس لدينا مجموعة من المدربين. اختر المدرب المناسب وأرسل طلبك بسهولة.
+                    {% else %}
+                    At Padel House, we have a selection of coaches. Choose the right coach and send your request easily.
+                    {% endif %}
+                </p>
+
+                <a href="#coach-section" class="btn-training-main">
+                    <i class="fas fa-arrow-down"></i>
+                    {% if current_lang == 'ku' %}بینینی ڕاهێنەران{% elif current_lang == 'ar' %}عرض المدربين{% else %}View Coaches{% endif %}
+                </a>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="training-image-wrap">
+                    <div class="training-image-glow"></div>
+                    <img
+                        src="{{ url_for('static', filename='images/coach.jpg') }}"
+                        alt="Padel Coach"
+                        loading="lazy"
+                        class="training-image"
+                        onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/blackcourt.jpg') }}';">
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-light" id="coach-section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-badge">
+                {% if current_lang == 'ku' %}ڕاهێنەران{% elif current_lang == 'ar' %}المدربون{% else %}Coaches{% endif %}
+            </span>
+
+            <h2 class="section-title">
+                {% if current_lang == 'ku' %}ڕاهێنەرانی پادڵ هاوس{% elif current_lang == 'ar' %}مدربو بادل هاوس{% else %}Padel House Coaches{% endif %}
+            </h2>
+
+            <p class="section-subtitle">
+                {% if current_lang == 'ku' %}
+                ڕاهێنەری گونجاو هەڵبژێرە و داواکارییەکەت بنێرە. تیمەکەمان دواتر پەیوەندیت پێوە دەکات.
+                {% elif current_lang == 'ar' %}
+                اختر المدرب المناسب وأرسل طلبك، وسيقوم فريقنا بالتواصل معك لاحقاً.
+                {% else %}
+                Choose the right coach and send your request. Our team will contact you afterwards.
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="row g-4">
+            {% for coach in coaches %}
+            <div class="col-lg-6">
+                <div class="coaches-grid-card">
+                    <div class="coach-card-image-wrap">
+                        {% if coach.status == 'coming_soon' %}
+                        <span class="coach-coming-badge">
+                            {% if current_lang == 'ku' %}بەم زووانە{% elif current_lang == 'ar' %}قريباً{% else %}Coming Soon{% endif %}
+                        </span>
+                        {% endif %}
+
+                        <img
+    src="{{ url_for('static', filename=coach.image if coach.image and '/' in coach.image else ('images/' ~ coach.image if coach.image else 'images/coming-soon.jpg')) }}"
+    alt="{{ coach.name }}"
+    loading="lazy"
+    class="coach-card-image {% if coach.status == 'coming_soon' %}coming{% endif %}"
+    onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/coming-soon.jpg') }}';">
+                    </div>
+
+                    <div class="coach-card-body">
+                        <div class="coach-label">
+                            {{ coach.get_status_text(current_lang) }}
+                        </div>
+
+                        <h3 class="coach-name">{{ coach.name }}</h3>
+
+                        <div class="coach-role">
+                            {% if current_lang == 'ku' %}
+                            ڕاهێنەری پادڵ
+                            {% elif current_lang == 'ar' %}
+                            مدرب بادل
+                            {% else %}
+                            Padel Coach
+                            {% endif %}
+                        </div>
+
+                        <p class="coach-description">
+                            {% if coach.bio %}
+                                {{ coach.bio }}
+                            {% else %}
+                                {% if current_lang == 'ku' %}
+                                ڕاهێنەری پادڵ بۆ پێشکەشکردنی خولی ڕاهێنانی تایبەت.
+                                {% elif current_lang == 'ar' %}
+                                مدرب بادل لتقديم جلسات تدريب خاصة وتطوير مستوى اللاعبين.
+                                {% else %}
+                                Padel coach offering private training sessions to improve player performance.
+                                {% endif %}
+                            {% endif %}
+                        </p>
+
+                        <div class="coach-info-grid">
+                            <div class="coach-info-item">
+                                <span>{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</span>
+                                <strong>{{ coach.get_status_text(current_lang) }}</strong>
+                            </div>
+
+                            <div class="coach-info-item">
+                                <span>{% if current_lang == 'ku' %}جۆر{% elif current_lang == 'ar' %}النوع{% else %}Type{% endif %}</span>
+                                <strong>
+                                    {% if current_lang == 'ku' %}ڕاهێنان{% elif current_lang == 'ar' %}تدريب{% else %}Training{% endif %}
+                                </strong>
+                            </div>
+
+                            <div class="coach-info-item">
+                                <span>{% if current_lang == 'ku' %}جۆری خول{% elif current_lang == 'ar' %}نوع الجلسة{% else %}Session Type{% endif %}</span>
+                                <strong>
+                                    {% if current_lang == 'ku' %}تایبەت{% elif current_lang == 'ar' %}خاصة{% else %}Private{% endif %}
+                                </strong>
+                            </div>
+
+                            <div class="coach-info-item">
+                                <span>{% if current_lang == 'ku' %}پەیوەندی{% elif current_lang == 'ar' %}آلية الحجز{% else %}Booking Method{% endif %}</span>
+                                <strong>
+                                    {% if current_lang == 'ku' %}پەیوەندی دواتر{% elif current_lang == 'ar' %}اتصال لاحقاً{% else %}Callback{% endif %}
+                                </strong>
+                            </div>
+                        </div>
+
+                        <div class="coach-price-box">
+                            <div class="coach-price-label">
+                                {% if current_lang == 'ku' %}بارودۆخی هەنووکە{% elif current_lang == 'ar' %}الحالة الحالية{% else %}Current Status{% endif %}
+                            </div>
+
+                            <div class="coach-price" style="font-size:1.6rem;">
+                                {{ coach.get_status_text(current_lang) }}
+                            </div>
+                        </div>
+
+                        <div class="coach-actions">
+                            <a href="#training-request-section" class="btn-training-main choose-coach-btn" data-coach-id="{{ coach.id }}">
+                                <i class="fas fa-calendar-check"></i>
+                                {% if coach.status == 'available' %}
+                                    {% if current_lang == 'ku' %}هەڵبژاردنی ئەم ڕاهێنەرە{% elif current_lang == 'ar' %}اختيار هذا المدرب{% else %}Choose This Coach{% endif %}
+                                {% else %}
+                                    {% if current_lang == 'ku' %}داواکاری بۆ ئەم ڕاهێنەرە{% elif current_lang == 'ar' %}طلب هذا المدرب{% else %}Request This Coach{% endif %}
+                                {% endif %}
+                            </a>
+
+                            <a href="{{ url_for('main.index') }}" class="btn-training-outline">
+                                <i class="fas fa-arrow-left"></i>
+                                {% if current_lang == 'ku' %}گەڕانەوە بۆ سەرەکی{% elif current_lang == 'ar' %}العودة للرئيسية{% else %}Back to Home{% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12">
+                <div class="alert alert-warning text-center rounded-4 p-4">
+                    {% if current_lang == 'ku' %}
+                    هیچ ڕاهێنەرێک ئێستا بەردەست نییە.
+                    {% elif current_lang == 'ar' %}
+                    لا يوجد مدربون متاحون حالياً.
+                    {% else %}
+                    No coaches are currently available.
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<section class="section section-gray">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-badge">{% if current_lang == 'ku' %}سوودەکان{% elif current_lang == 'ar' %}الفوائد{% else %}Benefits{% endif %}</span>
+            <h2 class="section-title">
+                {% if current_lang == 'ku' %}ئەم ڕاهێنانە چی پێشکەش دەکات؟{% elif current_lang == 'ar' %}ماذا يقدم لك هذا التدريب؟{% else %}What Does This Training Offer?{% endif %}
+            </h2>
+            <p class="section-subtitle">
+                {% if current_lang == 'ku' %}
+                باشترکردنی بنەماکانی یاری و دروستکردنی بنەمایەکی بەهێز بۆ پێشکەوتنی خێراتر.
+                {% elif current_lang == 'ar' %}
+                تطوير أساسيات اللعب وبناء قاعدة قوية للتقدم بشكل أسرع داخل الملعب.
+                {% else %}
+                Improve your basics and build a stronger foundation for faster progress on court.
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-bullseye"></i></div>
+                    <h5 class="feature-title">{% if current_lang == 'ku' %}دروستی لێدان{% elif current_lang == 'ar' %}دقة الضربات{% else %}Shot Accuracy{% endif %}</h5>
+                    <p class="feature-text">{% if current_lang == 'ku' %}باشترکردنی کۆنترۆڵ و ئاراستەی لێدانەکان.{% elif current_lang == 'ar' %}تحسين التحكم وتوجيه الضربات داخل الملعب.{% else %}Improve control and direction of your shots.{% endif %}</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-person-running"></i></div>
+                    <h5 class="feature-title">{% if current_lang == 'ku' %}جوڵەی باشتر{% elif current_lang == 'ar' %}حركة أفضل{% else %}Better Movement{% endif %}</h5>
+                    <p class="feature-text">{% if current_lang == 'ku' %}فێربوونی جوڵەی دروست و شوێن‌گرتن لە یاریگا.{% elif current_lang == 'ar' %}تعلم الحركة الصحيحة والتمركز الأفضل داخل الملعب.{% else %}Learn better positioning and movement on court.{% endif %}</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-lightbulb"></i></div>
+                    <h5 class="feature-title">{% if current_lang == 'ku' %}تاکتیکی یاری{% elif current_lang == 'ar' %}تكتيك اللعب{% else %}Game Tactics{% endif %}</h5>
+                    <p class="feature-text">{% if current_lang == 'ku' %}تێگەیشتن لە بریاردان و تاکتیکی یاری بە شێوەیەکی باشتر.{% elif current_lang == 'ar' %}فهم أفضل لاتخاذ القرار وتكتيك اللعب أثناء المباراة.{% else %}Better decision-making and tactical understanding.{% endif %}</p>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                    <h5 class="feature-title">{% if current_lang == 'ku' %}پێشکەوتنی خێرا{% elif current_lang == 'ar' %}تطور أسرع{% else %}Faster Progress{% endif %}</h5>
+                    <p class="feature-text">{% if current_lang == 'ku' %}خشتەی ڕاهێنانی باشتر بۆ گەیشتن بە ئەنجامی خێراتر.{% elif current_lang == 'ar' %}تدريب منظم يساعدك على الوصول إلى نتائج أفضل بشكل أسرع.{% else %}Structured coaching for quicker improvement.{% endif %}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section section-gray" id="training-request-section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-badge">
+                {% if current_lang == 'ku' %}داواکاری ڕاهێنان{% elif current_lang == 'ar' %}طلب التدريب{% else %}Training Request{% endif %}
+            </span>
+            <h2 class="section-title">
+                {% if current_lang == 'ku' %}فۆڕمی داواکاری ڕاهێنان{% elif current_lang == 'ar' %}فورم طلب التدريب{% else %}Training Request Form{% endif %}
+            </h2>
+            <p class="section-subtitle">
+                {% if current_lang == 'ku' %}
+                ڕاهێنەری دڵخوازت هەڵبژێرە و زانیارییەکانت پڕ بکەرەوە. تیمی پادڵ هاوس دواتر پەیوەندیت پێوە دەکات.
+                {% elif current_lang == 'ar' %}
+                اختر المدرب المناسب واملأ بياناتك، وسيقوم فريق بادل هاوس بالتواصل معك لاحقاً لتحديد التفاصيل.
+                {% else %}
+                Choose the right coach and fill in your details. The Padel House team will contact you later to arrange the details.
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="training-request-wrap">
+            <div class="training-request-card">
+                <form action="{{ url_for('main.submit_training_request') }}" method="POST">
+                    <div class="row g-4">
+                        <div class="col-lg-6">
+                            <label class="training-form-label">
+                                {% if current_lang == 'ku' %}هەڵبژاردنی ڕاهێنەر{% elif current_lang == 'ar' %}اختيار المدرب{% else %}Choose Coach{% endif %}
+                            </label>
+                            <select name="coach_id" class="training-form-select" required id="coachSelect">
+                                <option value="">
+                                    {% if current_lang == 'ku' %}ڕاهێنەر هەڵبژێرە{% elif current_lang == 'ar' %}اختر المدرب{% else %}Select a coach{% endif %}
+                                </option>
+
+                                {% for coach in coaches %}
+                                <option value="{{ coach.id }}">
+                                    {{ coach.name }} - {{ coach.get_status_text(current_lang) }}
+                                </option>
+                                {% endfor %}
+                            </select>
+
+                            <div class="training-coach-hint">
+                                {% if current_lang == 'ku' %}
+                                ئەگەر ڕاهێنەرێک "بەم زووانە" بوو، داواکارییەکەت تۆمار دەبێت و کاتێک بەردەست بوو پەیوەندیت پێوە دەکرێت.
+                                {% elif current_lang == 'ar' %}
+                                إذا كان المدرب بحالة "قريباً"، فسيتم تسجيل طلبك وسيتم التواصل معك عند توفره.
+                                {% else %}
+                                If the coach is marked as "Coming Soon", your request will be saved and you will be contacted when the coach becomes available.
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <label class="training-form-label">
+                                {% if current_lang == 'ku' %}الباقة التدريبية{% elif current_lang == 'ar' %}الباقة التدريبية{% else %}Training Package{% endif %}
+                            </label>
+                            <select name="package_name" class="training-form-select" required id="packageSelect">
+                                <option value="">
+                                    {% if current_lang == 'ku' %}پاکێج هەڵبژێرە{% elif current_lang == 'ar' %}اختر الباقة{% else %}Choose Package{% endif %}
+                                </option>
+                                <option value="1 Session" data-price="50000" data-sessions="1">1 Session - 50,000 IQD</option>
+                                <option value="4 Sessions" data-price="175000" data-sessions="4">4 Sessions - 175,000 IQD</option>
+                                <option value="6 Sessions" data-price="250000" data-sessions="6">6 Sessions - 250,000 IQD</option>
+                                <option value="8 Sessions" data-price="325000" data-sessions="8">8 Sessions - 325,000 IQD</option>
+                                <option value="10 Sessions" data-price="450000" data-sessions="10">10 Sessions - 450,000 IQD</option>
+                                <option value="12 Sessions" data-price="500000" data-sessions="12">12 Sessions - 500,000 IQD</option>
+                            </select>
+
+                            <input type="hidden" name="package_price" id="packagePriceInput">
+                            <input type="hidden" name="package_sessions" id="packageSessionsInput">
+
+                            <div class="training-package-preview" id="packagePreview">
+                                <strong>
+                                    {% if current_lang == 'ku' %}پاکێجی هەڵبژێردراو:{% elif current_lang == 'ar' %}الباقة المختارة:{% else %}Selected Package:{% endif %}
+                                </strong>
+                                <span id="packagePreviewText"></span>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <label class="training-form-label">
+                                {% if current_lang == 'ku' %}ناوی تەواو{% elif current_lang == 'ar' %}الاسم الكامل{% else %}Full Name{% endif %}
+                            </label>
+                            <input
+                                type="text"
+                                name="full_name"
+                                class="training-form-control"
+                                required
+                                placeholder="{% if current_lang == 'ku' %}ناوی تەواوت بنووسە{% elif current_lang == 'ar' %}اكتب اسمك الكامل{% else %}Enter your full name{% endif %}">
+                        </div>
+
+                        <div class="col-lg-6">
+                            <label class="training-form-label">
+                                {% if current_lang == 'ku' %}ژمارەی مۆبایل{% elif current_lang == 'ar' %}رقم الهاتف{% else %}Phone Number{% endif %}
+                            </label>
+                            <input
+                                type="text"
+                                name="phone"
+                                class="training-form-control"
+                                required
+                                placeholder="{% if current_lang == 'ku' %}ژمارەی مۆبایل{% elif current_lang == 'ar' %}أدخل رقم الهاتف{% else %}Enter phone number{% endif %}">
+                        </div>
+
+                        <div class="col-lg-6">
+                            <label class="training-form-label">
+                                {% if current_lang == 'ku' %}ئاستی یاری{% elif current_lang == 'ar' %}مستوى اللعب{% else %}Playing Level{% endif %}
+                            </label>
+                            <select name="level" class="training-form-select">
+                                <option value="">
+                                    {% if current_lang == 'ku' %}ئاست هەڵبژێرە{% elif current_lang == 'ar' %}اختر المستوى{% else %}Select level{% endif %}
+                                </option>
+                                <option value="beginner">
+                                    {% if current_lang == 'ku' %}دەستپێکەر{% elif current_lang == 'ar' %}مبتدئ{% else %}Beginner{% endif %}
+                                </option>
+                                <option value="intermediate">
+                                    {% if current_lang == 'ku' %}ناوەند{% elif current_lang == 'ar' %}متوسط{% else %}Intermediate{% endif %}
+                                </option>
+                                <option value="advanced">
+                                    {% if current_lang == 'ku' %}پێشکەوتوو{% elif current_lang == 'ar' %}متقدم{% else %}Advanced{% endif %}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="training-form-label">
+                                {% if current_lang == 'ku' %}تێبینی{% elif current_lang == 'ar' %}ملاحظة{% else %}Note{% endif %}
+                            </label>
+                            <textarea
+                                name="note"
+                                class="training-form-textarea"
+                                placeholder="{% if current_lang == 'ku' %}هەر زانیارییەکی زیادە بنووسە...{% elif current_lang == 'ar' %}اكتب أي ملاحظة إضافية...{% else %}Write any additional note...{% endif %}"></textarea>
+                        </div>
+                    </div>
+
+                    <p class="training-form-note">
+                        {% if current_lang == 'ku' %}
+                        دوای ناردنی داواکاری، تیمی پادڵ هاوس پەیوەندیت پێوە دەکات بۆ دیاریکردنی کات و وردەکارییەکان.
+                        {% elif current_lang == 'ar' %}
+                        بعد إرسال الطلب، سيتواصل معك فريق بادل هاوس لتحديد الوقت والتفاصيل المناسبة.
+                        {% else %}
+                        After submitting the request, the Padel House team will contact you to arrange the suitable time and details.
+                        {% endif %}
+                    </p>
+
+                    <div class="training-form-actions">
+                        <button type="submit" class="btn-training-main">
+                            <i class="fas fa-paper-plane"></i>
+                            {% if current_lang == 'ku' %}ناردنی داواکاری{% elif current_lang == 'ar' %}إرسال الطلب{% else %}Send Request{% endif %}
+                        </button>
+
+                        <a href="#coach-section" class="btn-training-outline">
+                            <i class="fas fa-arrow-up"></i>
+                            {% if current_lang == 'ku' %}گەڕانەوە بۆ ڕاهێنەران{% elif current_lang == 'ar' %}العودة إلى المدربين{% else %}Back to Coaches{% endif %}
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const packageSelect = document.getElementById('packageSelect');
+    const packagePriceInput = document.getElementById('packagePriceInput');
+    const packageSessionsInput = document.getElementById('packageSessionsInput');
+    const packagePreview = document.getElementById('packagePreview');
+    const packagePreviewText = document.getElementById('packagePreviewText');
+    const coachSelect = document.getElementById('coachSelect');
+    const chooseCoachButtons = document.querySelectorAll('.choose-coach-btn');
+
+    if (packageSelect) {
+        packageSelect.addEventListener('change', function () {
+            const selected = packageSelect.options[packageSelect.selectedIndex];
+            const price = selected.getAttribute('data-price') || '';
+            const sessions = selected.getAttribute('data-sessions') || '';
+            const label = selected.text || '';
+
+            packagePriceInput.value = price;
+            packageSessionsInput.value = sessions;
+
+            if (packageSelect.value) {
+                packagePreview.style.display = 'block';
+                packagePreviewText.textContent = label;
+            } else {
+                packagePreview.style.display = 'none';
+                packagePreviewText.textContent = '';
+            }
+        });
+    }
+
+    chooseCoachButtons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const coachId = btn.getAttribute('data-coach-id');
+            if (coachSelect && coachId) {
+                coachSelect.value = coachId;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

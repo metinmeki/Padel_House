@@ -1,0 +1,111 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Coaches Management{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid">
+
+<h3 class="mb-4">🏆 Coaches</h3>
+
+<!-- Add Coach -->
+
+<form method="POST" action="{{ url_for('admin.add_coach') }}" enctype="multipart/form-data" class="card p-3 mb-4">
+
+<div class="row">
+
+<div class="col-md-4">
+<label>Name</label>
+<input type="text" name="name" class="form-control" required>
+</div>
+
+<div class="col-md-4">
+<label>Status</label>
+<select name="status" class="form-control">
+<option value="available">Available</option>
+<option value="coming_soon">Coming Soon</option>
+</select>
+</div>
+
+<div class="col-md-4">
+<label>Image</label>
+<input type="file" name="image" class="form-control">
+</div>
+
+<div class="col-md-12 mt-3">
+<label>Bio</label>
+<textarea name="bio" class="form-control"></textarea>
+</div>
+
+<div class="col-md-12 mt-3">
+<button class="btn btn-success">Add Coach</button>
+</div>
+
+</div>
+
+</form>
+
+<!-- Coaches Table -->
+
+<div class="card p-3">
+
+<table class="table table-bordered">
+
+<thead>
+<tr>
+<th>ID</th>
+<th>Image</th>
+<th>Name</th>
+<th>Status</th>
+<th>Active</th>
+<th>Actions</th>
+</tr>
+</thead>
+
+<tbody>
+
+{% for coach in coaches %}
+
+<tr>
+
+<td>{{ coach.id }}</td>
+
+<td>
+{% if coach.image %}
+<img src="{{ url_for('static', filename=coach.image) }}" width="70">
+{% else %}
+<img src="{{ url_for('static', filename='images/coming-soon.jpg') }}" width="70">
+{% endif %}
+</td>
+
+<td>{{ coach.name }}</td>
+
+<td>{{ coach.status }}</td>
+
+<td>{{ "Yes" if coach.is_active else "No" }}</td>
+
+<td>
+
+<form method="POST"
+action="{{ url_for('admin.delete_coach', coach_id=coach.id) }}"
+onsubmit="return confirm('Delete this coach?')">
+
+<button class="btn btn-danger btn-sm">Delete</button>
+
+</form>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+
+{% endblock %}

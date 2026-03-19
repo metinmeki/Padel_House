@@ -14,7 +14,7 @@
                     <p class="text-muted mb-1">
                         {% if current_lang == 'ku' %}حجزەکانی ئەمڕۆ{% elif current_lang == 'ar' %}حجوزات اليوم{% else %}Today's Bookings{% endif %}
                     </p>
-                    <h3 class="mb-0">{{ today_bookings|default(0) }}</h3>
+                    <h3 class="mb-0" id="today-bookings">{{ today_bookings|default(0) }}</h3>
                 </div>
                 <div class="icon bg-primary bg-opacity-10 text-primary">
                     <i class="fas fa-calendar-check"></i>
@@ -31,7 +31,7 @@
                     <p class="text-muted mb-1">
                         {% if current_lang == 'ku' %}حجزی چاوەڕوان{% elif current_lang == 'ar' %}حجوزات معلقة{% else %}Pending Bookings{% endif %}
                     </p>
-                    <h3 class="mb-0">{{ pending_bookings|default(0) }}</h3>
+                    <h3 class="mb-0" id="pending-bookings">{{ pending_bookings|default(0) }}</h3>
                 </div>
                 <div class="icon bg-warning bg-opacity-10 text-warning">
                     <i class="fas fa-clock"></i>
@@ -48,7 +48,7 @@
                     <p class="text-muted mb-1">
                         {% if current_lang == 'ku' %}داواکاریەکانی ئەمڕۆ{% elif current_lang == 'ar' %}طلبات اليوم{% else %}Today's Orders{% endif %}
                     </p>
-                    <h3 class="mb-0">{{ today_orders|default(0) }}</h3>
+                    <h3 class="mb-0" id="today-orders">{{ today_orders|default(0) }}</h3>
                 </div>
                 <div class="icon bg-success bg-opacity-10 text-success">
                     <i class="fas fa-shopping-bag"></i>
@@ -57,7 +57,7 @@
         </div>
     </div>
 
-    <!-- Total Revenue -->
+    <!-- Today's Revenue -->
     <div class="col-md-6 col-xl-3">
         <div class="stat-card">
             <div class="d-flex justify-content-between align-items-center">
@@ -65,7 +65,7 @@
                     <p class="text-muted mb-1">
                         {% if current_lang == 'ku' %}داهاتی ئەمڕۆ{% elif current_lang == 'ar' %}إيرادات اليوم{% else %}Today's Revenue{% endif %}
                     </p>
-                    <h3 class="mb-0">{{ "{:,.0f}".format(today_revenue|default(0)) }}</h3>
+                    <h3 class="mb-0" id="today-revenue">{{ "{:,.0f}".format(today_revenue|default(0)) }}</h3>
                 </div>
                 <div class="icon bg-info bg-opacity-10 text-info">
                     <i class="fas fa-money-bill-wave"></i>
@@ -89,42 +89,44 @@
                 </a>
             </div>
 
-            {% if recent_bookings %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>{{ t('customer_name') }}</th>
-                            <th>{{ t('select_stadium') }}</th>
-                            <th>{{ t('select_date') }}</th>
-                            <th>{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for booking in recent_bookings %}
-                        <tr>
-                            <td>{{ booking.customer_name }}</td>
-                            <td>{{ booking.stadium.name if booking.stadium else '-' }}</td>
-                            <td>{{ booking.date }}</td>
-                            <td>
-                                {% if booking.status == 'pending' %}
-                                <span class="badge badge-pending">{{ t('pending') }}</span>
-                                {% elif booking.status == 'confirmed' %}
-                                <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
-                                {% elif booking.status == 'cancelled' %}
-                                <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
-                                {% else %}
-                                <span class="badge badge-completed">{{ t('completed') }}</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div id="recent-bookings-wrapper">
+                <p class="text-muted text-center py-4 {% if recent_bookings %}d-none{% endif %}" id="recent-bookings-empty">
+                    {{ t('no_bookings') }}
+                </p>
+
+                <div class="table-responsive {% if not recent_bookings %}d-none{% endif %}" id="recent-bookings-table-wrap">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>{{ t('customer_name') }}</th>
+                                <th>{{ t('select_stadium') }}</th>
+                                <th>{{ t('select_date') }}</th>
+                                <th>{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-bookings-body">
+                            {% for booking in recent_bookings %}
+                            <tr>
+                                <td>{{ booking.customer_name }}</td>
+                                <td>{{ booking.stadium.name if booking.stadium else '-' }}</td>
+                                <td>{{ booking.date }}</td>
+                                <td>
+                                    {% if booking.status == 'pending' %}
+                                    <span class="badge badge-pending">{{ t('pending') }}</span>
+                                    {% elif booking.status == 'confirmed' %}
+                                    <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
+                                    {% elif booking.status == 'cancelled' %}
+                                    <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
+                                    {% else %}
+                                    <span class="badge badge-completed">{{ t('completed') }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            {% else %}
-            <p class="text-muted text-center py-4">{{ t('no_bookings') }}</p>
-            {% endif %}
         </div>
     </div>
 
@@ -141,136 +143,330 @@
                 </a>
             </div>
 
-            {% if recent_orders %}
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>{{ t('customer_name') }}</th>
-                            <th>{{ t('total') }}</th>
-                            <th>{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for order in recent_orders %}
-                        <tr>
-                            <td>{{ order.id }}</td>
-                            <td>{{ order.customer_name }}</td>
-                            <td>{{ "{:,.0f}".format(order.total_price|default(0)) }} {{ t('iqd') }}</td>
-                            <td>
-                                {% if order.status == 'pending' %}
-                                <span class="badge badge-pending">{{ t('pending') }}</span>
-                                {% elif order.status == 'confirmed' %}
-                                <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
-                                {% elif order.status == 'delivered' %}
-                                <span class="badge badge-completed">{{ t('delivered') }}</span>
-                                {% else %}
-                                <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div id="recent-orders-wrapper">
+                <p class="text-muted text-center py-4 {% if recent_orders %}d-none{% endif %}" id="recent-orders-empty">
+                    {{ t('no_orders') }}
+                </p>
+
+                <div class="table-responsive {% if not recent_orders %}d-none{% endif %}" id="recent-orders-table-wrap">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>{{ t('customer_name') }}</th>
+                                <th>{{ t('total') }}</th>
+                                <th>{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-orders-body">
+                            {% for order in recent_orders %}
+                            <tr>
+                                <td>{{ order.id }}</td>
+                                <td>{{ order.customer_name }}</td>
+                                <td>{{ "{:,.0f}".format(order.total_price|default(0)) }} {{ t('iqd') }}</td>
+                                <td>
+                                    {% if order.status == 'pending' %}
+                                    <span class="badge badge-pending">{{ t('pending') }}</span>
+                                    {% elif order.status == 'confirmed' %}
+                                    <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
+                                    {% elif order.status == 'delivered' %}
+                                    <span class="badge badge-completed">{{ t('delivered') }}</span>
+                                    {% else %}
+                                    <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            {% else %}
-            <p class="text-muted text-center py-4">{{ t('no_orders') }}</p>
-            {% endif %}
         </div>
     </div>
 </div>
 
-<!-- ✅ TODAY HISTORY LOG -->
+<!-- TODAY HISTORY LOG -->
 <div class="row g-4 mt-1">
-  <div class="col-12">
-    <div class="table-card">
-      <div class="d-flex justify-content-between align-items-center mb-4">
-        <h5 class="mb-0">
-          <i class="fas fa-history me-2" style="color:#E57625;"></i>
-          {% if current_lang == 'ku' %}مێژووی ئەمڕۆ{% elif current_lang == 'ar' %}سجل اليوم{% else %}Today's History{% endif %}
-        </h5>
+    <div class="col-12">
+        <div class="table-card">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2" style="color:#E57625;"></i>
+                    {% if current_lang == 'ku' %}مێژووی ئەمڕۆ{% elif current_lang == 'ar' %}سجل اليوم{% else %}Today's History{% endif %}
+                </h5>
 
-        <!-- optional small refresh hint -->
-        <small class="text-muted">
-          {% if current_lang == 'ar' %}آخر 20 عملية{% elif current_lang == 'ku' %}دوایین ٢٠ کردار{% else %}Last 20 actions{% endif %}
-        </small>
-      </div>
-
-      {% if today_logs %}
-      <div class="table-responsive">
-        <table class="table table-hover align-middle">
-          <thead>
-            <tr>
-              <th style="width:160px;">
-                {% if current_lang == 'ku' %}کات{% elif current_lang == 'ar' %}الوقت{% else %}Time{% endif %}
-              </th>
-              <th>
-                {% if current_lang == 'ku' %}کردار{% elif current_lang == 'ar' %}العملية{% else %}Action{% endif %}
-              </th>
-              <th style="width:160px;">
-                {% if current_lang == 'ku' %}بەکارهێنەر{% elif current_lang == 'ar' %}المستخدم{% else %}User{% endif %}
-              </th>
-              <th style="width:160px;">
-                {% if current_lang == 'ku' %}بڕی پارە{% elif current_lang == 'ar' %}المبلغ{% else %}Amount{% endif %}
-              </th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {% for x in today_logs %}
-            <tr>
-              <td class="text-muted">
-                {{ x.created_at.strftime('%H:%M:%S') if x.created_at else '-' }}
-              </td>
-
-              <td>
-                <div style="font-weight:800;">{{ x.title or x.action }}</div>
-
-                {% if x.note %}
-                  <small class="text-muted d-block">{{ x.note }}</small>
-                {% endif %}
-
-                <div class="mt-1">
-                  <span class="badge bg-dark">
-                    {{ x.entity_type or '-' }}{% if x.entity_id %} #{{ x.entity_id }}{% endif %}
-                  </span>
-                  {% if x.payment_method %}
-                    <span class="badge bg-secondary">{{ x.payment_method }}</span>
-                  {% endif %}
-                  {% if x.action %}
-                    <span class="badge bg-light text-dark">{{ x.action }}</span>
-                  {% endif %}
+                <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted">
+                        {% if current_lang == 'ar' %}آخر 20 عملية{% elif current_lang == 'ku' %}دوایین ٢٠ کردار{% else %}Last 20 actions{% endif %}
+                    </small>
+                    <span class="badge bg-success" id="live-indicator">
+                        {% if current_lang == 'ar' %}مباشر{% elif current_lang == 'ku' %}ڕاستەوخۆ{% else %}Live{% endif %}
+                    </span>
                 </div>
-              </td>
+            </div>
 
-              <td>
-                {% if x.user %}
-                  {{ x.user.username }}
-                {% else %}
-                  -
-                {% endif %}
-              </td>
+            <div id="today-logs-wrapper">
+                <p class="text-muted text-center py-4 {% if today_logs %}d-none{% endif %}" id="today-logs-empty">
+                    {% if current_lang == 'ku' %}هیچ کردارێک نیە لە ئەمڕۆ{% elif current_lang == 'ar' %}لا يوجد سجل اليوم{% else %}No activity today{% endif %}
+                </p>
 
-              <td style="font-weight:900;">
-                {% if x.amount %}
-                  {{ "{:,.0f}".format(x.amount) }} {{ t('iqd') }}
-                {% else %}
-                  -
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-        <p class="text-muted text-center py-4">
-          {% if current_lang == 'ku' %}هیچ کردارێک نیە لە ئەمڕۆ{% elif current_lang == 'ar' %}لا يوجد سجل اليوم{% else %}No activity today{% endif %}
-        </p>
-      {% endif %}
+                <div class="table-responsive {% if not today_logs %}d-none{% endif %}" id="today-logs-table-wrap">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width:160px;">
+                                    {% if current_lang == 'ku' %}کات{% elif current_lang == 'ar' %}الوقت{% else %}Time{% endif %}
+                                </th>
+                                <th>
+                                    {% if current_lang == 'ku' %}کردار{% elif current_lang == 'ar' %}العملية{% else %}Action{% endif %}
+                                </th>
+                                <th style="width:160px;">
+                                    {% if current_lang == 'ku' %}بەکارهێنەر{% elif current_lang == 'ar' %}المستخدم{% else %}User{% endif %}
+                                </th>
+                                <th style="width:160px;">
+                                    {% if current_lang == 'ku' %}بڕی پارە{% elif current_lang == 'ar' %}المبلغ{% else %}Amount{% endif %}
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody id="today-logs-body">
+                            {% for x in today_logs %}
+                            <tr>
+                                <td class="text-muted">
+                                    {{ x.created_at.strftime('%H:%M:%S') if x.created_at else '-' }}
+                                </td>
+
+                                <td>
+                                    <div style="font-weight:800;">{{ x.title or x.action }}</div>
+
+                                    {% if x.note %}
+                                    <small class="text-muted d-block">{{ x.note }}</small>
+                                    {% endif %}
+
+                                    <div class="mt-1">
+                                        <span class="badge bg-dark">
+                                            {{ x.entity_type or '-' }}{% if x.entity_id %} #{{ x.entity_id }}{% endif %}
+                                        </span>
+                                        {% if x.payment_method %}
+                                        <span class="badge bg-secondary">{{ x.payment_method }}</span>
+                                        {% endif %}
+                                        {% if x.action %}
+                                        <span class="badge bg-light text-dark">{{ x.action }}</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+
+                                <td>
+                                    {% if x.user %}
+                                    {{ x.user.username }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+
+                                <td style="font-weight:900;">
+                                    {% if x.amount is not none %}
+                                    {{ "{:,.0f}".format(x.amount) }} {{ t('iqd') }}
+                                    {% else %}
+                                    -
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
+{% endblock %}
 
+{% block extra_js %}
+<script>
+(function () {
+    const DASHBOARD_API_URL = "{{ url_for('admin.dashboard_live_data') }}";
+    const IQD_TEXT = "{{ t('iqd') }}";
+
+    const STATUS_TEXT = {
+        pending: "{{ t('pending') }}",
+        confirmed: "{{ t('confirmed') }}",
+        cancelled: "{{ t('cancelled') }}",
+        completed: "{{ t('completed') }}",
+        delivered: "{{ t('delivered') if t('delivered') else 'Delivered' }}"
+    };
+
+    function formatNumber(value) {
+        return new Intl.NumberFormat().format(value || 0);
+    }
+
+    function escapeHtml(value) {
+        if (value === null || value === undefined) return '';
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function bookingStatusBadge(status) {
+        if (status === 'pending') return `<span class="badge badge-pending">${escapeHtml(STATUS_TEXT.pending)}</span>`;
+        if (status === 'confirmed') return `<span class="badge badge-confirmed">${escapeHtml(STATUS_TEXT.confirmed)}</span>`;
+        if (status === 'cancelled') return `<span class="badge badge-cancelled">${escapeHtml(STATUS_TEXT.cancelled)}</span>`;
+        return `<span class="badge badge-completed">${escapeHtml(STATUS_TEXT.completed)}</span>`;
+    }
+
+    function orderStatusBadge(status) {
+        if (status === 'pending') return `<span class="badge badge-pending">${escapeHtml(STATUS_TEXT.pending)}</span>`;
+        if (status === 'confirmed') return `<span class="badge badge-confirmed">${escapeHtml(STATUS_TEXT.confirmed)}</span>`;
+        if (status === 'delivered') return `<span class="badge badge-completed">${escapeHtml(STATUS_TEXT.delivered)}</span>`;
+        return `<span class="badge badge-cancelled">${escapeHtml(STATUS_TEXT.cancelled)}</span>`;
+    }
+
+    function renderRecentBookings(bookings) {
+        const body = document.getElementById('recent-bookings-body');
+        const empty = document.getElementById('recent-bookings-empty');
+        const tableWrap = document.getElementById('recent-bookings-table-wrap');
+
+        if (!body || !empty || !tableWrap) return;
+
+        if (!bookings || bookings.length === 0) {
+            body.innerHTML = '';
+            tableWrap.classList.add('d-none');
+            empty.classList.remove('d-none');
+            return;
+        }
+
+        empty.classList.add('d-none');
+        tableWrap.classList.remove('d-none');
+
+        body.innerHTML = bookings.map(booking => `
+            <tr>
+                <td>${escapeHtml(booking.customer_name || '-')}</td>
+                <td>${escapeHtml(booking.stadium_name || '-')}</td>
+                <td>${escapeHtml(booking.date || '-')}</td>
+                <td>${bookingStatusBadge(booking.status)}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderRecentOrders(orders) {
+        const body = document.getElementById('recent-orders-body');
+        const empty = document.getElementById('recent-orders-empty');
+        const tableWrap = document.getElementById('recent-orders-table-wrap');
+
+        if (!body || !empty || !tableWrap) return;
+
+        if (!orders || orders.length === 0) {
+            body.innerHTML = '';
+            tableWrap.classList.add('d-none');
+            empty.classList.remove('d-none');
+            return;
+        }
+
+        empty.classList.add('d-none');
+        tableWrap.classList.remove('d-none');
+
+        body.innerHTML = orders.map(order => `
+            <tr>
+                <td>${escapeHtml(order.id ?? '-')}</td>
+                <td>${escapeHtml(order.customer_name || '-')}</td>
+                <td>${formatNumber(order.total_price)} ${escapeHtml(IQD_TEXT)}</td>
+                <td>${orderStatusBadge(order.status)}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderTodayLogs(logs) {
+        const body = document.getElementById('today-logs-body');
+        const empty = document.getElementById('today-logs-empty');
+        const tableWrap = document.getElementById('today-logs-table-wrap');
+
+        if (!body || !empty || !tableWrap) return;
+
+        if (!logs || logs.length === 0) {
+            body.innerHTML = '';
+            tableWrap.classList.add('d-none');
+            empty.classList.remove('d-none');
+            return;
+        }
+
+        empty.classList.add('d-none');
+        tableWrap.classList.remove('d-none');
+
+        body.innerHTML = logs.map(log => `
+            <tr>
+                <td class="text-muted">${escapeHtml(log.time || '-')}</td>
+                <td>
+                    <div style="font-weight:800;">${escapeHtml(log.title || log.action || '-')}</div>
+                    ${log.note ? `<small class="text-muted d-block">${escapeHtml(log.note)}</small>` : ''}
+                    <div class="mt-1">
+                        <span class="badge bg-dark">
+                            ${escapeHtml(log.entity_type || '-')}${log.entity_id ? ` #${escapeHtml(log.entity_id)}` : ''}
+                        </span>
+                        ${log.payment_method ? `<span class="badge bg-secondary">${escapeHtml(log.payment_method)}</span>` : ''}
+                        ${log.action ? `<span class="badge bg-light text-dark">${escapeHtml(log.action)}</span>` : ''}
+                    </div>
+                </td>
+                <td>${escapeHtml(log.username || '-')}</td>
+                <td style="font-weight:900;">
+                    ${log.amount !== null && log.amount !== undefined ? `${formatNumber(log.amount)} ${escapeHtml(IQD_TEXT)}` : '-'}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    async function refreshDashboardLive() {
+        const liveIndicator = document.getElementById('live-indicator');
+
+        try {
+            const response = await fetch(DASHBOARD_API_URL, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                if (liveIndicator) {
+                    liveIndicator.classList.remove('bg-success');
+                    liveIndicator.classList.add('bg-danger');
+                }
+                return;
+            }
+
+            const data = await response.json();
+
+            const todayBookingsEl = document.getElementById('today-bookings');
+            const pendingBookingsEl = document.getElementById('pending-bookings');
+            const todayOrdersEl = document.getElementById('today-orders');
+            const todayRevenueEl = document.getElementById('today-revenue');
+
+            if (todayBookingsEl) todayBookingsEl.textContent = data.today_bookings ?? 0;
+            if (pendingBookingsEl) pendingBookingsEl.textContent = data.pending_bookings ?? 0;
+            if (todayOrdersEl) todayOrdersEl.textContent = data.today_orders ?? 0;
+            if (todayRevenueEl) todayRevenueEl.textContent = formatNumber(data.today_revenue ?? 0);
+
+            renderRecentBookings(data.recent_bookings || []);
+            renderRecentOrders(data.recent_orders || []);
+            renderTodayLogs(data.today_logs || []);
+
+            if (liveIndicator) {
+                liveIndicator.classList.remove('bg-danger');
+                liveIndicator.classList.add('bg-success');
+            }
+        } catch (error) {
+            if (liveIndicator) {
+                liveIndicator.classList.remove('bg-success');
+                liveIndicator.classList.add('bg-danger');
+            }
+            console.error('Live dashboard refresh error:', error);
+        }
+    }
+
+    refreshDashboardLive();
+    setInterval(refreshDashboardLive, 15000);
+})();
+</script>
 {% endblock %}

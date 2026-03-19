@@ -5,9 +5,21 @@
 
 {% block content %}
 <div class="table-card">
+    <!-- Top Actions -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div>
+            <h5 class="mb-0">
+                {% if current_lang == 'ku' %}بەڕێوەبردنی حجزەکان{% elif current_lang == 'ar' %}إدارة الحجوزات{% else %}Manage Bookings{% endif %}
+            </h5>
+            <small class="text-muted">
+                {% if current_lang == 'ku' %}دەتوانیت حجزەکانی Tapane هەنووکە هاوسەنگ بکەیت{% elif current_lang == 'ar' %}يمكنك مزامنة حجوزات Tapane الآن{% else %}You can sync Tapane bookings now{% endif %}
+            </small>
+        </div>
+    </div>
+
     <!-- Filters -->
     <div class="row g-3 mb-4">
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label class="form-label">
                 {% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}
             </label>
@@ -23,6 +35,16 @@
                     <option value="pending" selected>{{ t('pending') }}</option>
                 {% else %}
                     <option value="pending">{{ t('pending') }}</option>
+                {% endif %}
+
+                {% if current_status == 'pending_cancel' %}
+                    <option value="pending_cancel" selected>
+                        {% if current_lang == 'ku' %}داواکاری هەڵوەشاندنەوە{% elif current_lang == 'ar' %}طلب إلغاء{% else %}Cancel Request{% endif %}
+                    </option>
+                {% else %}
+                    <option value="pending_cancel">
+                        {% if current_lang == 'ku' %}داواکاری هەڵوەشاندنەوە{% elif current_lang == 'ar' %}طلب إلغاء{% else %}Cancel Request{% endif %}
+                    </option>
                 {% endif %}
 
                 {% if current_status == 'confirmed' %}
@@ -45,7 +67,7 @@
             </select>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-2">
             <label class="form-label">{{ t('select_stadium') }}</label>
 
             <select id="filter-stadium" class="form-select">
@@ -65,12 +87,30 @@
             </select>
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-2">
+            <label class="form-label">
+                {% if current_lang == 'ku' %}سەرچاوە{% elif current_lang == 'ar' %}المصدر{% else %}Source{% endif %}
+            </label>
+
+            <select id="filter-source" class="form-select">
+                <option value="all" {% if not current_source or current_source == 'all' %}selected{% endif %}>
+                    {{ t('all') }}
+                </option>
+                <option value="website" {% if current_source == 'website' %}selected{% endif %}>
+                    {% if current_lang == 'ku' %}ماڵپەڕ{% elif current_lang == 'ar' %}الموقع{% else %}Website{% endif %}
+                </option>
+                <option value="tapane" {% if current_source == 'tapane' %}selected{% endif %}>
+                    Tapane
+                </option>
+            </select>
+        </div>
+
+        <div class="col-md-2">
             <label class="form-label">{{ t('select_date') }}</label>
             <input type="date" id="filter-date" class="form-control" value="{{ current_date or '' }}">
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-4">
             <label class="form-label">{{ t('search') }}</label>
             <input type="text" id="filter-search" class="form-control"
                    value="{{ current_q or '' }}"
@@ -89,6 +129,9 @@
                     <th>{{ t('select_stadium') }}</th>
                     <th>{{ t('select_date') }}</th>
                     <th>{{ t('select_time') }}</th>
+                    <th>
+                        {% if current_lang == 'ku' %}سەرچاوە{% elif current_lang == 'ar' %}المصدر{% else %}Source{% endif %}
+                    </th>
                     <th>{{ t('total') }}</th>
                     <th>{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
                     <th>{{ t('actions') }}</th>
@@ -114,18 +157,36 @@
                         </td>
 
                         <td>
+                            {% if booking.source == 'tapane' %}
+                                <span class="badge bg-dark">Tapane</span>
+                            {% elif booking.source == 'website' %}
+                                <span class="badge bg-primary">
+                                    {% if current_lang == 'ku' %}ماڵپەڕ{% elif current_lang == 'ar' %}الموقع{% else %}Website{% endif %}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ booking.source or '-' }}</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
                             {{ "{:,.0f}".format(booking.final_price or 0) }} {{ t('iqd') }}
                         </td>
 
                         <td>
                             {% if booking.status == 'pending' %}
                                 <span class="badge badge-pending">{{ t('pending') }}</span>
+                            {% elif booking.status == 'pending_cancel' %}
+                                <span class="badge bg-warning text-dark">
+                                    {% if current_lang == 'ku' %}داواکاری هەڵوەشاندنەوە{% elif current_lang == 'ar' %}طلب إلغاء{% else %}Cancel Request{% endif %}
+                                </span>
                             {% elif booking.status == 'confirmed' %}
                                 <span class="badge badge-confirmed">{{ t('confirmed') }}</span>
                             {% elif booking.status == 'cancelled' %}
                                 <span class="badge badge-cancelled">{{ t('cancelled') }}</span>
-                            {% else %}
+                            {% elif booking.status == 'completed' %}
                                 <span class="badge badge-completed">{{ t('completed') }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ booking.status or '-' }}</span>
                             {% endif %}
                         </td>
 
@@ -136,7 +197,6 @@
                                     <i class="fas fa-eye"></i>
                                 </a>
 
-                                <!-- ✅ Approve ONLY pending -->
                                 {% if booking.status == 'pending' %}
                                 <button type="button"
                                         class="btn btn-outline-success"
@@ -144,15 +204,37 @@
                                         title="{{ t('confirm') }}">
                                     <i class="fas fa-check"></i>
                                 </button>
-                                {% endif %}
 
-                                <!-- ✅ Cancel pending OR confirmed (so slot becomes available again) -->
-                                {% if booking.status in ['pending', 'confirmed'] %}
                                 <button type="button"
                                         class="btn btn-outline-danger"
                                         onclick="cancelBooking({{ booking.id }}, this); return false;"
                                         title="{{ t('cancel') }}">
                                     <i class="fas fa-times"></i>
+                                </button>
+                                {% endif %}
+
+                                {% if booking.status == 'confirmed' %}
+                                <button type="button"
+                                        class="btn btn-outline-danger"
+                                        onclick="cancelBooking({{ booking.id }}, this); return false;"
+                                        title="{{ t('cancel') }}">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                                {% endif %}
+
+                                {% if booking.status == 'pending_cancel' %}
+                                <button type="button"
+                                        class="btn btn-outline-danger"
+                                        onclick="approveCancelRequest({{ booking.id }}, this); return false;"
+                                        title="{% if current_lang == 'ku' %}پەسەندکردنی هەڵوەشاندنەوە{% elif current_lang == 'ar' %}قبول الإلغاء{% else %}Approve Cancel{% endif %}">
+                                    <i class="fas fa-times-circle"></i>
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-outline-success"
+                                        onclick="rejectCancelRequest({{ booking.id }}, this); return false;"
+                                        title="{% if current_lang == 'ku' %}ڕەتکردنەوەی هەڵوەشاندنەوە{% elif current_lang == 'ar' %}رفض الإلغاء{% else %}Reject Cancel{% endif %}">
+                                    <i class="fas fa-undo"></i>
                                 </button>
                                 {% endif %}
                             </div>
@@ -161,7 +243,7 @@
                     {% endfor %}
                 {% else %}
                 <tr>
-                    <td colspan="9" class="text-center py-4 text-muted">{{ t('no_bookings') }}</td>
+                    <td colspan="10" class="text-center py-4 text-muted">{{ t('no_bookings') }}</td>
                 </tr>
                 {% endif %}
             </tbody>
@@ -175,21 +257,65 @@
 function applyFilters() {
     const status = document.getElementById('filter-status').value || 'all';
     const stadium = document.getElementById('filter-stadium').value || 'all';
+    const source = document.getElementById('filter-source').value || 'all';
     const d = document.getElementById('filter-date').value || '';
     const q = document.getElementById('filter-search').value.trim();
 
     const params = new URLSearchParams();
     params.set('status', status);
     params.set('stadium', stadium);
+    params.set('source', source);
     if (d) params.set('date', d);
     if (q) params.set('q', q);
 
     window.location.href = `/admin/bookings?` + params.toString();
 }
 
+async function syncTapaneBookings(btn) {
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Syncing...';
+
+    try {
+        const date = document.getElementById('filter-date').value || '';
+        const stadium = document.getElementById('filter-stadium').value || 'all';
+        const status = document.getElementById('filter-status').value || 'all';
+        const q = document.getElementById('filter-search').value.trim();
+
+        const params = new URLSearchParams();
+        if (date) params.set('date', date);
+        if (stadium && stadium !== 'all') params.set('field_id', stadium);
+
+        const res = await fetch(`/admin/tapane/sync-bookings?${params.toString()}`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+            throw new Error((data && data.message) || 'Tapane sync failed');
+        }
+
+        const reloadParams = new URLSearchParams();
+        reloadParams.set('source', 'tapane');
+        if (status) reloadParams.set('status', status);
+        if (stadium) reloadParams.set('stadium', stadium);
+        if (date) reloadParams.set('date', date);
+        if (q) reloadParams.set('q', q);
+
+        alert(data.message || 'Tapane sync completed');
+        window.location.href = `/admin/bookings?` + reloadParams.toString();
+    } catch (err) {
+        alert(err.message || 'Connection error');
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+    }
+}
+
 // auto apply on change
 document.getElementById('filter-status').addEventListener('change', applyFilters);
 document.getElementById('filter-stadium').addEventListener('change', applyFilters);
+document.getElementById('filter-source').addEventListener('change', applyFilters);
 document.getElementById('filter-date').addEventListener('change', applyFilters);
 
 // search: enter + typing delay
@@ -239,6 +365,52 @@ async function cancelBooking(id, btn) {
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((data && data.message) || 'Cancel failed');
+
+        location.reload();
+    } catch (err) {
+        alert(err.message || 'Connection error');
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+    }
+}
+
+async function approveCancelRequest(id, btn) {
+    btn.disabled = true;
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    try {
+        const res = await fetch(`/admin/api/booking/${id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'cancelled' })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((data && data.message) || 'Approve cancel failed');
+
+        location.reload();
+    } catch (err) {
+        alert(err.message || 'Connection error');
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+    }
+}
+
+async function rejectCancelRequest(id, btn) {
+    btn.disabled = true;
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+    try {
+        const res = await fetch(`/admin/api/booking/${id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'confirmed' })
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error((data && data.message) || 'Reject cancel failed');
 
         location.reload();
     } catch (err) {

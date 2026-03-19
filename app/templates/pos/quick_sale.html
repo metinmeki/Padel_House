@@ -51,6 +51,10 @@
     gap: 1rem;
   }
 
+  .product-item {
+    display: block;
+  }
+
   .product-card {
     background: white;
     border-radius: 12px;
@@ -59,6 +63,7 @@
     cursor: pointer;
     transition: all 0.3s ease;
     border: 2px solid transparent;
+    user-select: none;
   }
 
   .product-card:hover {
@@ -188,11 +193,11 @@
 
     <!-- Categories -->
     <div class="category-tabs">
-      <button class="category-tab active" data-category="all">
+      <button type="button" class="category-tab active" data-category="all">
         <i class="fas fa-th me-1"></i>الكل
       </button>
       {% for category in categories %}
-        <button class="category-tab" data-category="{{ category.id }}">
+        <button type="button" class="category-tab" data-category="{{ category.id }}">
           {{ category.name_ku }}
         </button>
       {% endfor %}
@@ -201,8 +206,12 @@
     <!-- Products Grid -->
     <div class="product-grid" id="productsGrid">
       {% for product in products %}
-      <div class="product-item" data-category="{{ product.category_id }}">
-        <div class="product-card" onclick="addToCart({{ product.id }}, '{{ product.name_ku }}', {{ product.price }}, '{{ product.image or '' }}')">
+      <div class="product-item"
+           data-category="{{ product.category_id }}"
+           data-name="{{ product.name_ku|lower }}"
+           data-barcode="{{ product.barcode or '' }}">
+        <div class="product-card"
+             onclick='addToCart({{ product.id }}, {{ product.name_ku|tojson }}, {{ product.price }}, {{ (product.image or "")|tojson }})'>
           {% if product.image %}
             <img src="{{ url_for('static', filename='images/products/' + product.image) }}" alt="{{ product.name_ku }}">
           {% else %}
@@ -249,26 +258,29 @@
       <div class="d-grid gap-2">
         <div class="row g-2">
           <div class="col-6">
-            <button class="btn btn-success w-100 btn-lg" onclick="checkout('cash')" id="cashBtn" disabled>
+            <button type="button" class="btn btn-success w-100 btn-lg" onclick="checkout('cash')" id="cashBtn" disabled>
               <i class="fas fa-money-bill-wave me-1"></i>نقدي
             </button>
           </div>
           <div class="col-6">
-            <button class="btn btn-info w-100 btn-lg" onclick="checkout('card')" id="cardBtn" disabled>
+            <button type="button" class="btn btn-info w-100 btn-lg" onclick="checkout('card')" id="cardBtn" disabled>
               <i class="fas fa-credit-card me-1"></i>بطاقة
             </button>
           </div>
         </div>
-          <button class="btn btn-danger w-100 btn-lg" onclick="openDebtModal()" id="debtBtn" disabled>
-              <i class="fas fa-user-clock me-2"></i>ديون
-          </button>
-        <button class="btn btn-outline-danger" onclick="clearCart()" id="clearBtn" disabled>
+
+        <button type="button" class="btn btn-danger w-100 btn-lg" onclick="openDebtModal()" id="debtBtn" disabled>
+          <i class="fas fa-user-clock me-2"></i>ديون
+        </button>
+
+        <button type="button" class="btn btn-outline-danger" onclick="clearCart()" id="clearBtn" disabled>
           <i class="fas fa-trash me-2"></i>إفراغ السلة
         </button>
       </div>
     </div>
   </div>
 </div>
+
 <!-- Debt Modal -->
 <div class="modal fade" id="debtModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
@@ -325,6 +337,7 @@
 let cart = [];
 let lastScanned = "";
 let lastScanAt = 0;
+let activeCategory = sessionStorage.getItem('quick_sale_active_category') || 'all';
 
 function formatNumber(num) {
   return (Number(num || 0)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -339,12 +352,67 @@ function escapeHtml(str) {
     .replaceAll("'", "&#039;");
 }
 
+function saveActiveCategory() {
+  sessionStorage.setItem('quick_sale_active_category', activeCategory);
+}
+
+function restoreActiveCategory() {
+  document.querySelectorAll('.category-tab').forEach(tab => {
+    if (tab.dataset.category === activeCategory) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+}
+
+function getPageScrollY() {
+  return window.scrollY || window.pageYOffset || 0;
+}
+
+function restorePageScroll(y) {
+  requestAnimationFrame(() => {
+    window.scrollTo(0, y);
+    setTimeout(() => window.scrollTo(0, y), 0);
+    setTimeout(() => window.scrollTo(0, y), 60);
+  });
+}
+
+function focusBarcodeWithoutScroll() {
+  const barcodeInput = document.getElementById('barcodeInput');
+  if (!barcodeInput) return;
+
+  try {
+    barcodeInput.focus({ preventScroll: true });
+  } catch (e) {
+    const currentY = getPageScrollY();
+    barcodeInput.focus();
+    restorePageScroll(currentY);
+  }
+}
+
+function applyFilters() {
+  const searchValue = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+
+  document.querySelectorAll('.product-item').forEach(item => {
+    const itemCategory = item.dataset.category || '';
+    const itemName = (item.dataset.name || '').toLowerCase();
+    const itemBarcode = (item.dataset.barcode || '').toLowerCase();
+
+    const categoryMatch = activeCategory === 'all' || itemCategory === activeCategory;
+    const searchMatch = !searchValue || itemName.includes(searchValue) || itemBarcode.includes(searchValue);
+
+    item.style.display = (categoryMatch && searchMatch) ? 'block' : 'none';
+  });
+}
+
 function updateCartUI() {
   const cartItems = document.getElementById('cartItems');
   const totalAmount = document.getElementById('totalAmount');
   const cashBtn = document.getElementById('cashBtn');
   const cardBtn = document.getElementById('cardBtn');
   const clearBtn = document.getElementById('clearBtn');
+  const debtBtn = document.getElementById('debtBtn');
   const itemsCount = document.getElementById('itemsCount');
 
   if (cart.length === 0) {
@@ -360,6 +428,7 @@ function updateCartUI() {
     cashBtn.disabled = true;
     cardBtn.disabled = true;
     clearBtn.disabled = true;
+    debtBtn.disabled = true;
     return;
   }
 
@@ -379,16 +448,16 @@ function updateCartUI() {
             <h6 class="mb-0">${escapeHtml(item.name)}</h6>
             <small class="text-muted">${formatNumber(item.price)} × ${item.quantity}</small>
           </div>
-          <button class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})">
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})">
             <i class="fas fa-trash"></i>
           </button>
         </div>
 
         <div class="d-flex justify-content-between align-items-center">
           <div class="qty-control">
-            <button class="qty-btn" onclick="updateQty(${index}, ${item.quantity - 1})">-</button>
+            <button type="button" class="qty-btn" onclick="updateQty(${index}, ${item.quantity - 1})">-</button>
             <span style="min-width: 30px; text-align: center;">${item.quantity}</span>
-            <button class="qty-btn" onclick="updateQty(${index}, ${item.quantity + 1})">+</button>
+            <button type="button" class="qty-btn" onclick="updateQty(${index}, ${item.quantity + 1})">+</button>
           </div>
           <strong style="color: var(--primary-color);">${formatNumber(subtotal)} IQD</strong>
         </div>
@@ -403,12 +472,14 @@ function updateCartUI() {
   cashBtn.disabled = false;
   cardBtn.disabled = false;
   clearBtn.disabled = false;
+  debtBtn.disabled = false;
 }
-const debtBtn = document.getElementById('debtBtn');
-if (debtBtn) debtBtn.disabled = false;
 
 function addToCart(productId, name, price, image) {
+  const scrollY = getPageScrollY();
+
   const existing = cart.find(item => item.product_id === productId);
+
   if (existing) {
     existing.quantity++;
   } else {
@@ -420,35 +491,50 @@ function addToCart(productId, name, price, image) {
       image: image || ''
     });
   }
+
   updateCartUI();
+  applyFilters();
+  restorePageScroll(scrollY);
+  focusBarcodeWithoutScroll();
 }
 
 function updateQty(index, newQty) {
+  const scrollY = getPageScrollY();
+
   newQty = Number(newQty || 0);
   if (newQty <= 0) {
     cart.splice(index, 1);
   } else {
     cart[index].quantity = newQty;
   }
+
   updateCartUI();
+  restorePageScroll(scrollY);
 }
 
 function removeItem(index) {
+  const scrollY = getPageScrollY();
+
   cart.splice(index, 1);
   updateCartUI();
+  restorePageScroll(scrollY);
 }
 
 function clearCart() {
   if (confirm('إفراغ السلة؟')) {
+    const scrollY = getPageScrollY();
     cart = [];
     updateCartUI();
+    restorePageScroll(scrollY);
   }
 }
 
 function checkout(paymentMethod) {
   if (cart.length === 0) return;
+
   const debtBtn = document.getElementById('debtBtn');
-if (debtBtn) debtBtn.disabled = true;
+  if (debtBtn) debtBtn.disabled = true;
+
   const items = cart.map(item => ({
     product_id: item.product_id,
     quantity: item.quantity
@@ -468,12 +554,15 @@ if (debtBtn) debtBtn.disabled = true;
       window.location.href = `/pos/receipt/${data.session_id}`;
     } else {
       alert(data.message || 'حدث خطأ');
+      if (debtBtn) debtBtn.disabled = false;
     }
   })
   .catch(() => {
     alert('فشل الاتصال بالسيرفر');
+    if (debtBtn) debtBtn.disabled = false;
   });
 }
+
 function getCartTotal() {
   return cart.reduce((sum, it) => sum + (it.price * it.quantity), 0);
 }
@@ -539,7 +628,6 @@ function submitDebt() {
       return;
     }
 
-    // success: close modal + clear cart
     const modalEl = document.getElementById('debtModal');
     const modal = bootstrap.Modal.getInstance(modalEl);
     if (modal) modal.hide();
@@ -555,72 +643,70 @@ function submitDebt() {
     err.style.display = 'block';
   });
 }
-// Category filter
+
 document.querySelectorAll('.category-tab').forEach(tab => {
   tab.addEventListener('click', function() {
-    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-    this.classList.add('active');
+    activeCategory = this.dataset.category;
+    saveActiveCategory();
+    restoreActiveCategory();
+    applyFilters();
+    focusBarcodeWithoutScroll();
+  });
+});
 
-    const category = this.dataset.category;
-    document.querySelectorAll('.product-item').forEach(item => {
-      if (category === 'all' || item.dataset.category === category) {
-        item.style.display = 'block';
-      } else {
-        item.style.display = 'none';
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+  searchInput.addEventListener('input', function() {
+    applyFilters();
+  });
+}
+
+const barcodeInput = document.getElementById('barcodeInput');
+if (barcodeInput) {
+  barcodeInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const barcode = this.value.trim();
+      if (!barcode) return;
+
+      const now = Date.now();
+      if (barcode === lastScanned && (now - lastScanAt) < 300) {
+        this.value = '';
+        return;
       }
-    });
-  });
-});
 
-// Search
-document.getElementById('searchInput').addEventListener('input', function() {
-  const search = this.value.toLowerCase();
-  document.querySelectorAll('.product-item').forEach(item => {
-    const name = item.querySelector('h6').textContent.toLowerCase();
-    item.style.display = name.includes(search) ? 'block' : 'none';
-  });
-});
+      lastScanned = barcode;
+      lastScanAt = now;
 
-// Barcode scanner
-// Barcode scanner
-document.getElementById('barcodeInput').addEventListener('keydown', function(e) {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    const barcode = this.value.trim();
-    if (!barcode) return;
+      const scrollY = getPageScrollY();
 
-    const now = Date.now();
-    if (barcode === lastScanned && (now - lastScanAt) < 300) {
-      this.value = '';
-      return;
+      fetch('/pos/scan-barcode', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ barcode: barcode })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          addToCart(data.product.id, data.product.name_ku, data.product.price, data.product.image);
+          this.value = '';
+          restorePageScroll(scrollY);
+          focusBarcodeWithoutScroll();
+        } else {
+          alert('المنتج غير موجود!');
+          this.value = '';
+        }
+      })
+      .catch(() => {
+        alert('فشل الاتصال بالسيرفر');
+        this.value = '';
+      });
     }
-    lastScanned = barcode;
-    lastScanAt = now;
+  });
+}
 
-    fetch('/pos/scan-barcode', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({barcode: barcode})
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        addToCart(data.product.id, data.product.name_ku, data.product.price, data.product.image);
-        // Product added silently, no alert
-        this.value = '';
-        this.focus();
-      } else {
-        alert('المنتج غير موجود!');
-        this.value = '';
-      }
-    })
-    .catch(() => {
-      alert('فشل الاتصال بالسيرفر');
-      this.value = '';
-    });
-  }
-});
-
+restoreActiveCategory();
+applyFilters();
 updateCartUI();
 </script>
 {% endblock %}

@@ -104,6 +104,51 @@
         </div>
     </div>
 
+    <div class="col-12"><hr></div>
+
+<div class="col-md-6">
+    <p class="text-muted mb-1">
+        {% if current_lang == 'ku' %}سەرچاوە{% elif current_lang == 'ar' %}المصدر{% else %}Source{% endif %}
+    </p>
+    <h6>
+        {% if booking.source == 'tapane' %}
+            <span class="badge bg-dark">Tapane</span>
+        {% else %}
+            <span class="badge bg-primary">
+                {% if current_lang == 'ku' %}وێبسایت{% elif current_lang == 'ar' %}الموقع{% else %}Website{% endif %}
+            </span>
+        {% endif %}
+    </h6>
+</div>
+
+<div class="col-md-6">
+    <p class="text-muted mb-1">
+        {% if current_lang == 'ku' %}ژمارەی دەرەکی{% elif current_lang == 'ar' %}المعرف الخارجي{% else %}External Booking ID{% endif %}
+    </p>
+    <h6>{{ booking.external_booking_id or '-' }}</h6>
+</div>
+
+<div class="col-md-6">
+    <p class="text-muted mb-1">
+        {% if current_lang == 'ku' %}دۆخی Tapane{% elif current_lang == 'ar' %}حالة Tapane{% else %}Tapane Status{% endif %}
+    </p>
+    <h6>{{ booking.external_status or '-' }}</h6>
+</div>
+
+<div class="col-md-6">
+    <p class="text-muted mb-1">
+        {% if current_lang == 'ku' %}دوایین هاوکاتکردن{% elif current_lang == 'ar' %}آخر مزامنة{% else %}Last Synced At{% endif %}
+    </p>
+    <h6>
+        {% if booking.last_synced_at %}
+            {{ booking.last_synced_at.strftime('%Y-%m-%d %H:%M') }}
+        {% else %}
+            -
+        {% endif %}
+    </h6>
+</div>
+
+
     <!-- Actions -->
     <div class="col-lg-4">
         <div class="table-card">

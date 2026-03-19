@@ -240,7 +240,9 @@
       {% for product in products %}
         {% set can_buy = (product.stock is none) or (product.stock > 0) %}
 
-        <div class="product-item" data-category="{{ product.category_id }}">
+        <div class="product-item"
+             data-category="{{ product.category_id }}"
+             data-name="{{ product.name_ku|lower }}">
           <div class="product-card {{ '' if can_buy else 'opacity-50' }}"
                {% if can_buy %}
                  role="button"
@@ -568,7 +570,7 @@ let ordersTotal = {{ session.get_orders_total() }};
 let currentTimePrice = 0;
 let currentHours = 0;
 let currentAutoDiscount = 0;
-let activeCategory = 'all';
+let activeCategory = sessionStorage.getItem('pos_active_category') || 'all';
 let lastScanned = '';
 let lastScanAt = 0;
 
@@ -590,8 +592,39 @@ function restoreScrollPosition() {
   }
 }
 
-function reloadKeepScroll() {
+function saveActiveCategory() {
+  sessionStorage.setItem('pos_active_category', activeCategory);
+}
+
+function restoreActiveCategory() {
+  document.querySelectorAll('.category-tab').forEach(tab => {
+    if (tab.dataset.category === activeCategory) {
+      tab.classList.add('active');
+    } else {
+      tab.classList.remove('active');
+    }
+  });
+}
+
+function saveSearchValue() {
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    sessionStorage.setItem('pos_search_value', searchInput.value || '');
+  }
+}
+
+function restoreSearchValue() {
+  const saved = sessionStorage.getItem('pos_search_value');
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput && saved !== null) {
+    searchInput.value = saved;
+  }
+}
+
+function reloadKeepState() {
   saveScrollPosition();
+  saveActiveCategory();
+  saveSearchValue();
   window.location.reload();
 }
 
@@ -607,7 +640,7 @@ function applyFilters() {
 
   document.querySelectorAll('.product-item').forEach(item => {
     const categoryMatch = activeCategory === 'all' || item.dataset.category === activeCategory;
-    const name = item.querySelector('h6')?.textContent?.toLowerCase() || '';
+    const name = (item.dataset.name || item.querySelector('h6')?.textContent || '').toLowerCase();
     const searchMatch = !search || name.includes(search);
     item.style.display = (categoryMatch && searchMatch) ? 'block' : 'none';
   });
@@ -694,7 +727,7 @@ function updateModalTotals() {
 }
 
 function addToCart(productId) {
-  saveScrollPosition();
+  reloadKeepState();
 
   fetch(`/pos/session/${sessionId}/add-item`, {
     method: 'POST',
@@ -704,7 +737,7 @@ function addToCart(productId) {
   .then(res => res.json())
   .then(data => {
     if (data.success) {
-      reloadKeepScroll();
+      window.location.reload();
     } else {
       alert(data.message || 'حدث خطأ');
     }
@@ -713,7 +746,7 @@ function addToCart(productId) {
 }
 
 function updateQty(itemId, newQty) {
-  saveScrollPosition();
+  reloadKeepState();
 
   fetch(`/pos/session/${sessionId}/update-quantity`, {
     method: 'POST',
@@ -722,8 +755,11 @@ function updateQty(itemId, newQty) {
   })
   .then(res => res.json())
   .then(data => {
-    if (data.success) reloadKeepScroll();
-    else alert(data.message || 'حدث خطأ');
+    if (data.success) {
+      window.location.reload();
+    } else {
+      alert(data.message || 'حدث خطأ');
+    }
   })
   .catch(() => alert('حدث خطأ في الاتصال'));
 }
@@ -731,13 +767,16 @@ function updateQty(itemId, newQty) {
 function removeItem(itemId) {
   if (!confirm('حذف هذا المنتج؟')) return;
 
-  saveScrollPosition();
+  reloadKeepState();
 
   fetch(`/pos/session/${sessionId}/remove-item/${itemId}`, { method: 'POST' })
     .then(res => res.json())
     .then(data => {
-      if (data.success) reloadKeepScroll();
-      else alert(data.message || 'حدث خطأ');
+      if (data.success) {
+        window.location.reload();
+      } else {
+        alert(data.message || 'حدث خطأ');
+      }
     })
     .catch(() => alert('حدث خطأ في الاتصال'));
 }
@@ -789,9 +828,9 @@ document.querySelectorAll('.payment-method').forEach(btn => {
 document.querySelectorAll('.category-tab').forEach(tab => {
   tab.addEventListener('click', function(e) {
     e.preventDefault();
-    document.querySelectorAll('.category-tab').forEach(t => t.classList.remove('active'));
-    this.classList.add('active');
     activeCategory = this.dataset.category;
+    saveActiveCategory();
+    restoreActiveCategory();
     applyFilters();
   });
 });
@@ -799,6 +838,7 @@ document.querySelectorAll('.category-tab').forEach(tab => {
 const searchInput = document.getElementById('searchInput');
 if (searchInput) {
   searchInput.addEventListener('input', function() {
+    saveSearchValue();
     applyFilters();
   });
 }
@@ -820,6 +860,8 @@ if (barcodeInput) {
       lastScanAt = now;
 
       saveScrollPosition();
+      saveActiveCategory();
+      saveSearchValue();
 
       fetch('/pos/scan-barcode', {
         method: 'POST',
@@ -899,6 +941,8 @@ if (debtModalEl) {
 }
 
 restoreScrollPosition();
+restoreSearchValue();
+restoreActiveCategory();
 applyFilters();
 </script>
 {% endblock %}

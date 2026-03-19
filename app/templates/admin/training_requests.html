@@ -1,0 +1,271 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}طلبات التدريب{% endblock %}
+{% block page_title %}طلبات التدريب{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">طلبات التدريب</h2>
+            <p class="text-muted mb-0">إدارة طلبات التدريب الخاصة بالمدربين</p>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('admin.manage_training_requests') }}">
+                <div class="row g-3">
+
+                    <div class="col-md-3">
+                        <label class="form-label">الحالة</label>
+                        <select name="status" class="form-select">
+                            <option value="all" {% if current_status == 'all' %}selected{% endif %}>كل الحالات</option>
+                            <option value="new" {% if current_status == 'new' %}selected{% endif %}>جديد</option>
+                            <option value="contacted" {% if current_status == 'contacted' %}selected{% endif %}>تم التواصل</option>
+                            <option value="scheduled" {% if current_status == 'scheduled' %}selected{% endif %}>تم تحديد الموعد</option>
+                            <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>ملغي</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">المدرب</label>
+                        <select name="coach_id" class="form-select">
+                            <option value="all" {% if current_coach == 'all' %}selected{% endif %}>كل المدربين</option>
+                            {% for coach in coaches %}
+                            <option value="{{ coach.id }}" {% if current_coach == coach.id|string %}selected{% endif %}>
+                                {{ coach.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">بحث</label>
+                        <input
+                            type="text"
+                            name="q"
+                            class="form-control"
+                            value="{{ current_q }}"
+                            placeholder="ابحث بالاسم أو الهاتف">
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button class="btn btn-dark w-100" type="submit">فلترة</button>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body">
+            {% if requests_list %}
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>العميل</th>
+                            <th>الهاتف</th>
+                            <th>المدرب</th>
+                            <th>الباقة</th>
+                            <th>الجلسات</th>
+                            <th>السعر</th>
+                            <th>المستوى</th>
+                            <th>الملاحظة</th>
+                            <th>الحالة</th>
+                            <th>التاريخ</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for item in requests_list %}
+                        <tr id="request-row-{{ item.id }}">
+                            <td>{{ item.id }}</td>
+                            <td>{{ item.full_name }}</td>
+                            <td>{{ item.phone }}</td>
+                            <td>{{ item.coach.name if item.coach else '-' }}</td>
+
+                            <td>{{ item.package_name or '-' }}</td>
+
+                            <td>
+                                {% if item.package_sessions %}
+                                    {{ item.package_sessions }} جلسة
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% if item.package_price %}
+                                    {{ "{:,}".format(item.package_price) }} IQD
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+
+                            <td>{{ item.level or '-' }}</td>
+
+                            <td style="max-width: 220px;">
+                                <div class="text-truncate" title="{{ item.note or '' }}">
+                                    {{ item.note or '-' }}
+                                </div>
+                            </td>
+
+                            <td>
+                                <span
+                                    class="{% if item.status == 'new' %}badge bg-warning text-dark{% elif item.status == 'contacted' %}badge bg-info text-dark{% elif item.status == 'scheduled' %}badge bg-success{% elif item.status == 'cancelled' %}badge bg-danger{% else %}badge bg-secondary{% endif %}"
+                                    id="status-badge-{{ item.id }}">
+                                    {% if item.status == 'new' %}جديد
+                                    {% elif item.status == 'contacted' %}تم التواصل
+                                    {% elif item.status == 'scheduled' %}تم تحديد الموعد
+                                    {% elif item.status == 'cancelled' %}ملغي
+                                    {% else %}{{ item.status }}{% endif %}
+                                </span>
+                            </td>
+
+                            <td>{{ item.created_at.strftime('%Y-%m-%d %H:%M') if item.created_at else '-' }}</td>
+
+                            <td>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% if item.status != 'contacted' %}
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-info"
+                                        onclick="updateTrainingStatus({{ item.id }}, 'contacted')">
+                                        تم التواصل
+                                    </button>
+                                    {% endif %}
+
+                                    {% if item.status != 'scheduled' %}
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-success"
+                                        onclick="updateTrainingStatus({{ item.id }}, 'scheduled')">
+                                        تم تحديد الموعد
+                                    </button>
+                                    {% endif %}
+
+                                    {% if item.status != 'cancelled' %}
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-danger"
+                                        onclick="updateTrainingStatus({{ item.id }}, 'cancelled')">
+                                        إلغاء
+                                    </button>
+                                    {% endif %}
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-dark"
+                                        onclick="deleteTrainingRequest({{ item.id }})">
+                                        حذف
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                لا توجد طلبات تدريب حالياً
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function getTrainingStatusLabel(status) {
+    const labels = {
+        new: 'جديد',
+        contacted: 'تم التواصل',
+        scheduled: 'تم تحديد الموعد',
+        cancelled: 'ملغي'
+    };
+    return labels[status] || status;
+}
+
+function getTrainingStatusClass(status) {
+    if (status === 'new') return 'badge bg-warning text-dark';
+    if (status === 'contacted') return 'badge bg-info text-dark';
+    if (status === 'scheduled') return 'badge bg-success';
+    if (status === 'cancelled') return 'badge bg-danger';
+    return 'badge bg-secondary';
+}
+
+async function updateTrainingStatus(requestId, status) {
+    try {
+        const response = await fetch(`/admin/api/training-request/${requestId}/status`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ status: status })
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            alert(data.message || 'حدث خطأ');
+            return;
+        }
+
+        const badge = document.getElementById(`status-badge-${requestId}`);
+        if (badge) {
+            badge.className = getTrainingStatusClass(status);
+            badge.textContent = getTrainingStatusLabel(status);
+        }
+
+        setTimeout(() => {
+            window.location.reload();
+        }, 300);
+
+    } catch (error) {
+        console.error(error);
+        alert('حدث خطأ أثناء تحديث الحالة');
+    }
+}
+
+async function deleteTrainingRequest(requestId) {
+    const confirmed = confirm('هل أنت متأكد من حذف طلب التدريب؟');
+    if (!confirmed) return;
+
+    try {
+        const response = await fetch(`/admin/api/training-request/${requestId}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (!data.success) {
+            alert(data.message || 'حدث خطأ');
+            return;
+        }
+
+        const row = document.getElementById(`request-row-${requestId}`);
+        if (row) {
+            row.remove();
+        }
+
+        setTimeout(() => {
+            window.location.reload();
+        }, 300);
+
+    } catch (error) {
+        console.error(error);
+        alert('حدث خطأ أثناء حذف الطلب');
+    }
+}
+</script>
+{% endblock %}

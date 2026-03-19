@@ -230,10 +230,15 @@
       border-radius:0 !important;
     }
 
-    /* Avoid gradients (thermal printers hate them) */
-    .receipt-total{
+    /* FIX: Force total background black and ALL child spans white */
+    .receipt-total,
+    .receipt-total span,
+    .receipt-total span:first-child,
+    .receipt-total span:last-child {
       background:#000 !important;
       color:#fff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
     /* Never print buttons/controls */
@@ -420,7 +425,7 @@
       window.onafterprint = function(){
         goBackToPOS();
       };
-      // Fallback for browsers that don’t fire onafterprint reliably
+      // Fallback for browsers that don't fire onafterprint reliably
       setTimeout(goBackToPOS, 2500);
     }
 

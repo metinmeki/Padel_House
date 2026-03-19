@@ -268,7 +268,10 @@ def inject_admin_counts():
             'new_training_requests_count': 0
         }
 
-    pending_bookings_count = Booking.query.filter_by(status='pending').count()
+    pending_bookings_count = Booking.query.filter(
+        Booking.status.in_(['pending', 'pending_cancel'])
+    ).count()
+
     pending_orders_count = Order.query.filter_by(status='pending').count()
     new_training_requests_count = CoachTrainingRequest.query.filter_by(status='new').count()
 
@@ -402,7 +405,9 @@ def dashboard():
         Booking.date == date.today()
     ).scalar() or 0
 
-    pending_bookings = Booking.query.filter_by(status='pending').count()
+    pending_bookings = Booking.query.filter(
+        Booking.status.in_(['pending', 'pending_cancel'])
+    ).count()
 
     total_products = Product.query.filter_by(is_active=True).count()
     total_orders = Order.query.count()
@@ -644,7 +649,9 @@ def _sync_booking_after_admin_status_change(booking, target_status):
 @login_required
 @permission_required('can_manage_bookings')
 def pending_bookings():
-    bookings = Booking.query.filter_by(status='pending').order_by(Booking.created_at.desc()).all()
+    bookings = Booking.query.filter(
+        Booking.status.in_(['pending', 'pending_cancel'])
+    ).order_by(Booking.created_at.desc()).all()
     stadiums = Stadium.query.all()
     return render_template('admin/pending_bookings.html', bookings=bookings, stadiums=stadiums)
 
@@ -899,21 +906,42 @@ def update_booking_status(booking_id):
 
     data = request.json or {}
     new_status = (data.get('status') or '').strip().lower()
-    reason = (data.get('reason') or '').strip()  # optional
+    reason = (data.get('reason') or '').strip()
 
-    if new_status not in ['pending', 'confirmed', 'completed', 'cancelled']:
+    if new_status not in ['pending', 'pending_cancel', 'confirmed', 'completed', 'cancelled']:
         return jsonify({'success': False, 'message': 'Invalid status'}), 400
 
     old_status = booking.status
     booking.status = new_status
 
-    # ✅ If confirm from pending
-    if new_status == 'confirmed' and old_status == 'pending':
-        booking.confirmed_at = datetime.utcnow()
-        if hasattr(booking, 'confirmed_by'):
+    # confirmed
+    if new_status == 'confirmed':
+        if old_status in ['pending', 'pending_cancel']:
+            booking.confirmed_at = datetime.utcnow()
+            if hasattr(booking, 'confirmed_by'):
+                booking.confirmed_by = current_user.id
+
+        # if admin rejected cancel request and wants to keep booking confirmed
+        if old_status == 'pending_cancel':
+            existing_notes = booking.notes or ''
+            extra_note = '[Cancel request rejected by admin]'
+            if extra_note not in existing_notes:
+                booking.notes = f"{existing_notes}\n{extra_note}".strip()
+
+    # pending_cancel
+    if new_status == 'pending_cancel':
+        # keep it confirmed in business sense, but waiting for admin decision on cancel
+        if not booking.confirmed_at:
+            booking.confirmed_at = datetime.utcnow()
+        if hasattr(booking, 'confirmed_by') and not getattr(booking, 'confirmed_by', None):
             booking.confirmed_by = current_user.id
 
-    # ✅ If cancelled
+        existing_notes = booking.notes or ''
+        extra_note = '[Pending cancel request from Tapane]'
+        if extra_note not in existing_notes:
+            booking.notes = f"{existing_notes}\n{extra_note}".strip()
+
+    # cancelled
     if new_status == 'cancelled':
         booking.confirmed_at = None
         if hasattr(booking, 'confirmed_by'):
@@ -926,13 +954,19 @@ def update_booking_status(booking_id):
         if hasattr(booking, 'rejection_reason') and reason:
             booking.rejection_reason = reason
 
+    # completed
+    if new_status == 'completed':
+        if not booking.confirmed_at:
+            booking.confirmed_at = datetime.utcnow()
+        if hasattr(booking, 'confirmed_by') and not getattr(booking, 'confirmed_by', None):
+            booking.confirmed_by = current_user.id
+
     try:
         db.session.commit()
     except Exception as e:
         db.session.rollback()
         return jsonify({'success': False, 'message': f'Database error: {str(e)}'}), 500
 
-    # ✅ Sync all applicable changes with Tapane
     tapane_synced, tapane_error = _sync_booking_after_admin_status_change(booking, new_status)
 
     return jsonify({
@@ -2580,7 +2614,9 @@ def api_settings_alias():
 @admin_bp.route('/api/pending-count', methods=['GET'])
 @login_required
 def admin_pending_count_api():
-    count = Booking.query.filter_by(status='pending').count()
+    count = Booking.query.filter(
+        Booking.status.in_(['pending', 'pending_cancel'])
+    ).count()
     return jsonify({'pending': count}), 200
 
 
@@ -2989,7 +3025,9 @@ def add_expense():
 def admin_live_dashboard():
     total_bookings = Booking.query.count()
 
-    pending_bookings_count = Booking.query.filter_by(status='pending').count()
+    pending_bookings_count = Booking.query.filter(
+        Booking.status.in_(['pending', 'pending_cancel'])
+    ).count()
     pending_orders_count = Order.query.filter_by(status='pending').count()
     new_training_requests_count = CoachTrainingRequest.query.filter_by(status='new').count()
 
@@ -3056,7 +3094,9 @@ def dashboard_live_data():
         Booking.date == today
     ).count()
 
-    pending_bookings = Booking.query.filter_by(status='pending').count()
+    pending_bookings = Booking.query.filter(
+        Booking.status.in_(['pending', 'pending_cancel'])
+    ).count()
 
     today_orders = Order.query.filter(
         Order.created_at >= start_of_day,

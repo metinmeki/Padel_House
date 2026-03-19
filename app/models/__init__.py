@@ -9,3 +9,5 @@ from app.models.table import Table
 from app.models.pos_session import POSSession
 from app.models.pos_order import POSOrder, POSOrderItem
 from app.models.expense import Expense
+from app.models.coach import Coach
+from app.models.coach_training_request import CoachTrainingRequest

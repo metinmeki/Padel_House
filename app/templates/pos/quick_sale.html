@@ -4,194 +4,310 @@
 
 {% block extra_css %}
 <style>
-  /* Search & Barcode */
+  /* ─── Search & Barcode ─── */
   .search-card {
-    background: white;
+    background: var(--bg-card);
     border-radius: 12px;
-    padding: 1rem;
+    padding: 1rem 1.2rem;
     margin-bottom: 1rem;
+    border: 1px solid var(--border);
   }
 
-  /* Category Tabs */
+  /* ─── Category Tabs ─── */
   .category-tabs {
     display: flex;
     gap: 0.5rem;
     overflow-x: auto;
-    padding: 0.5rem 0;
+    padding: 0.4rem 0 0.6rem;
     margin-bottom: 1rem;
+    scrollbar-width: none;
   }
+  .category-tabs::-webkit-scrollbar { display: none; }
 
-  .category-tab {
-    padding: 0.6rem 1.2rem;
-    border-radius: 25px;
-    border: 2px solid #e9ecef;
-    background: white;
-    color: var(--secondary-color);
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.3s ease;
-  }
-
-  .category-tab:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-  }
-
-  .category-tab.active {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-    color: white;
-    border-color: var(--primary-color);
-  }
-
-  /* Product Grid */
+  /* ─── Product Grid ─── */
   .product-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+    gap: 0.85rem;
   }
 
-  .product-item {
-    display: block;
-  }
+  .product-item { display: block; }
 
   .product-card {
-    background: white;
+    background: var(--bg-card);
     border-radius: 12px;
-    padding: 1rem;
+    padding: 1rem 0.8rem;
     text-align: center;
     cursor: pointer;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
+    transition: all 0.25s ease;
+    border: 1.5px solid var(--border);
     user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .product-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--primary-glow), transparent);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    border-radius: 12px;
   }
 
   .product-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-    border-color: var(--primary-color);
+    transform: translateY(-4px);
+    border-color: var(--primary);
+    box-shadow: 0 8px 24px rgba(229,118,37,0.18);
   }
 
-  .product-card img {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
+  .product-card:hover::before { opacity: 1; }
+
+  .product-card:active { transform: translateY(-1px) scale(0.98); }
+
+  .product-img-wrap {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 0.6rem;
     border-radius: 10px;
-    margin-bottom: 0.5rem;
-  }
-
-  .product-card h6 {
-    font-size: 0.9rem;
-    margin: 0.5rem 0;
-    color: var(--secondary-color);
-  }
-
-  .product-card .price {
-    color: var(--primary-color);
-    font-weight: 700;
-    font-size: 1rem;
-  }
-
-  /* Cart */
-  .cart-container {
-    position: sticky;
-    top: 100px;
-  }
-
-  .cart-items {
-    max-height: 50vh;
-    overflow-y: auto;
-    margin-bottom: 1rem;
-  }
-
-  .cart-item {
-    background: white;
-    border-radius: 10px;
-    padding: 1rem;
-    margin-bottom: 0.8rem;
-    border: 1px solid #e9ecef;
-  }
-
-  .qty-control {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 0.3rem 0.5rem;
-  }
-
-  .qty-btn {
-    width: 30px;
-    height: 30px;
-    border-radius: 6px;
-    border: 1px solid var(--primary-color);
-    background: white;
-    color: var(--primary-color);
-    font-weight: 700;
+    overflow: hidden;
+    background: var(--bg-surface);
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
   }
 
-  .qty-btn:hover {
-    background: var(--primary-color);
-    color: white;
+  .product-img-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
+
+  .product-card h6 {
+    font-size: 0.85rem;
+    margin: 0.3rem 0 0.2rem;
+    color: var(--text-primary);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .product-card .price {
+    color: var(--primary);
+    font-weight: 800;
+    font-size: 0.95rem;
+  }
+
+  /* Added-to-cart flash animation */
+  @keyframes addFlash {
+    0%   { box-shadow: 0 0 0 0 rgba(229,118,37,0.6); }
+    50%  { box-shadow: 0 0 0 8px rgba(229,118,37,0); }
+    100% { box-shadow: 0 0 0 0 rgba(229,118,37,0); }
+  }
+  .product-card.flash {
+    animation: addFlash 0.4s ease-out;
+  }
+
+  /* ─── Cart ─── */
+  .cart-container {
+    position: sticky;
+    top: 80px;
+  }
+
+  .cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cart-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .cart-badge {
+    background: var(--primary);
+    color: white;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    min-width: 28px;
+    text-align: center;
+  }
+
+  .cart-items {
+    max-height: 46vh;
+    overflow-y: auto;
+    margin-bottom: 0.75rem;
+    padding-left: 2px;
+  }
+
+  .cart-item {
+    background: var(--bg-surface);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--border);
+    transition: border-color 0.15s;
+  }
+
+  .cart-item:hover { border-color: var(--border-strong); }
+
+  .cart-item-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.1rem;
+  }
+
+  .cart-item-unit {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .cart-item-subtotal {
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 0.9rem;
+  }
+
+  .cart-empty {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: var(--text-muted);
+  }
+
+  .cart-empty i { font-size: 2.5rem; opacity: 0.3; margin-bottom: 0.75rem; }
+  .cart-empty p { margin: 0; font-size: 0.88rem; }
+
+  /* ─── Total Bar ─── */
+  .total-bar {
+    background: var(--bg-surface);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.9rem;
+    border: 1px solid var(--border-strong);
+  }
+
+  .total-label { color: var(--text-secondary); font-weight: 600; font-size: 0.92rem; }
 
   .total-amount {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--primary-color);
+    font-size: 1.55rem;
+    font-weight: 800;
+    color: var(--primary);
+    font-feature-settings: 'tnum';
   }
 
+  /* ─── Checkout Buttons ─── */
+  .checkout-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  /* ─── Debt Modal dark overrides ─── */
+  .debt-total-box {
+    background: var(--bg-surface);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* ─── Qty Control (already in base, reinforce here) ─── */
+  .qty-control {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--bg-input);
+    border-radius: 8px;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .qty-display {
+    min-width: 28px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+  }
+
+  /* ─── Responsive ─── */
   @media (max-width: 991px) {
-    .product-grid {
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    }
+    .product-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+    .cart-container { position: static; }
+    .cart-items { max-height: 35vh; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header mb-4">
+<div class="page-header mb-3">
   <div class="d-flex justify-content-between align-items-center">
-    <h2>
-      <i class="fas fa-bolt me-2" style="color: var(--primary-color);"></i>
+    <h2 style="color: var(--text-primary);">
+      <i class="fas fa-bolt me-2" style="color: var(--primary);"></i>
       بيع سريع
     </h2>
-    <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary">
-      <i class="fas fa-arrow-right me-2"></i>
-      رجوع
+    <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary btn-sm">
+      <i class="fas fa-arrow-right me-2"></i>رجوع
     </a>
   </div>
 </div>
 
-<div class="row g-4">
-  <!-- Products Section -->
+<div class="row g-3">
+
+  <!-- ══ Products Column ══ -->
   <div class="col-lg-8">
+
     <!-- Search & Barcode -->
     <div class="search-card">
       <div class="row g-2">
         <div class="col-md-6">
-          <input type="text"
-                 id="barcodeInput"
-                 class="form-control"
-                 placeholder="🔍 امسح الباركود..."
-                 autofocus>
+          <div style="position: relative;">
+            <i class="fas fa-barcode" style="
+              position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+              color: var(--primary); font-size: 1.1rem; pointer-events: none;"></i>
+            <input type="text"
+                   id="barcodeInput"
+                   class="form-control barcode-input"
+                   style="padding-right: 2.5rem;"
+                   placeholder="امسح الباركود..."
+                   autofocus>
+          </div>
         </div>
         <div class="col-md-6">
-          <input type="text"
-                 id="searchInput"
-                 class="form-control"
-                 placeholder="بحث بالاسم...">
+          <div style="position: relative;">
+            <i class="fas fa-search" style="
+              position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+              color: var(--text-muted); pointer-events: none;"></i>
+            <input type="text"
+                   id="searchInput"
+                   class="form-control"
+                   style="padding-right: 2.5rem;"
+                   placeholder="بحث بالاسم...">
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Categories -->
+    <!-- Category Tabs -->
     <div class="category-tabs">
       <button type="button" class="category-tab active" data-category="all">
         <i class="fas fa-th me-1"></i>الكل
@@ -211,118 +327,129 @@
            data-name="{{ product.name_ku|lower }}"
            data-barcode="{{ product.barcode or '' }}">
         <div class="product-card"
-             onclick='addToCart({{ product.id }}, {{ product.name_ku|tojson }}, {{ product.price }}, {{ (product.image or "")|tojson }})'>
-          {% if product.image %}
-            <img src="{{ url_for('static', filename='images/products/' + product.image) }}" alt="{{ product.name_ku }}">
-          {% else %}
-            <div style="width: 80px; height: 80px; background: #f8f9fa; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin: 0 auto 0.5rem;">
-              <i class="fas fa-box fa-2x text-muted"></i>
-            </div>
-          {% endif %}
+             onclick='addToCart({{ product.id }}, {{ product.name_ku|tojson }}, {{ product.price }}, {{ (product.image or "")|tojson }}, this)'>
+
+          <div class="product-img-wrap">
+            {% if product.image %}
+              <img src="{{ url_for('static', filename='images/products/' + product.image) }}" alt="{{ product.name_ku }}" loading="lazy">
+            {% else %}
+              <i class="fas fa-box" style="font-size: 1.8rem; color: var(--text-muted);"></i>
+            {% endif %}
+          </div>
+
           <h6>{{ product.name_ku }}</h6>
           <div class="price">{{ '{:,.0f}'.format(product.price) }} IQD</div>
         </div>
       </div>
       {% endfor %}
     </div>
+
+    <!-- No results message -->
+    <div id="noResults" style="display:none;" class="text-center py-5" style="color: var(--text-muted);">
+      <i class="fas fa-search fa-2x mb-3" style="opacity:0.3;"></i>
+      <p style="color: var(--text-muted);">لا توجد منتجات مطابقة</p>
+    </div>
+
   </div>
 
-  <!-- Cart Section -->
+  <!-- ══ Cart Column ══ -->
   <div class="col-lg-4">
     <div class="stat-card cart-container">
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="mb-0">
-          <i class="fas fa-shopping-basket me-2" style="color: var(--primary-color);"></i>
-          السلة
-        </h5>
-        <span class="badge bg-primary" style="font-size: 1rem; padding: 0.5rem 1rem;">
-          <span id="itemsCount">0</span>
-        </span>
-      </div>
 
-      <div class="cart-items" id="cartItems">
-        <div id="emptyCart" class="text-center text-muted py-5">
-          <i class="fas fa-shopping-basket fa-3x mb-3 opacity-50"></i>
-          <p class="mb-1">السلة فارغة</p>
-          <small>امسح الباركود أو اختر منتج</small>
+      <div class="cart-header">
+        <div class="cart-title">
+          <i class="fas fa-shopping-basket" style="color: var(--primary);"></i>
+          السلة
+        </div>
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <span class="cart-badge" id="itemsCount">0</span>
+          <button type="button"
+                  class="btn btn-outline-danger btn-sm py-1 px-2"
+                  onclick="clearCart()"
+                  id="clearBtn"
+                  disabled
+                  title="إفراغ السلة">
+            <i class="fas fa-trash"></i>
+          </button>
         </div>
       </div>
 
-      <hr>
+      <!-- Cart Items -->
+      <div class="cart-items" id="cartItems">
+        <div class="cart-empty">
+          <i class="fas fa-shopping-basket d-block"></i>
+          <p>السلة فارغة</p>
+          <small style="color: var(--text-muted); font-size: 0.78rem;">امسح الباركود أو اختر منتج</small>
+        </div>
+      </div>
 
-      <div class="d-flex justify-content-between align-items-center mb-3">
-        <span class="fs-5 fw-bold">المجموع:</span>
+      <!-- Total -->
+      <div class="total-bar">
+        <span class="total-label">المجموع</span>
         <span class="total-amount" id="totalAmount">0 IQD</span>
       </div>
 
-      <div class="d-grid gap-2">
-        <div class="row g-2">
-          <div class="col-6">
-            <button type="button" class="btn btn-success w-100 btn-lg" onclick="checkout('cash')" id="cashBtn" disabled>
-              <i class="fas fa-money-bill-wave me-1"></i>نقدي
-            </button>
-          </div>
-          <div class="col-6">
-            <button type="button" class="btn btn-info w-100 btn-lg" onclick="checkout('card')" id="cardBtn" disabled>
-              <i class="fas fa-credit-card me-1"></i>بطاقة
-            </button>
-          </div>
-        </div>
-
-        <button type="button" class="btn btn-danger w-100 btn-lg" onclick="openDebtModal()" id="debtBtn" disabled>
-          <i class="fas fa-user-clock me-2"></i>ديون
+      <!-- Checkout Buttons -->
+      <div class="checkout-grid">
+        <button type="button" class="btn btn-success btn-lg" onclick="checkout('cash')" id="cashBtn" disabled>
+          <i class="fas fa-money-bill-wave d-block mb-1" style="font-size:1.2rem;"></i>
+          <span style="font-size:0.85rem;">نقدي</span>
         </button>
-
-        <button type="button" class="btn btn-outline-danger" onclick="clearCart()" id="clearBtn" disabled>
-          <i class="fas fa-trash me-2"></i>إفراغ السلة
+        <button type="button" class="btn btn-info btn-lg" onclick="checkout('card')" id="cardBtn" disabled>
+          <i class="fas fa-credit-card d-block mb-1" style="font-size:1.2rem;"></i>
+          <span style="font-size:0.85rem;">بطاقة</span>
         </button>
       </div>
+
+      <button type="button" class="btn btn-danger w-100" onclick="openDebtModal()" id="debtBtn" disabled>
+        <i class="fas fa-user-clock me-2"></i>تسجيل كدين
+      </button>
+
     </div>
   </div>
 </div>
 
-<!-- Debt Modal -->
+<!-- ══ Debt Modal ══ -->
 <div class="modal fade" id="debtModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius:16px; overflow:hidden;">
-      <div class="modal-header" style="background:#dc3545; color:#fff;">
-        <h5 class="modal-title">
+    <div class="modal-content">
+      <div class="modal-header" style="background: linear-gradient(135deg, #EF4444, #C01E1E); border-bottom: none; border-radius: 16px 16px 0 0;">
+        <h5 class="modal-title" style="color: white;">
           <i class="fas fa-user-clock me-2"></i>تسجيل دين
         </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
-      <div class="modal-body">
-        <div class="mb-2 text-muted">
-          سيتم حفظ السلة كـ <strong>دين</strong> بدون دفع.
+      <div class="modal-body" style="padding: 1.25rem;">
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1rem;">
+          سيتم حفظ السلة الحالية كـ <strong style="color: var(--danger);">دين</strong> بدون دفع فوري.
+        </p>
+
+        <div class="mb-3">
+          <label class="form-label">اسم الشخص <span style="color: var(--danger);">*</span></label>
+          <input type="text" id="debtName" class="form-control" placeholder="مثال: أحمد محمد">
         </div>
 
         <div class="mb-3">
-          <label class="form-label">اسم الشخص (مطلوب)</label>
-          <input type="text" id="debtName" class="form-control" placeholder="مثال: أحمد / أصدقاء">
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">رقم الهاتف (اختياري)</label>
+          <label class="form-label">رقم الهاتف <span style="color: var(--text-muted); font-size: 0.8rem;">(اختياري)</span></label>
           <input type="text" id="debtPhone" class="form-control" placeholder="07xx xxx xxxx">
         </div>
 
         <div class="mb-3">
-          <label class="form-label">ملاحظة (اختياري)</label>
-          <textarea id="debtNote" class="form-control" rows="2" placeholder="مثال: أخذوا منتجات وما دفعوا"></textarea>
+          <label class="form-label">ملاحظة <span style="color: var(--text-muted); font-size: 0.8rem;">(اختياري)</span></label>
+          <textarea id="debtNote" class="form-control" rows="2" placeholder="ملاحظات إضافية..."></textarea>
         </div>
 
-        <div class="d-flex justify-content-between align-items-center p-3"
-             style="background:#f8f9fa; border-radius:12px;">
-          <span class="fw-bold">إجمالي الدين:</span>
-          <span class="fw-bold" style="color:#dc3545;" id="debtTotalText">0 IQD</span>
+        <div class="debt-total-box">
+          <span style="font-weight: 600; color: var(--text-secondary);">إجمالي الدين</span>
+          <span style="font-weight: 800; color: var(--danger); font-size: 1.2rem;" id="debtTotalText">0 IQD</span>
         </div>
 
-        <div id="debtError" class="text-danger mt-2" style="display:none;"></div>
+        <div id="debtError" class="mt-2" style="display:none; color: var(--danger); font-size: 0.88rem;"></div>
       </div>
 
-      <div class="modal-footer">
-        <button type="button" class="btn btn-light" data-bs-dismiss="modal">إلغاء</button>
+      <div class="modal-footer" style="border-top: 1px solid var(--border);">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
         <button type="button" class="btn btn-danger" onclick="submitDebt()" id="debtSaveBtn">
           <i class="fas fa-save me-2"></i>حفظ الدين
         </button>
@@ -339,96 +466,82 @@ let lastScanned = "";
 let lastScanAt = 0;
 let activeCategory = sessionStorage.getItem('quick_sale_active_category') || 'all';
 
+// ── Helpers ──────────────────────────────────────────────
 function formatNumber(num) {
-  return (Number(num || 0)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return (Number(num || 0)).toLocaleString('en-US');
 }
 
 function escapeHtml(str) {
   return String(str || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+    .replaceAll("&","&amp;").replaceAll("<","&lt;")
+    .replaceAll(">","&gt;").replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
 }
 
-function saveActiveCategory() {
-  sessionStorage.setItem('quick_sale_active_category', activeCategory);
-}
+function saveCategory() { sessionStorage.setItem('quick_sale_active_category', activeCategory); }
 
-function restoreActiveCategory() {
+function restoreCategory() {
   document.querySelectorAll('.category-tab').forEach(tab => {
-    if (tab.dataset.category === activeCategory) {
-      tab.classList.add('active');
-    } else {
-      tab.classList.remove('active');
-    }
+    tab.classList.toggle('active', tab.dataset.category === activeCategory);
   });
 }
 
-function getPageScrollY() {
-  return window.scrollY || window.pageYOffset || 0;
-}
+function getScrollY() { return window.scrollY || window.pageYOffset || 0; }
 
-function restorePageScroll(y) {
+function restoreScroll(y) {
   requestAnimationFrame(() => {
     window.scrollTo(0, y);
-    setTimeout(() => window.scrollTo(0, y), 0);
     setTimeout(() => window.scrollTo(0, y), 60);
   });
 }
 
-function focusBarcodeWithoutScroll() {
-  const barcodeInput = document.getElementById('barcodeInput');
-  if (!barcodeInput) return;
-
-  try {
-    barcodeInput.focus({ preventScroll: true });
-  } catch (e) {
-    const currentY = getPageScrollY();
-    barcodeInput.focus();
-    restorePageScroll(currentY);
-  }
+function focusBarcode() {
+  const el = document.getElementById('barcodeInput');
+  if (el) el.focus({ preventScroll: true });
 }
 
+// ── Filters ──────────────────────────────────────────────
 function applyFilters() {
-  const searchValue = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+  const search = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+  let visible = 0;
 
   document.querySelectorAll('.product-item').forEach(item => {
-    const itemCategory = item.dataset.category || '';
-    const itemName = (item.dataset.name || '').toLowerCase();
-    const itemBarcode = (item.dataset.barcode || '').toLowerCase();
-
-    const categoryMatch = activeCategory === 'all' || itemCategory === activeCategory;
-    const searchMatch = !searchValue || itemName.includes(searchValue) || itemBarcode.includes(searchValue);
-
-    item.style.display = (categoryMatch && searchMatch) ? 'block' : 'none';
+    const catMatch = activeCategory === 'all' || item.dataset.category === activeCategory;
+    const searchMatch = !search
+      || (item.dataset.name || '').includes(search)
+      || (item.dataset.barcode || '').includes(search);
+    const show = catMatch && searchMatch;
+    item.style.display = show ? 'block' : 'none';
+    if (show) visible++;
   });
+
+  const noResults = document.getElementById('noResults');
+  if (noResults) noResults.style.display = visible === 0 ? 'block' : 'none';
 }
 
+// ── Cart UI ───────────────────────────────────────────────
 function updateCartUI() {
-  const cartItems = document.getElementById('cartItems');
+  const cartItems   = document.getElementById('cartItems');
   const totalAmount = document.getElementById('totalAmount');
-  const cashBtn = document.getElementById('cashBtn');
-  const cardBtn = document.getElementById('cardBtn');
-  const clearBtn = document.getElementById('clearBtn');
-  const debtBtn = document.getElementById('debtBtn');
-  const itemsCount = document.getElementById('itemsCount');
+  const cashBtn     = document.getElementById('cashBtn');
+  const cardBtn     = document.getElementById('cardBtn');
+  const clearBtn    = document.getElementById('clearBtn');
+  const debtBtn     = document.getElementById('debtBtn');
+  const itemsCount  = document.getElementById('itemsCount');
+  const hasItems    = cart.length > 0;
 
-  if (cart.length === 0) {
+  // Toggle buttons
+  [cashBtn, cardBtn, clearBtn, debtBtn].forEach(b => { if (b) b.disabled = !hasItems; });
+
+  if (!hasItems) {
     cartItems.innerHTML = `
-      <div id="emptyCart" class="text-center text-muted py-5">
-        <i class="fas fa-shopping-basket fa-3x mb-3 opacity-50"></i>
-        <p class="mb-1">السلة فارغة</p>
-        <small>امسح الباركود أو اختر منتج</small>
-      </div>
-    `;
+      <div class="cart-empty">
+        <i class="fas fa-shopping-basket d-block"></i>
+        <p>السلة فارغة</p>
+        <small style="color: var(--text-muted); font-size: 0.78rem;">امسح الباركود أو اختر منتج</small>
+      </div>`;
     totalAmount.textContent = '0 IQD';
     itemsCount.textContent = '0';
-    cashBtn.disabled = true;
-    cardBtn.disabled = true;
-    clearBtn.disabled = true;
-    debtBtn.disabled = true;
     return;
   }
 
@@ -444,268 +557,260 @@ function updateCartUI() {
     html += `
       <div class="cart-item">
         <div class="d-flex justify-content-between align-items-start mb-2">
-          <div>
-            <h6 class="mb-0">${escapeHtml(item.name)}</h6>
-            <small class="text-muted">${formatNumber(item.price)} × ${item.quantity}</small>
+          <div style="flex:1; min-width:0; margin-left: 0.5rem;">
+            <div class="cart-item-name">${escapeHtml(item.name)}</div>
+            <div class="cart-item-unit">${formatNumber(item.price)} × ${item.quantity}</div>
           </div>
-          <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem(${index})">
-            <i class="fas fa-trash"></i>
+          <button type="button"
+                  class="btn btn-sm btn-outline-danger py-0 px-2"
+                  style="flex-shrink:0; font-size: 0.78rem;"
+                  onclick="removeItem(${index})">
+            <i class="fas fa-times"></i>
           </button>
         </div>
 
         <div class="d-flex justify-content-between align-items-center">
           <div class="qty-control">
-            <button type="button" class="qty-btn" onclick="updateQty(${index}, ${item.quantity - 1})">-</button>
-            <span style="min-width: 30px; text-align: center;">${item.quantity}</span>
+            <button type="button" class="qty-btn" onclick="updateQty(${index}, ${item.quantity - 1})">−</button>
+            <span class="qty-display">${item.quantity}</span>
             <button type="button" class="qty-btn" onclick="updateQty(${index}, ${item.quantity + 1})">+</button>
           </div>
-          <strong style="color: var(--primary-color);">${formatNumber(subtotal)} IQD</strong>
+          <span class="cart-item-subtotal">${formatNumber(subtotal)} IQD</span>
         </div>
-      </div>
-    `;
+      </div>`;
   });
 
   cartItems.innerHTML = html;
   totalAmount.textContent = formatNumber(total) + ' IQD';
   itemsCount.textContent = String(totalQty);
-
-  cashBtn.disabled = false;
-  cardBtn.disabled = false;
-  clearBtn.disabled = false;
-  debtBtn.disabled = false;
 }
 
-function addToCart(productId, name, price, image) {
-  const scrollY = getPageScrollY();
-
-  const existing = cart.find(item => item.product_id === productId);
+// ── Cart Actions ──────────────────────────────────────────
+function addToCart(productId, name, price, image, cardEl) {
+  const scrollY = getScrollY();
+  const existing = cart.find(i => i.product_id === productId);
 
   if (existing) {
     existing.quantity++;
   } else {
-    cart.push({
-      product_id: productId,
-      name: name,
-      price: Number(price || 0),
-      quantity: 1,
-      image: image || ''
-    });
+    cart.push({ product_id: productId, name, price: Number(price || 0), quantity: 1, image: image || '' });
+  }
+
+  // Flash animation on card
+  if (cardEl) {
+    cardEl.classList.remove('flash');
+    void cardEl.offsetWidth; // reflow
+    cardEl.classList.add('flash');
   }
 
   updateCartUI();
   applyFilters();
-  restorePageScroll(scrollY);
-  focusBarcodeWithoutScroll();
+  restoreScroll(scrollY);
+  focusBarcode();
 }
 
 function updateQty(index, newQty) {
-  const scrollY = getPageScrollY();
-
+  const scrollY = getScrollY();
   newQty = Number(newQty || 0);
-  if (newQty <= 0) {
-    cart.splice(index, 1);
-  } else {
-    cart[index].quantity = newQty;
-  }
-
+  if (newQty <= 0) cart.splice(index, 1);
+  else cart[index].quantity = newQty;
   updateCartUI();
-  restorePageScroll(scrollY);
+  restoreScroll(scrollY);
 }
 
 function removeItem(index) {
-  const scrollY = getPageScrollY();
-
+  const scrollY = getScrollY();
   cart.splice(index, 1);
   updateCartUI();
-  restorePageScroll(scrollY);
+  restoreScroll(scrollY);
 }
 
 function clearCart() {
-  if (confirm('إفراغ السلة؟')) {
-    const scrollY = getPageScrollY();
-    cart = [];
-    updateCartUI();
-    restorePageScroll(scrollY);
-  }
+  if (!confirm('إفراغ السلة؟')) return;
+  const scrollY = getScrollY();
+  cart = [];
+  updateCartUI();
+  restoreScroll(scrollY);
 }
 
-function checkout(paymentMethod) {
-  if (cart.length === 0) return;
-
+// ── Checkout ──────────────────────────────────────────────
+function checkout(method) {
+  if (!cart.length) return;
   const debtBtn = document.getElementById('debtBtn');
   if (debtBtn) debtBtn.disabled = true;
 
-  const items = cart.map(item => ({
-    product_id: item.product_id,
-    quantity: item.quantity
-  }));
+  // Show loading on clicked button
+  const btn = document.getElementById(method === 'cash' ? 'cashBtn' : 'cardBtn');
+  const origHTML = btn ? btn.innerHTML : '';
+  if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
   fetch('/pos/quick-sale/checkout', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      items: items,
-      payment_method: paymentMethod
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })), payment_method: method })
   })
-  .then(res => res.json())
+  .then(r => r.json())
   .then(data => {
     if (data.success) {
       window.location.href = `/pos/receipt/${data.session_id}`;
     } else {
       alert(data.message || 'حدث خطأ');
+      if (btn) btn.innerHTML = origHTML;
       if (debtBtn) debtBtn.disabled = false;
     }
   })
   .catch(() => {
     alert('فشل الاتصال بالسيرفر');
+    if (btn) btn.innerHTML = origHTML;
     if (debtBtn) debtBtn.disabled = false;
   });
 }
 
+// ── Debt ──────────────────────────────────────────────────
 function getCartTotal() {
-  return cart.reduce((sum, it) => sum + (it.price * it.quantity), 0);
+  return cart.reduce((s, i) => s + i.price * i.quantity, 0);
 }
 
 function openDebtModal() {
-  if (cart.length === 0) return;
-
-  const total = getCartTotal();
-  document.getElementById('debtTotalText').textContent = formatNumber(total) + " IQD";
+  if (!cart.length) return;
+  document.getElementById('debtTotalText').textContent = formatNumber(getCartTotal()) + ' IQD';
   document.getElementById('debtError').style.display = 'none';
-  document.getElementById('debtName').value = '';
-  document.getElementById('debtPhone').value = '';
-  document.getElementById('debtNote').value = '';
-
-  const modal = new bootstrap.Modal(document.getElementById('debtModal'));
-  modal.show();
-
-  setTimeout(() => document.getElementById('debtName').focus(), 200);
+  ['debtName', 'debtPhone', 'debtNote'].forEach(id => { document.getElementById(id).value = ''; });
+  new bootstrap.Modal(document.getElementById('debtModal')).show();
+  setTimeout(() => document.getElementById('debtName').focus(), 250);
 }
 
 function submitDebt() {
-  if (cart.length === 0) return;
+  if (!cart.length) return;
+  const name  = document.getElementById('debtName').value.trim();
+  const phone = document.getElementById('debtPhone').value.trim();
+  const note  = document.getElementById('debtNote').value.trim();
+  const err   = document.getElementById('debtError');
 
-  const name = (document.getElementById('debtName').value || '').trim();
-  const phone = (document.getElementById('debtPhone').value || '').trim();
-  const note = (document.getElementById('debtNote').value || '').trim();
-
-  const err = document.getElementById('debtError');
   err.style.display = 'none';
-  err.textContent = '';
-
   if (!name) {
     err.textContent = 'الرجاء كتابة اسم الشخص';
     err.style.display = 'block';
+    document.getElementById('debtName').focus();
     return;
   }
 
-  const items = cart.map(it => ({
-    product_id: it.product_id,
-    quantity: it.quantity
-  }));
-
   const btn = document.getElementById('debtSaveBtn');
   btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
 
   fetch('/pos/quick-sale/debt', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      name: name,
-      phone: phone,
-      note: note,
-      items: items
-    })
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, phone, note, items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })) })
   })
   .then(r => r.json())
   .then(data => {
     btn.disabled = false;
-
+    btn.innerHTML = '<i class="fas fa-save me-2"></i>حفظ الدين';
     if (!data.success) {
       err.textContent = data.message || 'حدث خطأ';
       err.style.display = 'block';
       return;
     }
-
-    const modalEl = document.getElementById('debtModal');
-    const modal = bootstrap.Modal.getInstance(modalEl);
-    if (modal) modal.hide();
-
+    bootstrap.Modal.getInstance(document.getElementById('debtModal'))?.hide();
     cart = [];
     updateCartUI();
-
-    alert('تم تسجيل الدين بنجاح ✅');
+    // Show a nicer toast-like alert
+    showToast('تم تسجيل الدين بنجاح ✅', 'success');
   })
   .catch(() => {
     btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-save me-2"></i>حفظ الدين';
     err.textContent = 'فشل الاتصال بالسيرفر';
     err.style.display = 'block';
   });
 }
 
-document.querySelectorAll('.category-tab').forEach(tab => {
-  tab.addEventListener('click', function() {
-    activeCategory = this.dataset.category;
-    saveActiveCategory();
-    restoreActiveCategory();
-    applyFilters();
-    focusBarcodeWithoutScroll();
-  });
-});
+// ── Toast Notification ────────────────────────────────────
+function showToast(message, type = 'success') {
+  const existing = document.getElementById('posToast');
+  if (existing) existing.remove();
 
-const searchInput = document.getElementById('searchInput');
-if (searchInput) {
-  searchInput.addEventListener('input', function() {
-    applyFilters();
-  });
+  const colors = { success: 'var(--success)', danger: 'var(--danger)', warning: 'var(--warning)' };
+  const icons  = { success: 'check-circle', danger: 'exclamation-circle', warning: 'exclamation-triangle' };
+
+  const toast = document.createElement('div');
+  toast.id = 'posToast';
+  toast.style.cssText = `
+    position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%);
+    background: var(--bg-card); border: 1px solid ${colors[type]};
+    color: var(--text-primary); padding: 0.8rem 1.5rem; border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 9999;
+    font-weight: 600; font-family: 'Cairo', sans-serif;
+    display: flex; align-items: center; gap: 0.6rem;
+    animation: slideUp 0.3s ease;
+  `;
+  toast.innerHTML = `<i class="fas fa-${icons[type]}" style="color: ${colors[type]};"></i> ${message}`;
+
+  if (!document.getElementById('toastStyle')) {
+    const style = document.createElement('style');
+    style.id = 'toastStyle';
+    style.textContent = `@keyframes slideUp { from { opacity:0; transform: translateX(-50%) translateY(20px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }`;
+    document.head.appendChild(style);
+  }
+
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
 }
 
+// ── Barcode Scanner ───────────────────────────────────────
 const barcodeInput = document.getElementById('barcodeInput');
 if (barcodeInput) {
   barcodeInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const barcode = this.value.trim();
-      if (!barcode) return;
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const barcode = this.value.trim();
+    if (!barcode) return;
 
-      const now = Date.now();
-      if (barcode === lastScanned && (now - lastScanAt) < 300) {
-        this.value = '';
-        return;
+    const now = Date.now();
+    if (barcode === lastScanned && (now - lastScanAt) < 300) { this.value = ''; return; }
+    lastScanned = barcode;
+    lastScanAt = now;
+
+    const scrollY = getScrollY();
+    this.value = '';
+
+    fetch('/pos/scan-barcode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ barcode })
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        addToCart(data.product.id, data.product.name_ku, data.product.price, data.product.image, null);
+        restoreScroll(scrollY);
+        focusBarcode();
+      } else {
+        showToast('المنتج غير موجود!', 'danger');
       }
-
-      lastScanned = barcode;
-      lastScanAt = now;
-
-      const scrollY = getPageScrollY();
-
-      fetch('/pos/scan-barcode', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ barcode: barcode })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          addToCart(data.product.id, data.product.name_ku, data.product.price, data.product.image);
-          this.value = '';
-          restorePageScroll(scrollY);
-          focusBarcodeWithoutScroll();
-        } else {
-          alert('المنتج غير موجود!');
-          this.value = '';
-        }
-      })
-      .catch(() => {
-        alert('فشل الاتصال بالسيرفر');
-        this.value = '';
-      });
-    }
+    })
+    .catch(() => showToast('فشل الاتصال بالسيرفر', 'danger'));
   });
 }
 
-restoreActiveCategory();
+// ── Search ────────────────────────────────────────────────
+document.getElementById('searchInput')?.addEventListener('input', applyFilters);
+
+// ── Category Tabs ─────────────────────────────────────────
+document.querySelectorAll('.category-tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    activeCategory = this.dataset.category;
+    saveCategory();
+    restoreCategory();
+    applyFilters();
+    focusBarcode();
+  });
+});
+
+// ── Init ──────────────────────────────────────────────────
+restoreCategory();
 applyFilters();
 updateCartUI();
 </script>

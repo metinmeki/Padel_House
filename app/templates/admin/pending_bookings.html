@@ -21,10 +21,26 @@
     }
 
     .booking-card.pending { border-right-color: #ffc107; }
-    .booking-card.pending_cancel { border-right-color: #fd7e14; }
+    .booking-card.pending_cancel {
+        border-right-color: #fd7e14;
+        background: #fff8f0;
+    }
     .booking-card.confirmed { border-right-color: #28a745; }
     .booking-card.cancelled { border-right-color: #dc3545; opacity: 0.9; }
     .booking-card.completed { border-right-color: #6c757d; opacity: 0.9; }
+
+    /* ✅ شريط تنبيه لطلبات الإلغاء */
+    .cancel-request-banner {
+        background: linear-gradient(135deg, #ff6b35, #f7931e);
+        color: white;
+        padding: 10px 16px;
+        border-radius: 8px;
+        margin-bottom: 12px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
 
     .customer-phone {
         font-size: 1.2rem;
@@ -69,10 +85,8 @@
         border-radius: 8px;
         font-weight: 600;
     }
-    .btn-approve:hover {
-        background: #218838;
-        color: #fff;
-    }
+    .btn-approve:hover { background: #218838; color: #fff; }
+
     .btn-reject {
         background: #dc3545;
         border: none;
@@ -81,10 +95,8 @@
         border-radius: 8px;
         font-weight: 600;
     }
-    .btn-reject:hover {
-        background: #c82333;
-        color: #fff;
-    }
+    .btn-reject:hover { background: #c82333; color: #fff; }
+
     .btn-call {
         background: #17a2b8;
         border: none;
@@ -93,10 +105,32 @@
         border-radius: 8px;
         font-weight: 600;
     }
-    .btn-call:hover {
-        background: #138496;
+    .btn-call:hover { background: #138496; color: #fff; }
+
+    /* ✅ أزرار خاصة بطلب الإلغاء */
+    .btn-approve-cancel {
+        background: #dc3545;
+        border: none;
         color: #fff;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        width: 100%;
+        margin-bottom: 8px;
     }
+    .btn-approve-cancel:hover { background: #c82333; color: #fff; }
+
+    .btn-reject-cancel {
+        background: #28a745;
+        border: none;
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        width: 100%;
+    }
+    .btn-reject-cancel:hover { background: #218838; color: #fff; }
+
     .empty-state {
         text-align: center;
         padding: 60px 20px;
@@ -139,30 +173,12 @@
         display: inline-block;
         margin-top: 8px;
     }
-    .status-pending {
-        background: #fff3cd;
-        color: #856404;
-    }
-    .status-pending-cancel {
-        background: #ffe5d0;
-        color: #a04a00;
-    }
-    .status-confirmed {
-        background: #d4edda;
-        color: #155724;
-    }
-    .status-cancelled {
-        background: #f8d7da;
-        color: #721c24;
-    }
-    .status-completed {
-        background: #e2e3e5;
-        color: #383d41;
-    }
-    .source-badge {
-        margin-top: 8px;
-        display: inline-block;
-    }
+    .status-pending { background: #fff3cd; color: #856404; }
+    .status-pending-cancel { background: #ffe5d0; color: #a04a00; }
+    .status-confirmed { background: #d4edda; color: #155724; }
+    .status-cancelled { background: #f8d7da; color: #721c24; }
+    .status-completed { background: #e2e3e5; color: #383d41; }
+    .source-badge { margin-top: 8px; display: inline-block; }
 </style>
 {% endblock %}
 
@@ -178,15 +194,49 @@
                 {% if current_lang == 'ar' %}تواصل مع العملاء وقم بتأكيد الحجوزات{% else %}Contact customers and confirm bookings{% endif %}
             </p>
         </div>
-        <span class="badge bg-warning text-dark fs-5 p-2">
-            {{ bookings|length }} {% if current_lang == 'ar' %}قيد الانتظار{% else %}Pending{% endif %}
-        </span>
+
+        <!-- ✅ عدادات منفصلة -->
+        <div class="d-flex gap-2">
+            {% set pending_count = bookings | selectattr('status', 'equalto', 'pending') | list | length %}
+            {% set cancel_count = bookings | selectattr('status', 'equalto', 'pending_cancel') | list | length %}
+
+            {% if pending_count > 0 %}
+            <span class="badge bg-warning text-dark fs-6 p-2">
+                <i class="fas fa-clock me-1"></i>
+                {{ pending_count }}
+                {% if current_lang == 'ar' %}معلق{% else %}Pending{% endif %}
+            </span>
+            {% endif %}
+
+            {% if cancel_count > 0 %}
+            <span class="badge bg-danger fs-6 p-2">
+                <i class="fas fa-exclamation-triangle me-1"></i>
+                {{ cancel_count }}
+                {% if current_lang == 'ar' %}طلب إلغاء{% else %}Cancel Request{% endif %}
+            </span>
+            {% endif %}
+        </div>
     </div>
 
     {% if bookings %}
     <div class="bookings-list">
         {% for booking in bookings %}
         <div class="booking-card {{ booking.status or 'pending' }}" id="booking-{{ booking.id }}">
+
+            <!-- ✅ شريط تنبيه لطلبات الإلغاء -->
+            {% if booking.status == 'pending_cancel' %}
+            <div class="cancel-request-banner">
+                <i class="fas fa-exclamation-triangle"></i>
+                {% if current_lang == 'ar' %}
+                    ⚠️ هذا العميل طلب إلغاء حجزه — قرر قبول أو رفض الطلب
+                {% elif current_lang == 'ku' %}
+                    ⚠️ ئەم کڕیارە داوای هەڵوەشاندنەوەی حجزەکەی کردووە — بڕیار بدە
+                {% else %}
+                    ⚠️ This customer requested to cancel — decide to approve or reject
+                {% endif %}
+            </div>
+            {% endif %}
+
             <div class="row align-items-center">
                 <div class="col-md-4">
                     <h5 class="mb-1">
@@ -247,10 +297,6 @@
                                 <i class="fas fa-flag-checkered me-1"></i>
                                 {% if current_lang == 'ar' %}مكتمل{% else %}Completed{% endif %}
                             </span>
-                        {% else %}
-                            <span class="status-badge status-pending">
-                                {{ booking.status }}
-                            </span>
                         {% endif %}
                     </div>
                 </div>
@@ -269,7 +315,7 @@
                             <label>{% if current_lang == 'ar' %}التاريخ{% else %}Date{% endif %}</label>
                             <span>
                                 <i class="fas fa-calendar me-1 text-success"></i>
-                                {{ booking.date.strftime('%Y-%m-%d') if booking.date else '-' }}
+                                {{ booking.display_date_str or '-' }}
                             </span>
                         </div>
 
@@ -293,16 +339,25 @@
                             </span>
                         </div>
                     </div>
+
+                    {% if booking.notes %}
+                    <div class="mt-2 p-2 bg-light rounded small text-muted">
+                        <i class="fas fa-sticky-note me-1"></i>{{ booking.notes }}
+                    </div>
+                    {% endif %}
                 </div>
 
                 <div class="col-md-3">
                     <div class="action-buttons flex-column">
+
+                        <!-- زر الاتصال دائماً -->
                         <a href="tel:{{ booking.customer_phone }}" class="btn btn-call w-100 mb-2">
                             <i class="fas fa-phone me-2"></i>
                             {% if current_lang == 'ar' %}اتصال{% else %}Call{% endif %}
                         </a>
 
                         {% if booking.status == 'pending' %}
+                        <!-- حجز عادي: قبول أو رفض -->
                         <button class="btn btn-approve w-100 mb-2" onclick="approveBooking({{ booking.id }})">
                             <i class="fas fa-check me-2"></i>
                             {% if current_lang == 'ar' %}قبول{% else %}Approve{% endif %}
@@ -314,14 +369,15 @@
                         </button>
 
                         {% elif booking.status == 'pending_cancel' %}
-                        <button class="btn btn-reject w-100 mb-2" onclick="approveCancelRequest({{ booking.id }})">
-                            <i class="fas fa-times-circle me-2"></i>
-                            {% if current_lang == 'ar' %}قبول الإلغاء{% else %}Approve Cancel{% endif %}
+                        <!-- ✅ طلب إلغاء: قبول الإلغاء أو رفضه -->
+                        <button class="btn btn-approve-cancel" onclick="approveCancelRequest({{ booking.id }}, '{{ booking.customer_name }}')">
+                            <i class="fas fa-check me-2"></i>
+                            {% if current_lang == 'ar' %}✅ قبول الإلغاء{% elif current_lang == 'ku' %}✅ پەسەندکردنی هەڵوەشاندنەوە{% else %}✅ Approve Cancel{% endif %}
                         </button>
 
-                        <button class="btn btn-approve w-100" onclick="rejectCancelRequest({{ booking.id }})">
+                        <button class="btn btn-reject-cancel" onclick="rejectCancelRequest({{ booking.id }}, '{{ booking.customer_name }}')">
                             <i class="fas fa-undo me-2"></i>
-                            {% if current_lang == 'ar' %}رفض الإلغاء{% else %}Reject Cancel{% endif %}
+                            {% if current_lang == 'ar' %}↩️ رفض الإلغاء{% elif current_lang == 'ku' %}↩️ ڕەتکردنەوەی هەڵوەشاندنەوە{% else %}↩️ Reject Cancel{% endif %}
                         </button>
 
                         {% else %}
@@ -340,6 +396,7 @@
                             {% endif %}
                         </button>
                         {% endif %}
+
                     </div>
                 </div>
             </div>
@@ -363,6 +420,7 @@
     {% endif %}
 </div>
 
+<!-- Modal رفض الحجز -->
 <div class="modal fade" id="rejectModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -374,14 +432,13 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>
-                    {% if current_lang == 'ar' %}هل أنت متأكد من رفض هذا الحجز؟{% else %}Are you sure you want to reject this booking?{% endif %}
-                </p>
+                <p>{% if current_lang == 'ar' %}هل أنت متأكد من رفض هذا الحجز؟{% else %}Are you sure you want to reject this booking?{% endif %}</p>
                 <div class="mb-3">
                     <label class="form-label">
                         {% if current_lang == 'ar' %}سبب الرفض (اختياري){% else %}Rejection Reason (Optional){% endif %}
                     </label>
-                    <textarea id="rejectionReason" class="rejection-reason" placeholder="{% if current_lang == 'ar' %}اكتب السبب...{% else %}Enter reason...{% endif %}"></textarea>
+                    <textarea id="rejectionReason" class="rejection-reason"
+                        placeholder="{% if current_lang == 'ar' %}اكتب السبب...{% else %}Enter reason...{% endif %}"></textarea>
                 </div>
             </div>
             <div class="modal-footer">
@@ -404,15 +461,14 @@ let currentBookingId = null;
 
 function removeBookingCard(bookingId) {
     const row = document.getElementById(`booking-${bookingId}`);
-    if (row) {
-        row.remove();
-    }
+    if (row) row.remove();
 }
 
 function refreshPageSilently() {
     window.location.reload();
 }
 
+// ✅ قبول الحجز العادي
 function approveBooking(bookingId) {
     if (!confirm('{% if current_lang == "ar" %}هل أنت متأكد من قبول هذا الحجز؟{% else %}Approve this booking?{% endif %}')) return;
 
@@ -428,11 +484,10 @@ function approveBooking(bookingId) {
             setTimeout(refreshPageSilently, 300);
         }
     })
-    .catch(() => {
-        alert('Connection error');
-    });
+    .catch(() => alert('Connection error'));
 }
 
+// ✅ رفض الحجز العادي (modal)
 function showRejectModal(bookingId) {
     currentBookingId = bookingId;
     document.getElementById('rejectionReason').value = '';
@@ -461,13 +516,16 @@ document.getElementById('confirmRejectBtn').addEventListener('click', function()
             setTimeout(refreshPageSilently, 300);
         }
     })
-    .catch(() => {
-        alert('Connection error');
-    });
+    .catch(() => alert('Connection error'));
 });
 
-function approveCancelRequest(bookingId) {
-    if (!confirm('{% if current_lang == "ar" %}هل أنت متأكد من قبول طلب الإلغاء؟{% else %}Approve cancel request?{% endif %}')) return;
+// ✅ قبول طلب الإلغاء = إلغاء الحجز نهائياً
+function approveCancelRequest(bookingId, customerName) {
+    const msg = customerName
+        ? `{% if current_lang == "ar" %}هل تريد قبول طلب إلغاء حجز{% else %}Approve cancel request for{% endif %} ${customerName}؟\n{% if current_lang == "ar" %}سيتم إلغاء الحجز نهائياً.{% else %}Booking will be cancelled permanently.{% endif %}`
+        : '{% if current_lang == "ar" %}هل أنت متأكد من قبول طلب الإلغاء؟{% else %}Approve cancel request?{% endif %}';
+
+    if (!confirm(msg)) return;
 
     fetch(`/admin/api/booking/${bookingId}/status`, {
         method: 'POST',
@@ -482,13 +540,16 @@ function approveCancelRequest(bookingId) {
             setTimeout(refreshPageSilently, 300);
         }
     })
-    .catch(() => {
-        alert('Connection error');
-    });
+    .catch(() => alert('Connection error'));
 }
 
-function rejectCancelRequest(bookingId) {
-    if (!confirm('{% if current_lang == "ar" %}هل تريد رفض طلب الإلغاء والإبقاء على الحجز مؤكداً؟{% else %}Reject cancel request and keep booking confirmed?{% endif %}')) return;
+// ✅ رفض طلب الإلغاء = إبقاء الحجز مؤكداً
+function rejectCancelRequest(bookingId, customerName) {
+    const msg = customerName
+        ? `{% if current_lang == "ar" %}هل تريد رفض طلب إلغاء حجز{% else %}Reject cancel request for{% endif %} ${customerName}؟\n{% if current_lang == "ar" %}سيبقى الحجز مؤكداً.{% else %}Booking will remain confirmed.{% endif %}`
+        : '{% if current_lang == "ar" %}رفض طلب الإلغاء والإبقاء على الحجز مؤكداً؟{% else %}Reject cancel request and keep booking confirmed?{% endif %}';
+
+    if (!confirm(msg)) return;
 
     fetch(`/admin/api/booking/${bookingId}/status`, {
         method: 'POST',
@@ -503,13 +564,10 @@ function rejectCancelRequest(bookingId) {
             setTimeout(refreshPageSilently, 300);
         }
     })
-    .catch(() => {
-        alert('Connection error');
-    });
+    .catch(() => alert('Connection error'));
 }
 
-setInterval(() => {
-    refreshPageSilently();
-}, 10000);
+// تحديث تلقائي كل 30 ثانية
+setInterval(refreshPageSilently, 30000);
 </script>
 {% endblock %}

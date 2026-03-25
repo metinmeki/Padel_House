@@ -4,208 +4,319 @@
 
 {% block extra_css %}
 <style>
-  /* Timer Display */
-  .timer-card {
-    background: linear-gradient(135deg, var(--warning-color) 0%, #ff9800 100%);
-    color: white;
-    border-radius: 15px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  /* ─── Session Info Card ─── */
+  .session-info-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .session-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 0.2rem;
+  }
+
+  .session-meta {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  /* ─── Timer ─── */
+  .timer-box {
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
     text-align: center;
   }
 
   .timer-display {
-    font-size: 3rem;
-    font-weight: 700;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    font-size: 2.4rem;
+    font-weight: 800;
+    color: var(--warning);
+    text-shadow: 0 0 16px rgba(245,158,11,0.3);
+    font-feature-settings: 'tnum';
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
   }
 
-  /* Product Grid */
-  .product-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 1rem;
+  .timer-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
   }
 
-  .product-item {
-    display: block;
-  }
-
-  .product-card {
-    background: white;
+  /* ─── Search Card ─── */
+  .search-card {
+    background: var(--bg-card);
     border-radius: 12px;
-    padding: 1rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
-    user-select: none;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border);
+    margin-bottom: 1rem;
   }
 
-  .product-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-    border-color: var(--primary-color);
-  }
-
-  .product-card img {
-    width: 80px;
-    height: 80px;
-    object-fit: cover;
-    border-radius: 10px;
-    margin-bottom: 0.5rem;
-  }
-
-  .product-card h6 {
-    font-size: 0.9rem;
-    margin: 0.5rem 0;
-    color: var(--secondary-color);
-  }
-
-  .product-card .price {
-    color: var(--primary-color);
-    font-weight: 700;
-    font-size: 1rem;
-  }
-
-  /* Category Tabs */
+  /* ─── Category Tabs ─── */
   .category-tabs {
     display: flex;
     gap: 0.5rem;
     overflow-x: auto;
-    padding: 0.5rem 0;
+    padding: 0.3rem 0 0.6rem;
     margin-bottom: 1rem;
+    scrollbar-width: none;
+  }
+  .category-tabs::-webkit-scrollbar { display: none; }
+
+  /* ─── Product Grid ─── */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.8rem;
   }
 
-  .category-tab {
-    padding: 0.6rem 1.2rem;
-    border-radius: 25px;
-    border: 2px solid #e9ecef;
-    background: white;
-    color: var(--secondary-color);
-    font-weight: 600;
+  .product-item { display: block; }
+
+  .product-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 0.9rem 0.75rem;
+    text-align: center;
     cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.3s ease;
+    transition: all 0.22s ease;
+    border: 1.5px solid var(--border);
+    user-select: none;
+    position: relative;
+    overflow: hidden;
   }
 
-  .category-tab:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
+  .product-card::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--primary-glow), transparent);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    border-radius: 12px;
   }
 
-  .category-tab.active {
-    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-    color: white;
-    border-color: var(--primary-color);
+  .product-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--primary);
+    box-shadow: 0 6px 20px rgba(229,118,37,0.15);
   }
 
-  /* Cart Items */
-  .cart-item {
-    background: white;
-    border-radius: 10px;
-    padding: 1rem;
-    margin-bottom: 0.8rem;
-    border: 1px solid #e9ecef;
+  .product-card:hover::before { opacity: 1; }
+  .product-card:active { transform: scale(0.97); }
+
+  .product-card.opacity-50 { opacity: 0.45; cursor: not-allowed; }
+
+  .product-img-wrap {
+    width: 68px; height: 68px;
+    margin: 0 auto 0.5rem;
+    border-radius: 9px;
+    overflow: hidden;
+    background: var(--bg-surface);
+    display: flex; align-items: center; justify-content: center;
   }
 
-  .qty-control {
+  .product-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+
+  .product-card h6 {
+    font-size: 0.82rem;
+    color: var(--text-primary);
+    margin: 0.3rem 0 0.2rem;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .product-card .price { color: var(--primary); font-weight: 800; font-size: 0.9rem; }
+
+  /* ─── Cart (right side) ─── */
+  .cart-summary {
+    position: sticky;
+    top: 80px;
+  }
+
+  .cart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .cart-title {
+    font-weight: 700;
+    color: var(--text-primary);
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 0.3rem 0.5rem;
+    font-size: 1rem;
   }
 
-  .qty-btn {
-    width: 30px;
-    height: 30px;
-    border-radius: 6px;
-    border: 1px solid var(--primary-color);
-    background: white;
-    color: var(--primary-color);
-    font-weight: 700;
+  /* Play time alert */
+  .play-time-alert {
+    background: var(--warning-bg);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.75rem;
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
   }
 
-  .qty-btn:hover {
-    background: var(--primary-color);
-    color: white;
+  .play-time-alert .label { color: var(--warning); font-weight: 700; font-size: 0.88rem; }
+  .play-time-alert .value { color: var(--warning); font-weight: 800; font-size: 0.95rem; }
+
+  /* Cart items list */
+  .cart-items-list {
+    max-height: 38vh;
+    overflow-y: auto;
+    margin-bottom: 0.75rem;
+    padding-left: 2px;
   }
 
-  /* Cart Summary */
-  .cart-summary {
-    position: sticky;
-    top: 100px;
+  .cart-item {
+    background: var(--bg-surface);
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid var(--border);
+    transition: border-color 0.15s;
   }
 
+  .cart-item:hover { border-color: var(--border-strong); }
+
+  .cart-item-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .cart-item-unit {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+
+  .cart-empty {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-muted);
+  }
+
+  .cart-empty i { font-size: 2rem; opacity: 0.25; display: block; margin-bottom: 0.5rem; }
+  .cart-empty p { font-size: 0.85rem; margin: 0; }
+
+  /* Summary rows */
   .summary-row {
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    padding: 0.35rem 0;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+  }
+
+  .summary-row.total-row {
     padding: 0.5rem 0;
   }
 
   .total-amount {
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--primary-color);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary);
   }
 
-  /* Search & Barcode */
-  .search-card {
-    background: white;
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 1rem;
+  /* Action buttons */
+  .action-btns { display: grid; gap: 0.5rem; }
+
+  /* Payment modal stat card override */
+  #paymentModal .stat-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+  }
+
+  /* Payment method toggle */
+  .payment-method-btn {
+    flex: 1;
+    padding: 0.65rem;
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.88rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .payment-method-btn.active {
+    border-color: var(--primary);
+    background: var(--primary-glow);
+    color: var(--primary);
+  }
+
+  .payment-method-btn:hover:not(.active) {
+    border-color: var(--text-muted);
+    color: var(--text-primary);
   }
 
   @media (max-width: 991px) {
-    .timer-display {
-      font-size: 2rem;
-    }
-
-    .product-grid {
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    }
+    .cart-summary { position: static; }
+    .cart-items-list { max-height: 28vh; }
+    .timer-display { font-size: 1.8rem; }
+    .product-grid { grid-template-columns: repeat(auto-fill, minmax(115px, 1fr)); }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="row g-4">
-  <!-- Left Side: Products -->
+<div class="row g-3">
+
+  <!-- ══ Left: Products ══ -->
   <div class="col-lg-8">
 
     <!-- Session Info -->
-    <div class="stat-card mb-3">
-      <div class="row align-items-center">
-        <div class="col-md-6">
-          <h4 class="mb-1">
+    <div class="session-info-card">
+      <div class="row align-items-center g-3">
+        <div class="col">
+          <div class="session-title">
             {% if session.session_type == 'stadium' %}
-              <i class="fas fa-futbol me-2" style="color: var(--primary-color);"></i>
+              <i class="fas fa-futbol me-2" style="color: var(--primary);"></i>
             {% else %}
-              <i class="fas fa-chair me-2" style="color: var(--warning-color);"></i>
+              <i class="fas fa-chair me-2" style="color: var(--warning);"></i>
             {% endif %}
             {{ session.get_location_name() }}
-          </h4>
-          <p class="text-muted mb-0">
-            <i class="fas fa-clock me-1"></i>
+          </div>
+          <div class="session-meta">
+            <i class="fas fa-clock"></i>
             البداية: {{ session.start_time.strftime('%H:%M') }}
-            <span class="badge bg-success ms-2">نشط</span>
-          </p>
+            <span class="badge bg-success ms-1" style="font-size: 0.72rem;">نشط</span>
+          </div>
         </div>
 
         {% if session.session_type == 'stadium' %}
-        <div class="col-md-6 text-center">
-          <div class="timer-display" id="timer" style="color: var(--warning-color);">00:00:00</div>
-          <p class="mb-0 text-muted">
-            سعر الساعة: {{ '{:,.0f}'.format(stadium_price_per_hour or 40000) }} IQD
-          </p>
+        <div class="col-auto">
+          <div class="timer-box">
+            <div class="timer-display" id="timer">00:00:00</div>
+            <div class="timer-label">
+              سعر الساعة: {{ '{:,.0f}'.format(stadium_price_per_hour or 40000) }} IQD
+            </div>
+          </div>
         </div>
         {% endif %}
       </div>
@@ -215,15 +326,21 @@
     <div class="search-card">
       <div class="row g-2">
         <div class="col-md-6">
-          <input type="text" id="barcodeInput" class="form-control" placeholder="🔍 امسح الباركود أو ابحث...">
+          <div style="position:relative;">
+            <i class="fas fa-barcode" style="position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--primary);pointer-events:none;"></i>
+            <input type="text" id="barcodeInput" class="form-control" style="padding-right:2.4rem;" placeholder="امسح الباركود...">
+          </div>
         </div>
         <div class="col-md-6">
-          <input type="text" id="searchInput" class="form-control" placeholder="بحث بالاسم...">
+          <div style="position:relative;">
+            <i class="fas fa-search" style="position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--text-muted);pointer-events:none;"></i>
+            <input type="text" id="searchInput" class="form-control" style="padding-right:2.4rem;" placeholder="بحث بالاسم...">
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Categories -->
+    <!-- Category Tabs -->
     <div class="category-tabs">
       <button type="button" class="category-tab active" data-category="all">
         <i class="fas fa-th me-1"></i>الكل
@@ -239,41 +356,33 @@
     <div class="product-grid" id="productsGrid">
       {% for product in products %}
         {% set can_buy = (product.stock is none) or (product.stock > 0) %}
-
         <div class="product-item"
              data-category="{{ product.category_id }}"
              data-name="{{ product.name_ku|lower }}">
           <div class="product-card {{ '' if can_buy else 'opacity-50' }}"
                {% if can_buy %}
-                 role="button"
-                 tabindex="0"
+                 role="button" tabindex="0"
                  onclick="addToCart({{ product.id }})"
                  onkeydown="handleProductKey(event, {{ product.id }})"
                {% endif %}>
 
-            {% if product.image %}
-              <img src="{{ url_for('static', filename='images/products/' ~ product.image) }}"
-                   alt="{{ product.name_ku }}">
-            {% else %}
-              <div style="width:80px;height:80px;background:#f8f9fa;border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 0.5rem;">
-                <i class="fas fa-box fa-2x text-muted"></i>
-              </div>
-            {% endif %}
+            <div class="product-img-wrap">
+              {% if product.image %}
+                <img src="{{ url_for('static', filename='images/products/' ~ product.image) }}"
+                     alt="{{ product.name_ku }}" loading="lazy">
+              {% else %}
+                <i class="fas fa-box" style="font-size:1.6rem;color:var(--text-muted);"></i>
+              {% endif %}
+            </div>
 
             <h6>{{ product.name_ku }}</h6>
             <div class="price">{{ "{:,.0f}".format(product.price) }} IQD</div>
 
             {% if product.stock is not none %}
               {% if product.stock <= 0 %}
-                <div class="mt-1">
-                  <span class="badge bg-danger">غير متوفر</span>
-                </div>
+                <span class="badge mt-1" style="background:var(--danger-bg);color:var(--danger);border:1px solid rgba(239,68,68,0.3);font-size:0.7rem;">غير متوفر</span>
               {% else %}
-                <div class="mt-1">
-                  <small class="text-muted">
-                    المتبقي: <b>{{ product.stock }}</b>
-                  </small>
-                </div>
+                <small class="d-block mt-1" style="color:var(--text-muted);font-size:0.75rem;">المتبقي: <b style="color:var(--text-secondary);">{{ product.stock }}</b></small>
               {% endif %}
             {% endif %}
 
@@ -284,163 +393,164 @@
 
   </div>
 
-  <!-- Right Side: Cart -->
+  <!-- ══ Right: Cart ══ -->
   <div class="col-lg-4">
     <div class="stat-card cart-summary">
-      <h5 class="mb-3">
-        <i class="fas fa-receipt me-2" style="color: var(--primary-color);"></i>
-        الفاتورة
-      </h5>
 
-      {% if session.session_type == 'stadium' %}
-      <div class="alert alert-warning">
-        <div class="d-flex justify-content-between align-items-center">
-          <div>
-            <i class="fas fa-stopwatch me-2"></i>
-            <strong>وقت اللعب</strong>
-            <div><small id="playTimeText">0 ساعة</small></div>
-          </div>
-          <strong id="playTimePrice">0 IQD</strong>
+      <div class="cart-header">
+        <div class="cart-title">
+          <i class="fas fa-receipt" style="color:var(--primary);"></i>
+          الفاتورة
         </div>
+        <span style="font-size:0.78rem;color:var(--text-muted);">
+          {{ session.start_time.strftime('%H:%M') }}
+        </span>
+      </div>
+
+      <!-- Play time (stadium only) -->
+      {% if session.session_type == 'stadium' %}
+      <div class="play-time-alert">
+        <div>
+          <div class="label"><i class="fas fa-stopwatch me-1"></i> وقت اللعب</div>
+          <small id="playTimeText" style="color:var(--text-muted);font-size:0.78rem;">0 ساعة</small>
+        </div>
+        <strong id="playTimePrice" class="value">0 IQD</strong>
       </div>
       {% endif %}
 
       <!-- Cart Items -->
-      <div style="max-height: 40vh; overflow-y: auto; margin-bottom: 1rem;">
+      <div class="cart-items-list">
         {% set ns = namespace(has_items=false) %}
         {% for order in session.orders %}
           {% for item in order.items %}
             {% set ns.has_items = true %}
             <div class="cart-item" id="item-{{ item.id }}">
               <div class="d-flex justify-content-between align-items-start mb-2">
-                <div>
-                  <h6 class="mb-0">{{ item.product.name_ku }}</h6>
-                  <small class="text-muted">{{ '{:,.0f}'.format(item.price) }} × {{ item.quantity }}</small>
+                <div style="flex:1;min-width:0;margin-left:0.5rem;">
+                  <div class="cart-item-name">{{ item.product.name_ku }}</div>
+                  <div class="cart-item-unit">{{ '{:,.0f}'.format(item.price) }} × {{ item.quantity }}</div>
                 </div>
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeItem({{ item.id }})">
-                  <i class="fas fa-trash"></i>
+                <button type="button"
+                        class="btn btn-sm btn-outline-danger py-0 px-2"
+                        style="font-size:0.75rem;flex-shrink:0;"
+                        onclick="removeItem({{ item.id }})">
+                  <i class="fas fa-times"></i>
                 </button>
               </div>
-
               <div class="d-flex justify-content-between align-items-center">
                 <div class="qty-control">
-                  <button type="button" class="qty-btn" onclick="updateQty({{ item.id }}, {{ item.quantity - 1 }})">-</button>
-                  <span style="min-width: 30px; text-align: center;">{{ item.quantity }}</span>
+                  <button type="button" class="qty-btn" onclick="updateQty({{ item.id }}, {{ item.quantity - 1 }})">−</button>
+                  <span style="min-width:26px;text-align:center;font-weight:700;color:var(--text-primary);">{{ item.quantity }}</span>
                   <button type="button" class="qty-btn" onclick="updateQty({{ item.id }}, {{ item.quantity + 1 }})">+</button>
                 </div>
-                <strong style="color: var(--primary-color);">{{ '{:,.0f}'.format(item.price * item.quantity) }} IQD</strong>
+                <strong style="color:var(--primary);font-size:0.9rem;">{{ '{:,.0f}'.format(item.price * item.quantity) }} IQD</strong>
               </div>
             </div>
           {% endfor %}
         {% endfor %}
 
         {% if not ns.has_items %}
-        <div class="text-center text-muted py-4">
-          <i class="fas fa-shopping-cart fa-3x mb-2 opacity-50"></i>
-          <p class="mb-0">لا توجد منتجات</p>
+        <div class="cart-empty">
+          <i class="fas fa-shopping-cart"></i>
+          <p>لا توجد منتجات بعد</p>
         </div>
         {% endif %}
       </div>
 
       <hr>
 
+      <!-- Summary -->
       {% if session.session_type == 'stadium' %}
       <div class="summary-row">
-        <span>وقت اللعب:</span>
+        <span>وقت اللعب</span>
         <span id="timePriceSummary">0 IQD</span>
       </div>
       {% endif %}
 
       <div class="summary-row">
-        <span>المنتجات:</span>
+        <span>المنتجات</span>
         <span>{{ '{:,.0f}'.format(session.get_orders_total()) }} IQD</span>
       </div>
 
-      <div class="summary-row text-success d-none" id="autoDiscountRow">
-        <span><i class="fas fa-tag me-1"></i>خصم تلقائي:</span>
+      <div class="summary-row d-none" id="autoDiscountRow" style="color:var(--success);">
+        <span><i class="fas fa-tag me-1"></i>خصم تلقائي</span>
         <span id="autoDiscountAmount">-0 IQD</span>
       </div>
 
-      <hr style="border-width: 2px;">
+      <hr style="border-width:2px;border-color:var(--border-strong);">
 
-      <div class="summary-row mb-3">
-        <span class="fs-5 fw-bold">المجموع:</span>
+      <div class="summary-row total-row mb-3">
+        <span style="font-weight:700;color:var(--text-primary);font-size:1rem;">المجموع</span>
         <span class="total-amount" id="totalAmount">0 IQD</span>
       </div>
 
+      <!-- Finish Play button (stadium) -->
       {% if session.session_type == 'stadium' and session.status == 'active' %}
         {% if not session.end_time %}
         <form method="POST" action="{{ url_for('pos.finish_play', session_id=session.id) }}" class="mb-2">
-          <button type="submit" class="btn btn-warning btn-lg w-100">
-            <i class="fas fa-stopwatch me-2"></i> إنهاء وقت اللعب
+          <button type="submit" class="btn btn-warning w-100">
+            <i class="fas fa-stopwatch me-2"></i>إنهاء وقت اللعب
           </button>
         </form>
         {% else %}
-          <div class="alert alert-success text-center mb-2">
-            <i class="fas fa-check-circle me-2"></i>
-            تم إنهاء وقت اللعب ✅
-          </div>
+        <div class="mb-2" style="background:var(--success-bg);border:1px solid rgba(34,197,94,0.3);border-radius:10px;padding:0.65rem;text-align:center;color:var(--success);font-weight:700;font-size:0.88rem;">
+          <i class="fas fa-check-circle me-2"></i>تم إنهاء وقت اللعب ✅
+        </div>
         {% endif %}
       {% endif %}
 
-      <div class="d-grid gap-2">
+      <!-- Action Buttons -->
+      <div class="action-btns">
         <button type="button" class="btn btn-success btn-lg" onclick="closeSession()">
-          <i class="fas fa-check-circle me-2"></i>
-          إنهاء ودفع
+          <i class="fas fa-check-circle me-2"></i>إنهاء ودفع
         </button>
-
-        <button type="button" class="btn btn-warning w-100" onclick="openDebtModal()">
-          <i class="fas fa-hand-holding-usd me-2"></i> إنهاء كدين
+        <button type="button" class="btn btn-warning" onclick="openDebtModal()">
+          <i class="fas fa-hand-holding-usd me-2"></i>إنهاء كدين
         </button>
-
         <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary">
-          <i class="fas fa-arrow-right me-2"></i>
-          رجوع
+          <i class="fas fa-arrow-right me-2"></i>رجوع
         </a>
-
         <button type="button" class="btn btn-outline-danger" onclick="cancelSession()">
-          <i class="fas fa-times me-2"></i>
-          إلغاء الجلسة
+          <i class="fas fa-times me-2"></i>إلغاء الجلسة
         </button>
       </div>
+
     </div>
   </div>
 </div>
 
-<!-- Debt Modal -->
+<!-- ══ Debt Modal ══ -->
 <div class="modal fade" id="debtModal" tabindex="-1">
   <div class="modal-dialog">
     <form class="modal-content" id="debtForm" method="POST"
           action="{{ url_for('pos.finish_session_as_debt', session_id=session.id) }}">
-      <div class="modal-header">
-        <h5 class="modal-title">تسجيل دين</h5>
+      <div class="modal-header" style="background:linear-gradient(135deg,#EF4444,#C01E1E);border-bottom:none;border-radius:16px 16px 0 0;">
+        <h5 class="modal-title" style="color:white;">
+          <i class="fas fa-user-clock me-2"></i>تسجيل دين
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-
       <div class="modal-body">
-        <div class="mb-2">
-          <label class="form-label">الاسم *</label>
-          <input name="name" id="debtName" class="form-control" required>
+        <div class="mb-3">
+          <label class="form-label">الاسم <span style="color:var(--danger);">*</span></label>
+          <input name="name" id="debtName" class="form-control" required placeholder="اسم الشخص">
         </div>
-
-        <div class="mb-2">
-          <label class="form-label">رقم الهاتف</label>
-          <input name="phone" id="debtPhone" class="form-control">
+        <div class="mb-3">
+          <label class="form-label">رقم الهاتف <span style="color:var(--text-muted);font-size:0.8rem;">(اختياري)</span></label>
+          <input name="phone" id="debtPhone" class="form-control" placeholder="07xx xxx xxxx">
         </div>
-
-        <div class="mb-2">
-          <label class="form-label">ملاحظة</label>
+        <div class="mb-3">
+          <label class="form-label">ملاحظة <span style="color:var(--text-muted);font-size:0.8rem;">(اختياري)</span></label>
           <textarea name="note" id="debtNote" class="form-control" rows="2"></textarea>
         </div>
-
-        <div class="alert alert-info mb-0">
-          المبلغ: <b id="debtTotalAmount">0</b> IQD
+        <div style="background:var(--bg-surface);border:1px solid rgba(239,68,68,0.3);border-radius:12px;padding:0.9rem 1rem;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-weight:600;color:var(--text-secondary);">إجمالي الدين</span>
+          <span style="font-weight:800;color:var(--danger);font-size:1.15rem;"><b id="debtTotalAmount">0</b> IQD</span>
         </div>
       </div>
-
       <div class="modal-footer">
-        <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">إلغاء</button>
-        <button class="btn btn-warning" type="submit" id="submitDebtBtn">
+        <button class="btn btn-outline-secondary" type="button" data-bs-dismiss="modal">إلغاء</button>
+        <button class="btn btn-danger" type="submit" id="submitDebtBtn">
           <i class="fas fa-save me-2"></i>حفظ الدين
         </button>
       </div>
@@ -448,85 +558,80 @@
   </div>
 </div>
 
-<!-- Payment Modal -->
+<!-- ══ Payment Modal ══ -->
 <div class="modal fade" id="paymentModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
-    <div class="modal-content" style="border-radius: 15px; border: none;">
-      <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); color: white; border-radius: 15px 15px 0 0;">
-        <h5 class="modal-title">
-          <i class="fas fa-money-bill me-2"></i>
-          إتمام الدفع
+    <div class="modal-content">
+      <div class="modal-header" style="background:linear-gradient(135deg,var(--primary),var(--primary-dark));border-bottom:none;border-radius:16px 16px 0 0;">
+        <h5 class="modal-title" style="color:white;">
+          <i class="fas fa-money-bill me-2"></i>إتمام الدفع
         </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
-      <form action="{{ url_for('pos.close_session', session_id=session.id) }}" method="POST">
-        <div class="modal-body">
+      <form action="{{ url_for('pos.close_session', session_id=session.id) }}" method="POST" id="paymentForm">
+        <div class="modal-body" style="padding:1.5rem;">
           <div class="row g-4">
+
+            <!-- Invoice Summary -->
             <div class="col-md-6">
-              <h6 class="mb-3">تفاصيل الفاتورة</h6>
+              <h6 class="mb-3" style="color:var(--text-secondary);font-size:0.85rem;text-transform:uppercase;letter-spacing:0.05em;">تفاصيل الفاتورة</h6>
               <div class="stat-card">
                 {% if session.session_type == 'stadium' %}
-                <div class="d-flex justify-content-between mb-2">
-                  <span>وقت اللعب:</span>
+                <div class="summary-row">
+                  <span>وقت اللعب</span>
                   <span id="modalPlayTime">0 IQD</span>
                 </div>
                 {% endif %}
-
-                <div class="d-flex justify-content-between mb-2">
-                  <span>المنتجات:</span>
+                <div class="summary-row">
+                  <span>المنتجات</span>
                   <span>{{ '{:,.0f}'.format(session.get_orders_total()) }} IQD</span>
                 </div>
-
                 <hr>
-
-                <div class="d-flex justify-content-between mb-2">
-                  <span>المجموع الفرعي:</span>
+                <div class="summary-row">
+                  <span>المجموع الفرعي</span>
                   <span id="modalSubtotal">0 IQD</span>
                 </div>
-
-                <div class="d-flex justify-content-between mb-2 text-success d-none" id="modalAutoDiscountRow">
-                  <span>خصم تلقائي:</span>
+                <div class="summary-row d-none" id="modalAutoDiscountRow" style="color:var(--success);">
+                  <span>خصم تلقائي</span>
                   <span id="modalAutoDiscount">-0 IQD</span>
                 </div>
-
-                <div class="d-flex justify-content-between mb-2 text-warning d-none" id="modalManualDiscountRow">
-                  <span>خصم يدوي:</span>
+                <div class="summary-row d-none" id="modalManualDiscountRow" style="color:var(--warning);">
+                  <span>خصم يدوي</span>
                   <span id="modalManualDiscount">-0 IQD</span>
                 </div>
-
-                <hr style="border-width: 2px;">
-
-                <div class="d-flex justify-content-between">
-                  <strong class="fs-5">الصافي:</strong>
-                  <strong class="fs-4" style="color: var(--primary-color);" id="modalTotal">0 IQD</strong>
+                <hr style="border-width:2px;border-color:var(--border-strong);">
+                <div class="summary-row">
+                  <strong style="color:var(--text-primary);font-size:1rem;">الصافي</strong>
+                  <strong style="color:var(--primary);font-size:1.3rem;" id="modalTotal">0 IQD</strong>
                 </div>
               </div>
             </div>
 
+            <!-- Payment Options -->
             <div class="col-md-6">
-              <h6 class="mb-3">خيارات الدفع</h6>
+              <h6 class="mb-3" style="color:var(--text-secondary);font-size:0.85rem;text-transform:uppercase;letter-spacing:0.05em;">خيارات الدفع</h6>
 
               <div class="mb-3">
                 <label class="form-label">خصم يدوي (IQD)</label>
                 <input type="number" name="manual_discount" id="manualDiscountInput"
-                       class="form-control" value="0" min="0" onchange="updateModalTotals()">
+                       class="form-control" value="0" min="0" oninput="updateModalTotals()">
               </div>
 
               <div class="mb-3">
-                <label class="form-label">سبب الخصم (اختياري)</label>
+                <label class="form-label">سبب الخصم <span style="color:var(--text-muted);font-size:0.8rem;">(اختياري)</span></label>
                 <input type="text" name="discount_note" class="form-control"
-                       placeholder="مثال: زبون دائم، عرض خاص...">
+                       placeholder="زبون دائم، عرض خاص...">
               </div>
 
               <div class="mb-3">
                 <label class="form-label">طريقة الدفع</label>
                 <div class="d-flex gap-2">
-                  <button type="button" class="btn btn-outline-success flex-fill payment-method active" data-method="cash">
-                    <i class="fas fa-money-bill-wave me-2"></i>نقدي
+                  <button type="button" class="payment-method-btn payment-method active" data-method="cash">
+                    <i class="fas fa-money-bill-wave"></i>نقدي
                   </button>
-                  <button type="button" class="btn btn-outline-info flex-fill payment-method" data-method="card">
-                    <i class="fas fa-credit-card me-2"></i>بطاقة
+                  <button type="button" class="payment-method-btn payment-method" data-method="card">
+                    <i class="fas fa-credit-card"></i>بطاقة
                   </button>
                 </div>
                 <input type="hidden" name="payment_method" id="paymentMethod" value="cash">
@@ -540,10 +645,9 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-          <button type="submit" class="btn btn-success btn-lg">
-            <i class="fas fa-check me-2"></i>
-            تأكيد الدفع
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+          <button type="submit" class="btn btn-success btn-lg" id="confirmPayBtn">
+            <i class="fas fa-check me-2"></i>تأكيد الدفع
           </button>
         </div>
       </form>
@@ -554,268 +658,204 @@
 
 {% block extra_js %}
 <script>
-const sessionId = {{ session.id }};
-const sessionType = {{ session.session_type|tojson }};
-const startTime = new Date({{ session.start_time.isoformat()|tojson }});
-const pricePerHour = {{ stadium_price_per_hour if stadium_price_per_hour is not none else 40000 }};
-const sessionEndTimeStr = {{ (session.end_time.isoformat() if session.end_time else None)|tojson }};
-let isPlayFinished = sessionEndTimeStr !== null;
-const endTime = sessionEndTimeStr ? new Date(sessionEndTimeStr) : null;
+const sessionId        = {{ session.id }};
+const sessionType      = {{ session.session_type|tojson }};
+const startTime        = new Date({{ session.start_time.isoformat()|tojson }});
+const pricePerHour     = {{ stadium_price_per_hour if stadium_price_per_hour is not none else 40000 }};
+const sessionEndTimeStr= {{ (session.end_time.isoformat() if session.end_time else None)|tojson }};
+let   isPlayFinished   = sessionEndTimeStr !== null;
+const endTime          = sessionEndTimeStr ? new Date(sessionEndTimeStr) : null;
 
 const discountPercentage = {{ settings.discount_percentage if settings else 0 }};
-const discountStartHour = {{ settings.discount_start_hour if settings else 12 }};
-const discountEndHour = {{ settings.discount_end_hour if settings else 16 }};
-let ordersTotal = {{ session.get_orders_total() }};
+const discountStartHour  = {{ settings.discount_start_hour if settings else 12 }};
+const discountEndHour    = {{ settings.discount_end_hour if settings else 16 }};
+let ordersTotal          = {{ session.get_orders_total() }};
 
-let currentTimePrice = 0;
-let currentHours = 0;
+let currentTimePrice    = 0;
+let currentHours        = 0;
 let currentAutoDiscount = 0;
-let activeCategory = sessionStorage.getItem('pos_active_category') || 'all';
-let lastScanned = '';
-let lastScanAt = 0;
+let activeCategory      = sessionStorage.getItem('pos_active_category') || 'all';
+let lastScanned         = '';
+let lastScanAt          = 0;
 
-function formatNumber(num) {
-  return (Number(num || 0)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+// ── Helpers ──────────────────────────────────────────────
+function fmt(num) {
+  return (Number(num || 0)).toLocaleString('en-US');
 }
 
-function saveScrollPosition() {
-  sessionStorage.setItem('pos_session_scroll_y', String(window.scrollY || window.pageYOffset || 0));
-}
-
-function restoreScrollPosition() {
-  const savedY = sessionStorage.getItem('pos_session_scroll_y');
-  if (savedY !== null) {
-    requestAnimationFrame(() => {
-      window.scrollTo(0, parseInt(savedY, 10) || 0);
-      sessionStorage.removeItem('pos_session_scroll_y');
-    });
-  }
-}
-
-function saveActiveCategory() {
+function saveState() {
+  sessionStorage.setItem('pos_session_scroll_y', String(window.scrollY || 0));
   sessionStorage.setItem('pos_active_category', activeCategory);
+  const sv = document.getElementById('searchInput');
+  if (sv) sessionStorage.setItem('pos_search_value', sv.value || '');
 }
 
-function restoreActiveCategory() {
-  document.querySelectorAll('.category-tab').forEach(tab => {
-    if (tab.dataset.category === activeCategory) {
-      tab.classList.add('active');
-    } else {
-      tab.classList.remove('active');
-    }
-  });
-}
-
-function saveSearchValue() {
-  const searchInput = document.getElementById('searchInput');
-  if (searchInput) {
-    sessionStorage.setItem('pos_search_value', searchInput.value || '');
+function restoreState() {
+  const y = sessionStorage.getItem('pos_session_scroll_y');
+  if (y !== null) {
+    requestAnimationFrame(() => { window.scrollTo(0, parseInt(y,10)||0); });
+    sessionStorage.removeItem('pos_session_scroll_y');
   }
-}
+  const sv = sessionStorage.getItem('pos_search_value');
+  const si = document.getElementById('searchInput');
+  if (si && sv !== null) si.value = sv;
 
-function restoreSearchValue() {
-  const saved = sessionStorage.getItem('pos_search_value');
-  const searchInput = document.getElementById('searchInput');
-  if (searchInput && saved !== null) {
-    searchInput.value = saved;
-  }
-}
-
-function reloadKeepState() {
-  saveScrollPosition();
-  saveActiveCategory();
-  saveSearchValue();
-  window.location.reload();
-}
-
-function handleProductKey(event, productId) {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault();
-    addToCart(productId);
-  }
+  document.querySelectorAll('.category-tab').forEach(t =>
+    t.classList.toggle('active', t.dataset.category === activeCategory));
 }
 
 function applyFilters() {
   const search = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
-
   document.querySelectorAll('.product-item').forEach(item => {
-    const categoryMatch = activeCategory === 'all' || item.dataset.category === activeCategory;
-    const name = (item.dataset.name || item.querySelector('h6')?.textContent || '').toLowerCase();
-    const searchMatch = !search || name.includes(search);
-    item.style.display = (categoryMatch && searchMatch) ? 'block' : 'none';
+    const catOk = activeCategory === 'all' || item.dataset.category === activeCategory;
+    const nameOk = !search || (item.dataset.name || '').includes(search);
+    item.style.display = (catOk && nameOk) ? 'block' : 'none';
   });
 }
 
+function handleProductKey(e, id) {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addToCart(id); }
+}
+
+// ── Timer ─────────────────────────────────────────────────
 function updateTimer() {
   if (sessionType !== 'stadium') return;
 
-  const now = new Date();
-  const stopPoint = (isPlayFinished && endTime) ? endTime : now;
-  const diff = Math.max(0, Math.floor((stopPoint - startTime) / 1000));
+  const now   = new Date();
+  const stop  = (isPlayFinished && endTime) ? endTime : now;
+  const diff  = Math.max(0, Math.floor((stop - startTime) / 1000));
 
-  const hours = Math.floor(diff / 3600);
-  const minutes = Math.floor((diff % 3600) / 60);
-  const seconds = diff % 60;
+  const h = Math.floor(diff / 3600);
+  const m = Math.floor((diff % 3600) / 60);
+  const s = diff % 60;
 
-  const timerEl = document.getElementById('timer');
-  if (timerEl) {
-    timerEl.textContent =
-      String(hours).padStart(2, '0') + ':' +
-      String(minutes).padStart(2, '0') + ':' +
-      String(seconds).padStart(2, '0');
-  }
+  const el = document.getElementById('timer');
+  if (el) el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 
-  const totalMinutes = hours * 60 + minutes;
-  currentHours = Math.max(1, Math.ceil(totalMinutes / 60));
+  const totalMins = h * 60 + m;
+  currentHours     = Math.max(1, Math.ceil(totalMins / 60));
   currentTimePrice = currentHours * pricePerHour;
 
   const startHour = startTime.getHours();
   currentAutoDiscount = 0;
 
-  const autoRow = document.getElementById('autoDiscountRow');
-  const autoAmount = document.getElementById('autoDiscountAmount');
+  const autoRow  = document.getElementById('autoDiscountRow');
+  const autoAmt  = document.getElementById('autoDiscountAmount');
 
   if (startHour >= discountStartHour && startHour < discountEndHour && discountPercentage > 0) {
     currentAutoDiscount = Math.round(currentTimePrice * (discountPercentage / 100));
-    if (autoRow) autoRow.classList.remove('d-none');
-    if (autoAmount) autoAmount.textContent = '-' + formatNumber(currentAutoDiscount) + ' IQD';
+    autoRow?.classList.remove('d-none');
+    if (autoAmt) autoAmt.textContent = '-' + fmt(currentAutoDiscount) + ' IQD';
   } else {
-    if (autoRow) autoRow.classList.add('d-none');
+    autoRow?.classList.add('d-none');
   }
 
-  const playTimeText = document.getElementById('playTimeText');
-  const playTimePrice = document.getElementById('playTimePrice');
-  const timePriceSummary = document.getElementById('timePriceSummary');
-  const totalAmount = document.getElementById('totalAmount');
+  const grandTotal = Math.max(0, currentTimePrice + ordersTotal - currentAutoDiscount);
 
-  if (playTimeText) playTimeText.textContent = currentHours + ' ساعة';
-  if (playTimePrice) playTimePrice.textContent = formatNumber(currentTimePrice) + ' IQD';
-  if (timePriceSummary) timePriceSummary.textContent = formatNumber(currentTimePrice) + ' IQD';
-
-  const subtotal = currentTimePrice + ordersTotal;
-  const grandTotal = Math.max(0, subtotal - currentAutoDiscount);
-  if (totalAmount) totalAmount.textContent = formatNumber(grandTotal) + ' IQD';
+  const el2 = id => document.getElementById(id);
+  if (el2('playTimeText'))    el2('playTimeText').textContent    = currentHours + ' ساعة';
+  if (el2('playTimePrice'))   el2('playTimePrice').textContent   = fmt(currentTimePrice) + ' IQD';
+  if (el2('timePriceSummary'))el2('timePriceSummary').textContent= fmt(currentTimePrice) + ' IQD';
+  if (el2('totalAmount'))     el2('totalAmount').textContent     = fmt(grandTotal) + ' IQD';
 }
 
 if (sessionType === 'stadium') {
   updateTimer();
   setInterval(updateTimer, 1000);
 } else {
-  const totalAmount = document.getElementById('totalAmount');
-  if (totalAmount) totalAmount.textContent = formatNumber(ordersTotal) + ' IQD';
+  const ta = document.getElementById('totalAmount');
+  if (ta) ta.textContent = fmt(ordersTotal) + ' IQD';
 }
 
+// ── Modal Totals ──────────────────────────────────────────
 function updateModalTotals() {
-  const manualDiscount = parseInt(document.getElementById('manualDiscountInput')?.value || '0', 10) || 0;
+  const manual   = parseInt(document.getElementById('manualDiscountInput')?.value || '0', 10) || 0;
   const subtotal = currentTimePrice + ordersTotal;
-  const totalDiscount = currentAutoDiscount + manualDiscount;
-  const grandTotal = Math.max(0, subtotal - totalDiscount);
+  const grand    = Math.max(0, subtotal - currentAutoDiscount - manual);
 
-  const modalSubtotal = document.getElementById('modalSubtotal');
-  const modalManualDiscount = document.getElementById('modalManualDiscount');
-  const modalTotal = document.getElementById('modalTotal');
-  const manualRow = document.getElementById('modalManualDiscountRow');
+  const el = id => document.getElementById(id);
+  if (el('modalSubtotal'))     el('modalSubtotal').textContent     = fmt(subtotal) + ' IQD';
+  if (el('modalManualDiscount'))el('modalManualDiscount').textContent = '-' + fmt(manual) + ' IQD';
+  if (el('modalTotal'))        el('modalTotal').textContent        = fmt(grand) + ' IQD';
 
-  if (modalSubtotal) modalSubtotal.textContent = formatNumber(subtotal) + ' IQD';
-  if (modalManualDiscount) modalManualDiscount.textContent = '-' + formatNumber(manualDiscount) + ' IQD';
-  if (modalTotal) modalTotal.textContent = formatNumber(grandTotal) + ' IQD';
-
-  if (manualRow) {
-    if (manualDiscount > 0) manualRow.classList.remove('d-none');
-    else manualRow.classList.add('d-none');
-  }
+  const mr = el('modalManualDiscountRow');
+  if (mr) mr.classList.toggle('d-none', manual <= 0);
 }
 
+// ── Cart Actions (server-side) ────────────────────────────
 function addToCart(productId) {
-  reloadKeepState();
-
+  saveState();
   fetch(`/pos/session/${sessionId}/add-item`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `product_id=${encodeURIComponent(productId)}&quantity=1`
   })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      window.location.reload();
-    } else {
-      alert(data.message || 'حدث خطأ');
-    }
-  })
+  .then(r => r.json())
+  .then(d => { if (d.success) window.location.reload(); else alert(d.message || 'حدث خطأ'); })
   .catch(() => alert('حدث خطأ في الاتصال'));
 }
 
 function updateQty(itemId, newQty) {
-  reloadKeepState();
-
+  saveState();
   fetch(`/pos/session/${sessionId}/update-quantity`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: `item_id=${encodeURIComponent(itemId)}&quantity=${encodeURIComponent(newQty)}`
   })
-  .then(res => res.json())
-  .then(data => {
-    if (data.success) {
-      window.location.reload();
-    } else {
-      alert(data.message || 'حدث خطأ');
-    }
-  })
+  .then(r => r.json())
+  .then(d => { if (d.success) window.location.reload(); else alert(d.message || 'حدث خطأ'); })
   .catch(() => alert('حدث خطأ في الاتصال'));
 }
 
 function removeItem(itemId) {
   if (!confirm('حذف هذا المنتج؟')) return;
-
-  reloadKeepState();
-
+  saveState();
   fetch(`/pos/session/${sessionId}/remove-item/${itemId}`, { method: 'POST' })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        window.location.reload();
-      } else {
-        alert(data.message || 'حدث خطأ');
-      }
-    })
+    .then(r => r.json())
+    .then(d => { if (d.success) window.location.reload(); else alert(d.message || 'حدث خطأ'); })
     .catch(() => alert('حدث خطأ في الاتصال'));
 }
 
+// ── Close Session (open payment modal) ───────────────────
 function closeSession() {
-  const mins = document.getElementById('playTimeMinutes');
-  const price = document.getElementById('playTimePriceInput');
-  const auto = document.getElementById('autoDiscountInput');
+  const el = id => document.getElementById(id);
 
-  if (mins) mins.value = currentHours * 60;
-  if (price) price.value = currentTimePrice;
-  if (auto) auto.value = currentAutoDiscount;
+  if (el('playTimeMinutes'))   el('playTimeMinutes').value   = currentHours * 60;
+  if (el('playTimePriceInput'))el('playTimePriceInput').value = currentTimePrice;
+  if (el('autoDiscountInput')) el('autoDiscountInput').value  = currentAutoDiscount;
 
   if (sessionType === 'stadium') {
-    const modalPlay = document.getElementById('modalPlayTime');
-    const modalAuto = document.getElementById('modalAutoDiscount');
-    const modalAutoRow = document.getElementById('modalAutoDiscountRow');
-
-    if (modalPlay) modalPlay.textContent = formatNumber(currentTimePrice) + ' IQD';
-    if (modalAuto) modalAuto.textContent = '-' + formatNumber(currentAutoDiscount) + ' IQD';
-
-    if (modalAutoRow) {
-      if (currentAutoDiscount > 0) modalAutoRow.classList.remove('d-none');
-      else modalAutoRow.classList.add('d-none');
-    }
+    if (el('modalPlayTime')) el('modalPlayTime').textContent = fmt(currentTimePrice) + ' IQD';
+    const mar = el('modalAutoDiscountRow');
+    const mad = el('modalAutoDiscount');
+    if (mad) mad.textContent = '-' + fmt(currentAutoDiscount) + ' IQD';
+    if (mar) mar.classList.toggle('d-none', currentAutoDiscount <= 0);
   }
 
   updateModalTotals();
   new bootstrap.Modal(document.getElementById('paymentModal')).show();
 }
 
+// ── Auto-print after payment form submit ─────────────────
+document.getElementById('paymentForm')?.addEventListener('submit', function() {
+  const btn = document.getElementById('confirmPayBtn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري المعالجة...';
+  }
+  // Store flag so receipt page knows to auto-print
+  sessionStorage.setItem('pos_autoprint', '1');
+});
+
+// ── Cancel Session ────────────────────────────────────────
 function cancelSession() {
   if (!confirm('هل تريد إلغاء هذه الجلسة؟ سيتم حذف كل الطلبات!')) return;
-
   fetch(`/pos/session/${sessionId}/cancel`, { method: 'POST' })
     .then(() => window.location.href = '/pos')
     .catch(() => alert('حدث خطأ أثناء الإلغاء'));
 }
 
+// ── Payment Method Toggle ─────────────────────────────────
 document.querySelectorAll('.payment-method').forEach(btn => {
   btn.addEventListener('click', function() {
     document.querySelectorAll('.payment-method').forEach(b => b.classList.remove('active'));
@@ -825,124 +865,78 @@ document.querySelectorAll('.payment-method').forEach(btn => {
   });
 });
 
+// ── Category Tabs ─────────────────────────────────────────
 document.querySelectorAll('.category-tab').forEach(tab => {
   tab.addEventListener('click', function(e) {
     e.preventDefault();
     activeCategory = this.dataset.category;
-    saveActiveCategory();
-    restoreActiveCategory();
+    sessionStorage.setItem('pos_active_category', activeCategory);
+    document.querySelectorAll('.category-tab').forEach(t => t.classList.toggle('active', t === this));
     applyFilters();
   });
 });
 
-const searchInput = document.getElementById('searchInput');
-if (searchInput) {
-  searchInput.addEventListener('input', function() {
-    saveSearchValue();
-    applyFilters();
-  });
-}
+// ── Search ────────────────────────────────────────────────
+document.getElementById('searchInput')?.addEventListener('input', function() {
+  sessionStorage.setItem('pos_search_value', this.value || '');
+  applyFilters();
+});
 
-const barcodeInput = document.getElementById('barcodeInput');
-if (barcodeInput) {
-  barcodeInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const barcode = this.value.trim();
-      if (!barcode) return;
+// ── Barcode ───────────────────────────────────────────────
+document.getElementById('barcodeInput')?.addEventListener('keydown', function(e) {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const barcode = this.value.trim();
+  if (!barcode) return;
 
-      const now = Date.now();
-      if (barcode === lastScanned && (now - lastScanAt) < 300) {
-        this.value = '';
-        return;
-      }
-      lastScanned = barcode;
-      lastScanAt = now;
+  const now = Date.now();
+  if (barcode === lastScanned && (now - lastScanAt) < 300) { this.value = ''; return; }
+  lastScanned = barcode;
+  lastScanAt  = now;
 
-      saveScrollPosition();
-      saveActiveCategory();
-      saveSearchValue();
+  saveState();
+  fetch('/pos/scan-barcode', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ barcode })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) { addToCart(d.product.id); this.value = ''; this.focus(); }
+    else { alert(d.message || 'المنتج غير موجود!'); this.value = ''; }
+  })
+  .catch(() => { this.value = ''; alert('حدث خطأ في المسح'); });
+});
 
-      fetch('/pos/scan-barcode', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ barcode })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          addToCart(data.product.id);
-          this.value = '';
-          this.focus();
-        } else {
-          alert(data.message || 'المنتج غير موجود!');
-          this.value = '';
-        }
-      })
-      .catch(() => {
-        this.value = '';
-        alert('حدث خطأ في المسح');
-      });
-    }
-  });
-}
-
+// ── Debt Modal ────────────────────────────────────────────
 function openDebtModal() {
-  let totalAmount = ordersTotal;
-  if (sessionType === 'stadium') {
-    totalAmount += currentTimePrice;
-    totalAmount -= currentAutoDiscount;
-  }
-
-  const totalEl = document.getElementById('debtTotalAmount');
-  if (totalEl) totalEl.textContent = formatNumber(totalAmount);
-
-  const nameEl = document.getElementById('debtName');
-  const phoneEl = document.getElementById('debtPhone');
-  const noteEl = document.getElementById('debtNote');
-
-  if (nameEl) nameEl.value = '';
-  if (phoneEl) phoneEl.value = '';
-  if (noteEl) noteEl.value = '';
-
+  let total = ordersTotal;
+  if (sessionType === 'stadium') total += currentTimePrice - currentAutoDiscount;
+  const el = document.getElementById('debtTotalAmount');
+  if (el) el.textContent = fmt(total);
+  ['debtName','debtPhone','debtNote'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
   new bootstrap.Modal(document.getElementById('debtModal')).show();
 }
 
-const debtForm = document.getElementById('debtForm');
-if (debtForm) {
-  debtForm.addEventListener('submit', function(e) {
-    const submitBtn = document.getElementById('submitDebtBtn');
-    const nameInput = document.getElementById('debtName');
+document.getElementById('debtForm')?.addEventListener('submit', function(e) {
+  const name = document.getElementById('debtName');
+  if (name && !name.value.trim()) {
+    e.preventDefault(); alert('الرجاء إدخال الاسم!'); name.focus(); return false;
+  }
+  const btn = document.getElementById('submitDebtBtn');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...'; }
+});
 
-    if (nameInput && !nameInput.value.trim()) {
-      e.preventDefault();
-      alert('الرجاء إدخال الاسم!');
-      nameInput.focus();
-      return false;
-    }
+document.getElementById('debtModal')?.addEventListener('hidden.bs.modal', function() {
+  const btn = document.getElementById('submitDebtBtn');
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save me-2"></i>حفظ الدين'; }
+});
 
-    if (submitBtn) {
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
-    }
-    return true;
-  });
-}
-
-const debtModalEl = document.getElementById('debtModal');
-if (debtModalEl) {
-  debtModalEl.addEventListener('hidden.bs.modal', function() {
-    const submitBtn = document.getElementById('submitDebtBtn');
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<i class="fas fa-save me-2"></i>حفظ الدين';
-    }
-  });
-}
-
-restoreScrollPosition();
-restoreSearchValue();
-restoreActiveCategory();
+// ── Init ──────────────────────────────────────────────────
+restoreState();
 applyFilters();
 </script>
 {% endblock %}

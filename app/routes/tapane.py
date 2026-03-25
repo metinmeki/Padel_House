@@ -2,11 +2,25 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime, time, timedelta
 import os
 import hmac
+import json
+import logging
 
 from app import db
 from app.models.booking import Booking
 from app.models.stadium import Stadium
 from app.models.settings import Settings
+
+# ✅ File logging
+try:
+    import os as _os
+    _os.makedirs('/var/log', exist_ok=True)
+    logging.basicConfig(
+        filename='/var/log/padel_webhook.log',
+        level=logging.DEBUG,
+        format='%(asctime)s %(message)s'
+    )
+except Exception:
+    logging.basicConfig(level=logging.DEBUG)
 
 tapane_bp = Blueprint('tapane', __name__)
 
@@ -217,25 +231,37 @@ def build_tapane_availability(stadium_id: int, booking_date_obj):
     if not settings:
         return None, "Settings not configured", 500
 
+    opening = int(settings.opening_hour or 12)
+    closing = int(settings.closing_hour or 4)
+
+    if opening > closing:
+        tapane_day_hours = set(list(range(opening, 24)) + list(range(0, closing)))
+    else:
+        tapane_day_hours = set(range(opening, closing))
+
     bookings = Booking.query.filter(
         Booking.stadium_id == stadium_id,
-        Booking.date.in_([booking_date_obj, booking_date_obj - timedelta(days=1)]),
+        Booking.date.in_([
+            booking_date_obj - timedelta(days=1),
+            booking_date_obj,
+            booking_date_obj + timedelta(days=1),
+        ]),
         Booking.status.in_(["pending", "pending_cancel", "confirmed"])
     ).all()
 
     taken_hours = set()
-    opening = int(settings.opening_hour or 12)
 
     for booking in bookings:
         for slot_date, slot_hour in booking_record_slots(booking):
-            # Hours BEFORE opening belong to the NEXT calendar day in Tapane's view
-            if slot_hour < opening:
-                adjusted_date = slot_date + timedelta(days=1)  # ← was: - timedelta(days=1)
-            else:
-                adjusted_date = slot_date
+            if slot_hour not in tapane_day_hours:
+                continue
 
-            if adjusted_date == booking_date_obj:
-                taken_hours.add(slot_hour)
+            if slot_hour >= opening:
+                if slot_date == booking_date_obj:
+                    taken_hours.add(slot_hour)
+            else:
+                if slot_date == booking_date_obj or slot_date == booking_date_obj + timedelta(days=1):
+                    taken_hours.add(slot_hour)
 
     available_slots = [{"hour": h} for h in range(24) if h not in taken_hours]
     booked_slots = [{"hour": h} for h in range(24) if h in taken_hours]
@@ -254,13 +280,21 @@ def build_tapane_availability(stadium_id: int, booking_date_obj):
 
 
 def find_booking_by_explicit_ids(tapane_booking_id: str, local_booking_id: str):
+    # 1. ابحث بـ local_booking_id
     if local_booking_id and local_booking_id.isdigit():
         booking = Booking.query.filter_by(id=int(local_booking_id)).first()
         if booking:
             return booking
 
+    # 2. ابحث بـ tapane UUID في external_booking_id
     if tapane_booking_id:
         booking = Booking.query.filter_by(external_booking_id=tapane_booking_id).first()
+        if booking:
+            return booking
+
+    # 3. إذا tapane_booking_id رقم → ابحث بـ local ID
+    if tapane_booking_id and tapane_booking_id.isdigit():
+        booking = Booking.query.filter_by(id=int(tapane_booking_id)).first()
         if booking:
             return booking
 
@@ -301,6 +335,68 @@ def find_existing_tapane_booking_by_slot(
     return None
 
 
+def find_existing_website_booking_by_slot(
+    stadium_id: int,
+    booking_date_obj,
+    parsed_hour: int,
+    parsed_minute: int,
+    duration_hours: int
+):
+    settings = Settings.query.first()
+    opening_hour = int(settings.opening_hour or 12) if settings else 12
+    closing_hour = int(settings.closing_hour or 4) if settings else 4
+
+    # ✅ Use the same save_date logic as the website
+    if opening_hour > closing_hour and parsed_hour < closing_hour:
+        actual_save_date = booking_date_obj + timedelta(days=1)
+    else:
+        actual_save_date = booking_date_obj
+
+    # ✅ Build the requested slots using save_date (same as website)
+    requested_start_dt = datetime.combine(
+        actual_save_date,
+        time(hour=parsed_hour, minute=parsed_minute or 0)
+    )
+    requested_slots = set()
+    for i in range(duration_hours):
+        slot_dt = requested_start_dt + timedelta(hours=i)
+        requested_slots.add((slot_dt.date(), slot_dt.hour))
+
+    # ✅ Search using actual_save_date, not booking_date_obj
+    candidates = Booking.query.filter(
+        Booking.stadium_id == stadium_id,
+        Booking.date == actual_save_date,
+        Booking.status.in_(["pending", "confirmed", "pending_cancel"]),
+        Booking.source == "website"
+    ).all()
+
+    for booking in candidates:
+        existing_slots = set(booking_record_slots(booking))
+        if requested_slots.intersection(existing_slots):
+            return booking
+
+    return None
+
+
+def get_midnight_save_date(booking_date_obj, parsed_hour: int):
+    settings = Settings.query.first()
+    opening_hour = int(settings.opening_hour or 12) if settings else 12
+    closing_hour = int(settings.closing_hour or 4) if settings else 4
+
+    if opening_hour > closing_hour and parsed_hour < closing_hour:
+        return booking_date_obj + timedelta(days=1)
+
+    return booking_date_obj
+
+
+def _is_tapane_uuid(value: str) -> bool:
+    if not value:
+        return False
+    if value.isdigit():
+        return False
+    return '-' in value
+
+
 @tapane_bp.route('/webhook', methods=['GET', 'POST'])
 def tapane_webhook():
     if request.method == 'GET':
@@ -337,6 +433,12 @@ def tapane_webhook():
 
     data = request.get_json(silent=True) or {}
 
+    # ✅ Log كل webhook لملف
+    try:
+        logging.info("WEBHOOK: " + json.dumps(data, ensure_ascii=False))
+    except Exception:
+        pass
+
     event_name = (data.get("event") or "").strip().lower()
     tapane_booking_id = str(data.get("booking_id") or "").strip()
     local_booking_id = str(data.get("external_booking_id") or "").strip()
@@ -356,10 +458,6 @@ def tapane_webhook():
 
     # -------------------------------------------------
     # booking.created
-    # Fix:
-    # - allow linking to existing website booking by explicit local id
-    # - do not create duplicate tapane row for same booking
-    # - keep source=website if original booking is website
     # -------------------------------------------------
     if event_name == "booking.created":
         booking_date = str(data.get("date") or "").strip()
@@ -376,8 +474,10 @@ def tapane_webhook():
         if not stadium:
             return jsonify({"success": False, "message": "Field mapping not found"}), 404
 
+        save_date = get_midnight_save_date(booking_date_obj, parsed_hour)
+
         start_dt = datetime.combine(
-            booking_date_obj,
+            save_date,
             time(hour=parsed_hour, minute=parsed_minute or 0)
         )
         end_dt = start_dt + timedelta(hours=duration_hours)
@@ -389,46 +489,47 @@ def tapane_webhook():
         if tapane_booking_id:
             booking = Booking.query.filter_by(external_booking_id=tapane_booking_id).first()
 
-        # Allow explicit local booking id to link an existing website booking
         if not booking and local_booking_id and local_booking_id.isdigit():
             candidate = Booking.query.filter_by(id=int(local_booking_id)).first()
             if candidate:
                 booking = candidate
+
+        if not booking:
+            existing = find_existing_website_booking_by_slot(
+                stadium_id=stadium.id,
+                booking_date_obj=booking_date_obj,
+                parsed_hour=parsed_hour,
+                parsed_minute=parsed_minute or 0,
+                duration_hours=duration_hours
+            )
+            if existing:
+                booking = existing
 
         if booking:
             booking.stadium_id = stadium.id
             booking.customer_name = customer_name
             booking.customer_phone = customer_phone
             booking.customer_email = customer_email
-            booking.date = booking_date_obj
-            booking.start_time = start_dt.time()
-            booking.end_time = end_dt.time()
             booking.duration_hours = duration_hours
             booking.original_price = price_data["original_price"]
             booking.discount_percentage = price_data["discount_percentage"]
             booking.discount_amount = price_data["discount_amount"]
             booking.final_price = price_data["final_price"]
-
             if notes:
                 booking.notes = notes
-
             booking.status = "pending"
             booking.external_status = event_name
             booking.external_booking_id = tapane_booking_id
-
-            # keep website bookings as website
             if not booking.source:
                 booking.source = "tapane"
-
             booking.last_synced_at = datetime.utcnow()
-
         else:
             booking = Booking(
                 stadium_id=stadium.id,
                 customer_name=customer_name,
                 customer_phone=customer_phone,
                 customer_email=customer_email,
-                date=booking_date_obj,
+                date=save_date,
                 start_time=start_dt.time(),
                 end_time=end_dt.time(),
                 duration_hours=duration_hours,
@@ -455,14 +556,12 @@ def tapane_webhook():
                 "error": str(e)
             }), 500
 
-        return jsonify({
-            "success": True,
-            "message": "Booking created/updated successfully",
-            "id": str(booking.id),
-            "external_booking_id": booking.external_booking_id,
-            "source": booking.source
-        }), 200
+        # ✅ Tapane يحفظ هذا الـ id كـ external_booking_id في future events
+        return jsonify({"id": str(booking.id)}), 200
 
+    # -------------------------------------------------
+    # All other events (accepted, cancelled, completed, rejected)
+    # -------------------------------------------------
     booking = find_booking_by_explicit_ids(
         tapane_booking_id=tapane_booking_id,
         local_booking_id=local_booking_id
@@ -478,22 +577,20 @@ def tapane_webhook():
     if not booking:
         return jsonify({"success": False, "message": "Booking not found"}), 404
 
-    # For non-created events:
-    # website bookings are allowed only if explicitly linked by external_booking_id or local id.
-    # Do not fallback-match website bookings by slot.
-    if booking.source == "website" and not (
-        (tapane_booking_id and booking.external_booking_id == tapane_booking_id) or
-        (local_booking_id and local_booking_id.isdigit() and booking.id == int(local_booking_id))
-    ):
-        return jsonify({
-            "success": False,
-            "message": "Refusing to update unrelated website booking from Tapane webhook"
-        }), 409
+    # ✅ Website bookings: سمح بالتحديث فقط إذا كان الـ external_booking_id يطابق
+    if booking.source == "website":
+        is_matched_by_tapane_id = tapane_booking_id and booking.external_booking_id == tapane_booking_id
+        is_matched_by_local_id = local_booking_id and local_booking_id.isdigit() and booking.id == int(local_booking_id)
+        # ✅ إذا tapane_booking_id هو رقم ويطابق الـ local id
+        is_matched_by_local_number = tapane_booking_id and tapane_booking_id.isdigit() and booking.id == int(
+            tapane_booking_id)
+        if not is_matched_by_tapane_id and not is_matched_by_local_id and not is_matched_by_local_number:
+            return jsonify({"success": False, "message": "Refusing to update unrelated website booking"}), 409
 
     if data.get("date"):
         try:
             booking_date_obj = datetime.strptime(str(data.get("date")).strip(), "%Y-%m-%d").date()
-            booking.date = booking_date_obj
+            booking.date = get_midnight_save_date(booking_date_obj, parsed_hour) if parsed_hour is not None else booking_date_obj
         except Exception:
             pass
 
@@ -507,16 +604,18 @@ def tapane_webhook():
         booking.end_time = end_dt.time()
         booking.duration_hours = duration_hours
 
+    # ✅ منطق الإلغاء الصحيح
     if event_name == "booking.cancelled":
-        if booking.status == "confirmed":
+        if booking.status in ("cancelled", "completed"):
+            # مُلغى أو منتهي مسبقاً — لا تغيير
+            pass
+        else:
+            # أي حالة أخرى (pending, confirmed, pending_cancel) → طلب إلغاء للأدمن
             booking.status = "pending_cancel"
-
             existing_notes = booking.notes or ""
             extra_note = "[Cancel request received from Tapane]"
             if extra_note not in existing_notes:
                 booking.notes = f"{existing_notes}\n{extra_note}".strip()
-        else:
-            booking.status = "cancelled"
 
     elif event_name == "booking.accepted":
         booking.status = "confirmed"
@@ -540,7 +639,10 @@ def tapane_webhook():
         booking.notes = notes
 
     booking.external_status = event_name
-    booking.external_booking_id = tapane_booking_id
+
+    # ✅ لا تُحدّث external_booking_id إلا إذا كان UUID حقيقي
+    if _is_tapane_uuid(tapane_booking_id):
+        booking.external_booking_id = tapane_booking_id
 
     if not booking.source:
         booking.source = "tapane"

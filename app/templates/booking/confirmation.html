@@ -88,7 +88,7 @@
               <td class="text-muted">
                 {% if is_ku %}بەروار{% elif current_lang == 'ar' %}التاريخ{% else %}Date{% endif %}
               </td>
-              <td class="fw-bold">{{ booking.date.strftime('%Y-%m-%d') }}</td>
+              <td class="fw-bold">{{ booking.display_date.strftime('%Y-%m-%d') if booking.display_date else '-' }}</td>
             </tr>
 
             <tr>

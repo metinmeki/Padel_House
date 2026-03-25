@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from app import db
 
 
@@ -51,6 +51,45 @@ class Booking(db.Model):
     def __repr__(self):
         return f'<Booking {self.id} - {self.customer_name} - {self.date}>'
 
+    @property
+    def display_date(self):
+        """
+        ✅ التاريخ الذي يراه الأدمن — نفس التاريخ الذي اختاره المستخدم.
+        الساعات بعد منتصف الليل (00:00 → 03:00) محفوظة على اليوم التالي في DB،
+        لكن نعرضها بالتاريخ السابق (اليوم الذي اختاره المستخدم).
+
+        مثال:
+        DB: date=Mar22, start=01:00 → display_date=Mar21
+        DB: date=Mar21, start=20:00 → display_date=Mar21 (لا تغيير)
+        """
+        try:
+            from app.models.settings import Settings
+            settings = Settings.query.first()
+            opening_hour = int(settings.opening_hour or 12) if settings else 12
+            closing_hour = int(settings.closing_hour or 4) if settings else 4
+
+            if not self.start_time or not self.date:
+                return self.date
+
+            start_hour = self.start_time.hour
+
+            # إذا كان وقت الإغلاق بعد منتصف الليل (closing < opening)
+            # والساعة في نطاق ما بعد منتصف الليل (0..closing)
+            # → الأدمن يجب أن يرى اليوم السابق
+            if opening_hour > closing_hour and start_hour < closing_hour:
+                return self.date - timedelta(days=1)
+
+            return self.date
+
+        except Exception:
+            return self.date
+
+    @property
+    def display_date_str(self):
+        """التاريخ كـ string للعرض في الـ templates"""
+        d = self.display_date
+        return str(d) if d else ''
+
     def to_dict(self):
         return {
             'id': self.id,
@@ -60,6 +99,7 @@ class Booking(db.Model):
             'customer_phone': self.customer_phone,
             'customer_email': self.customer_email,
             'date': str(self.date),
+            'display_date': self.display_date_str,  # ✅ التاريخ الصحيح للعرض
             'start_time': str(self.start_time) if self.start_time else None,
             'end_time': str(self.end_time) if self.end_time else None,
             'duration_hours': self.duration_hours,

@@ -15,6 +15,8 @@
   .visibility-box .form-check { margin-bottom: 0; }
   .img-ph { width:50px;height:50px;object-fit:cover; }
   .stock-badge { font-size: 12px; padding: 6px 10px; border-radius: 999px; font-weight: 700; }
+  .barcode-input-group .input-group-text { background: #fff3e0; border-color: #E57625; color: #E57625; }
+  .barcode-input-group input:focus { border-color: #E57625; box-shadow: 0 0 0 0.2rem rgba(229,118,37,0.15); }
 </style>
 {% endblock %}
 
@@ -85,15 +87,12 @@
     <div class="card-body py-2">
       <div class="d-flex flex-wrap gap-2 align-items-center">
         <span class="text-muted">{% if current_lang == 'ku' %}فلتەر:{% elif current_lang == 'ar' %}تصفية:{% else %}Filter:{% endif %}</span>
-
         <button class="btn btn-sm filter-btn active" type="button" data-filter="all">
           {% if current_lang == 'ku' %}هەموو{% elif current_lang == 'ar' %}الكل{% else %}All{% endif %}
         </button>
-
         {% for category in categories %}
           <button class="btn btn-sm filter-btn" type="button" data-filter="{{ category.id }}">{{ category.get_name(current_lang) }}</button>
         {% endfor %}
-
         <input type="text" class="form-control form-control-sm ms-auto"
                placeholder="{% if current_lang == 'ku' %}گەڕان...{% elif current_lang == 'ar' %}بحث...{% else %}Search...{% endif %}"
                id="searchProduct" style="width: 200px;">
@@ -142,7 +141,6 @@
                   <span class="text-muted">-</span>
                 {% endif %}
               </td>
-
               <td><strong>{{ "{:,.0f}".format(product.cost_price or 0) }}</strong> {{ t('iqd') }}</td>
               <td><strong style="color:#E57625;">{{ "{:,.0f}".format(product.price) }}</strong> {{ t('iqd') }}</td>
               <td>
@@ -150,7 +148,6 @@
                   {{ "{:,.0f}".format((product.price or 0) - (product.cost_price or 0)) }}
                 </strong> {{ t('iqd') }}
               </td>
-
               <td>
                 {% set s = product.stock if product.stock is not none else 0 %}
                 {% if product.stock is none %}
@@ -165,7 +162,6 @@
                   {% endif %}
                 {% endif %}
               </td>
-
               <td>
                 {% if product.barcode %}
                   <code class="bg-light text-dark px-2 py-1 rounded" style="font-size: 11px;">{{ product.barcode }}</code>
@@ -177,7 +173,6 @@
                   <span class="text-muted">-</span>
                 {% endif %}
               </td>
-
               <td>
                 {% if product.show_in_website %}
                   <span class="badge bg-info" title="{% if current_lang == 'ku' %}ماڵپەڕ{% elif current_lang == 'ar' %}الموقع{% else %}Website{% endif %}">🌐</span>
@@ -186,7 +181,6 @@
                   <span class="badge bg-dark" title="POS">💻</span>
                 {% endif %}
               </td>
-
               <td>
                 {% if product.is_active %}
                   <span class="badge bg-success">{% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}مفعل{% else %}Active{% endif %}</span>
@@ -194,7 +188,6 @@
                   <span class="badge bg-secondary">{% if current_lang == 'ku' %}ناچالاک{% elif current_lang == 'ar' %}معطل{% else %}Inactive{% endif %}</span>
                 {% endif %}
               </td>
-
               <td>
                 <button class="btn btn-sm btn-outline-primary edit-product" type="button"
                         data-id="{{ product.id }}"
@@ -215,11 +208,9 @@
                         data-barcode="{{ product.barcode or '' }}">
                   <i class="fas fa-edit"></i>
                 </button>
-
                 <button class="btn btn-sm btn-outline-warning toggle-product" type="button" data-id="{{ product.id }}">
                   <i class="fas fa-power-off"></i>
                 </button>
-
                 <button class="btn btn-sm btn-outline-danger delete-product" type="button"
                         data-id="{{ product.id }}"
                         data-name="{{ product.name_ku or product.name_ar or product.name_en or ('#' ~ product.id) }}">
@@ -242,7 +233,7 @@
   </div>
 </div>
 
-<!-- Add Product Modal -->
+<!-- ===== ADD PRODUCT MODAL ===== -->
 <div class="modal fade" id="addProductModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -253,7 +244,6 @@
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-
       <form id="addProductForm" enctype="multipart/form-data">
         <div class="modal-body">
           <div class="row mb-3">
@@ -280,6 +270,29 @@
             </div>
           </div>
 
+          <!-- ✅ حقل باركود الشركة في الأعلى - ADD -->
+          <div class="mb-3 p-3 rounded" style="background:#fff8f3; border:1px solid #E57625;">
+            <label class="form-label fw-bold mb-1">
+              <i class="fas fa-barcode me-1" style="color:#E57625;"></i>
+              {% if current_lang == 'ku' %}باڕکۆدی کۆمپانیا{% elif current_lang == 'ar' %}باركود الشركة{% else %}Company Barcode{% endif %}
+            </label>
+            <div class="input-group barcode-input-group">
+              <input type="text"
+                     class="form-control form-control-lg"
+                     name="barcode"
+                     id="addBarcodeInput"
+                     placeholder="{% if current_lang == 'ku' %}باڕکۆد بمسح یان بنووسە... (ئارەزوومەندانە){% elif current_lang == 'ar' %}امسح الباركود أو اكتبه... (اختياري){% else %}Scan or type barcode... (optional){% endif %}"
+                     autocomplete="off">
+              <span class="input-group-text fs-5">
+                <i class="fas fa-barcode"></i>
+              </span>
+            </div>
+            <small class="text-muted mt-1 d-block">
+              <i class="fas fa-info-circle me-1"></i>
+              {% if current_lang == 'ku' %}ئەگەر بەتاڵ بێت، باڕکۆدی ئۆتۆماتیکی دروست دەکرێت{% elif current_lang == 'ar' %}إذا تركته فارغاً سيتم توليد باركود تلقائياً{% else %}If empty, a barcode will be auto-generated{% endif %}
+            </small>
+          </div>
+
           <ul class="nav nav-tabs mb-3" role="tablist">
             <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#add-tab-ku" type="button">🇮🇶 کوردی *</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#add-tab-ar" type="button">🇸🇦 العربية</button></li>
@@ -297,7 +310,6 @@
                 <textarea class="form-control" name="description_ku" rows="2" dir="rtl" placeholder="وەسفی بەرهەمەکە بە کوردی"></textarea>
               </div>
             </div>
-
             <div class="tab-pane fade" id="add-tab-ar">
               <div class="mb-3">
                 <label class="form-label">اسم المنتج (العربية)</label>
@@ -308,7 +320,6 @@
                 <textarea class="form-control" name="description_ar" rows="2" dir="rtl" placeholder="وصف المنتج بالعربية"></textarea>
               </div>
             </div>
-
             <div class="tab-pane fade" id="add-tab-en">
               <div class="mb-3">
                 <label class="form-label">Product Name (English)</label>
@@ -366,7 +377,6 @@
             {% else %}Only Kurdish is required, other languages are optional{% endif %}
           </div>
         </div>
-
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
           <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>{{ t('save') }}</button>
@@ -376,7 +386,7 @@
   </div>
 </div>
 
-<!-- Edit Product Modal -->
+<!-- ===== EDIT PRODUCT MODAL ===== -->
 <div class="modal fade" id="editProductModal" tabindex="-1">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -387,7 +397,6 @@
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-
       <form id="editProductForm" enctype="multipart/form-data">
         <input type="hidden" name="product_id" id="editProductId">
         <div class="modal-body">
@@ -415,6 +424,29 @@
             </div>
           </div>
 
+          <!-- ✅ حقل باركود الشركة - EDIT -->
+          <div class="mb-3 p-3 rounded" style="background:#fff8f3; border:1px solid #E57625;">
+            <label class="form-label fw-bold mb-1">
+              <i class="fas fa-barcode me-1" style="color:#E57625;"></i>
+              {% if current_lang == 'ku' %}باڕکۆد{% elif current_lang == 'ar' %}الباركود{% else %}Barcode{% endif %}
+            </label>
+            <div class="input-group barcode-input-group">
+              <input type="text"
+                     class="form-control form-control-lg"
+                     name="barcode"
+                     id="editBarcodeInput"
+                     placeholder="{% if current_lang == 'ku' %}باڕکۆد بمسح یان بنووسە...{% elif current_lang == 'ar' %}امسح الباركود أو اكتبه...{% else %}Scan or type barcode...{% endif %}"
+                     autocomplete="off">
+              <span class="input-group-text fs-5">
+                <i class="fas fa-barcode"></i>
+              </span>
+            </div>
+            <small class="text-muted mt-1 d-block">
+              <i class="fas fa-info-circle me-1"></i>
+              {% if current_lang == 'ku' %}باڕکۆدی کۆمپانیا بنووسە یان بمسح{% elif current_lang == 'ar' %}اكتب أو امسح باركود الشركة الأصلي{% else %}Type or scan the original company barcode{% endif %}
+            </small>
+          </div>
+
           <ul class="nav nav-tabs mb-3" role="tablist">
             <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#edit-tab-ku" type="button">🇮🇶 کوردی *</button></li>
             <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#edit-tab-ar" type="button">🇸🇦 العربية</button></li>
@@ -432,7 +464,6 @@
                 <textarea class="form-control" name="description_ku" id="editDescKu" rows="2" dir="rtl"></textarea>
               </div>
             </div>
-
             <div class="tab-pane fade" id="edit-tab-ar">
               <div class="mb-3">
                 <label class="form-label">اسم المنتج (العربية)</label>
@@ -443,7 +474,6 @@
                 <textarea class="form-control" name="description_ar" id="editDescAr" rows="2" dir="rtl"></textarea>
               </div>
             </div>
-
             <div class="tab-pane fade" id="edit-tab-en">
               <div class="mb-3">
                 <label class="form-label">Product Name (English)</label>
@@ -493,9 +523,7 @@
               </div>
             </div>
           </div>
-
         </div>
-
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
           <button type="submit" class="btn btn-primary"><i class="fas fa-save me-2"></i>{{ t('save') }}</button>
@@ -539,6 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
     alert('{% if current_lang == "ku" %}باڕکۆد کۆپی کرا{% elif current_lang == "ar" %}تم نسخ الباركود{% else %}Barcode copied{% endif %}');
   }
 
+  // ===== FILTER & SEARCH =====
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', function() {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -548,15 +577,12 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   const searchInput = document.getElementById('searchProduct');
-  if (searchInput) {
-    searchInput.addEventListener('input', applyFilterAndSearch);
-  }
+  if (searchInput) searchInput.addEventListener('input', applyFilterAndSearch);
 
   function applyFilterAndSearch() {
     const activeBtn = document.querySelector('.filter-btn.active');
     const filter = activeBtn ? activeBtn.dataset.filter : 'all';
     const q = (searchInput ? searchInput.value : '').toLowerCase();
-
     document.querySelectorAll('#productsTable tbody tr[data-category]').forEach(row => {
       const matchFilter = (filter === 'all' || row.dataset.category === filter);
       const matchSearch = (!q || row.textContent.toLowerCase().includes(q));
@@ -564,11 +590,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // ===== ADD PRODUCT =====
+  // ✅ فوكس تلقائي على حقل الباركود عند فتح المودال
+  document.getElementById('addProductModal').addEventListener('shown.bs.modal', function() {
+    document.getElementById('addBarcodeInput').focus();
+  });
+
   const addForm = document.getElementById('addProductForm');
   if (addForm) {
     addForm.addEventListener('submit', function(e) {
       e.preventDefault();
-
       const categorySelect = document.getElementById('addCategoryId');
       if (!categorySelect.value) {
         categorySelect.classList.add('is-invalid');
@@ -605,26 +636,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // ===== EDIT PRODUCT =====
   document.querySelectorAll('.edit-product').forEach(btn => {
     btn.addEventListener('click', function() {
       document.getElementById('editProductId').value = this.dataset.id || '';
-
       document.getElementById('editNameKu').value = this.dataset.nameKu || '';
       document.getElementById('editNameAr').value = this.dataset.nameAr || '';
       document.getElementById('editNameEn').value = this.dataset.nameEn || '';
-
       document.getElementById('editDescKu').value = this.dataset.descKu || '';
       document.getElementById('editDescAr').value = this.dataset.descAr || '';
       document.getElementById('editDescEn').value = this.dataset.descEn || '';
-
       document.getElementById('editCategoryId').value = this.dataset.categoryId || '';
       document.getElementById('editCostPrice').value = this.dataset.costPrice || 0;
       document.getElementById('editPrice').value = this.dataset.price || 0;
       document.getElementById('editStock').value = this.dataset.stock || 0;
-
       document.getElementById('editIsActive').checked = dsBool(this.dataset.isActive);
       document.getElementById('editShowInWebsite').checked = dsBool(this.dataset.showInWebsite);
       document.getElementById('editShowInPos').checked = dsBool(this.dataset.showInPos);
+      // ✅ تحميل الباركود الحالي
+      document.getElementById('editBarcodeInput').value = this.dataset.barcode || '';
 
       new bootstrap.Modal(document.getElementById('editProductModal')).show();
     });
@@ -634,10 +664,8 @@ document.addEventListener('DOMContentLoaded', function() {
   if (editForm) {
     editForm.addEventListener('submit', function(e) {
       e.preventDefault();
-
       const productId = document.getElementById('editProductId').value;
       const formData = new FormData(editForm);
-
       formData.set('is_active', document.getElementById('editIsActive').checked ? '1' : '0');
       formData.set('show_in_website', document.getElementById('editShowInWebsite').checked ? '1' : '0');
       formData.set('show_in_pos', document.getElementById('editShowInPos').checked ? '1' : '0');
@@ -652,6 +680,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
+  // ===== TOGGLE =====
   document.querySelectorAll('.toggle-product').forEach(btn => {
     btn.addEventListener('click', function() {
       fetch(`/admin/api/product/${this.dataset.id}/toggle`, { method: 'POST', credentials: 'same-origin' })
@@ -661,14 +690,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
+  // ===== DELETE =====
   document.querySelectorAll('.delete-product').forEach(btn => {
     btn.addEventListener('click', function() {
       const name = this.dataset.name || ('#' + this.dataset.id);
       const msg = `{% if current_lang == "ku" %}سڕینەوەی{% elif current_lang == "ar" %}حذف{% else %}Delete{% endif %} "${name}"?`;
       if (!confirm(msg)) return;
-
       const id = this.dataset.id;
-
       fetch(`/admin/api/product/${id}`, { method: 'DELETE', credentials: 'same-origin' })
         .then(async r => {
           const data = await r.json().catch(() => ({}));

@@ -38,22 +38,10 @@
             overflow-y: auto;
         }
 
-        .sidebar::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .sidebar::-webkit-scrollbar-track {
-            background: rgba(255,255,255,0.05);
-        }
-
-        .sidebar::-webkit-scrollbar-thumb {
-            background: rgba(229,118,37,0.5);
-            border-radius: 3px;
-        }
-
-        .sidebar::-webkit-scrollbar-thumb:hover {
-            background: var(--primary-color);
-        }
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        .sidebar::-webkit-scrollbar-thumb { background: rgba(229,118,37,0.5); border-radius: 3px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
 
         .user-profile {
             padding: 15px 20px;
@@ -64,87 +52,37 @@
         }
 
         .user-avatar {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
+            width: 50px; height: 50px; border-radius: 50%;
             background: linear-gradient(135deg, var(--primary-color), #ff9051);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: #fff;
-            font-weight: 600;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; color: #fff; font-weight: 600;
             box-shadow: 0 4px 8px rgba(229,118,37,0.3);
         }
 
-        .user-info {
-            color: #fff;
-        }
+        .user-info { color: #fff; }
+        .user-name { font-size: 1rem; font-weight: 600; margin-bottom: 2px; }
+        .user-role { font-size: 0.75rem; color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; }
 
-        .user-name {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 2px;
-        }
-
-        .user-role {
-            font-size: 0.75rem;
-            color: rgba(255,255,255,0.6);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .role-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 0.7rem;
-            margin-top: 5px;
-        }
-
-        .role-super-admin {
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            color: #fff;
-            box-shadow: 0 2px 8px rgba(102,126,234,0.3);
-        }
-
-        .role-admin {
-            background: rgba(229,118,37,0.2);
-            color: var(--primary-color);
-            border: 1px solid var(--primary-color);
-        }
+        .role-badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; margin-top: 5px; }
+        .role-super-admin { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; box-shadow: 0 2px 8px rgba(102,126,234,0.3); }
+        .role-admin { background: rgba(229,118,37,0.2); color: var(--primary-color); border: 1px solid var(--primary-color); }
 
         .sidebar .nav-link {
             color: rgba(255,255,255,0.7);
-            padding: 12px 20px;
-            margin: 2px 10px;
-            border-radius: 8px;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            padding: 12px 20px; margin: 2px 10px; border-radius: 8px;
+            transition: all 0.3s; display: flex; align-items: center; justify-content: space-between;
         }
-
         .sidebar .nav-link:hover {
-            background: rgba(255,255,255,0.1);
-            color: #fff;
+            background: rgba(255,255,255,0.1); color: #fff;
             transform: translateX({% if is_rtl %}-{% endif %}3px);
         }
-
         .sidebar .nav-link.active {
-            background: rgba(229,118,37,0.2);
-            color: var(--primary-color);
+            background: rgba(229,118,37,0.2); color: var(--primary-color);
             border-{% if is_rtl %}right{% else %}left{% endif %}: 3px solid var(--primary-color);
         }
+        .sidebar .nav-link i { width: 24px; }
 
-        .sidebar .nav-link i {
-            width: 24px;
-        }
-
-        .pending-badge {
-            animation: pulse 2s infinite;
-        }
-
+        .pending-badge { animation: pulse 2s infinite; }
         @keyframes pulse {
             0% { transform: scale(1); }
             50% { transform: scale(1.1); }
@@ -155,97 +93,40 @@
             background: rgba(102, 126, 234, 0.1);
             border-{% if is_rtl %}right{% else %}left{% endif %}: 3px solid #667eea;
         }
+        .super-admin-section:hover { background: rgba(102, 126, 234, 0.15); }
 
-        .super-admin-section:hover {
-            background: rgba(102, 126, 234, 0.15);
-        }
-
-        .sidebar hr {
-            border-color: rgba(255,255,255,0.1);
-            margin: 15px 20px;
-        }
+        .sidebar hr { border-color: rgba(255,255,255,0.1); margin: 15px 20px; }
 
         .main-content {
             {% if is_rtl %}margin-right{% else %}margin-left{% endif %}: var(--sidebar-width);
-            padding: 20px;
-            min-height: 100vh;
+            padding: 20px; min-height: 100vh;
         }
 
-        .notification-bell {
-            position: relative;
-        }
-
+        .notification-bell { position: relative; }
         .notification-bell .btn {
-            border-radius: 50%;
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            border-radius: 50%; width: 45px; height: 45px;
+            display: flex; align-items: center; justify-content: center;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
-
-        .notification-bell .badge {
-            font-size: 0.7rem;
-        }
+        .notification-bell .badge { font-size: 0.7rem; }
 
         .stat-card {
-            background: #fff;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
+            background: #fff; border-radius: 12px; padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: transform 0.2s;
         }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .stat-card .icon { width: 50px; height: 50px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
 
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
+        .table-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
 
-        .stat-card .icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        .table-card {
-            background: #fff;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-        }
-
-        .badge-pending {
-            background-color: #ffc107;
-            color: #000;
-        }
-
-        .badge-confirmed {
-            background-color: #28a745;
-            color: #fff;
-        }
-
-        .badge-cancelled {
-            background-color: #dc3545;
-            color: #fff;
-        }
-
-        .badge-completed {
-            background-color: #17a2b8;
-            color: #fff;
-        }
+        .badge-pending { background-color: #ffc107; color: #000; }
+        .badge-confirmed { background-color: #28a745; color: #fff; }
+        .badge-cancelled { background-color: #dc3545; color: #fff; }
+        .badge-completed { background-color: #17a2b8; color: #fff; }
 
         @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX({% if is_rtl %}100%{% else %}-100%{% endif %});
-            }
-            .main-content {
-                {% if is_rtl %}margin-right{% else %}margin-left{% endif %}: 0;
-            }
+            .sidebar { transform: translateX({% if is_rtl %}100%{% else %}-100%{% endif %}); }
+            .main-content { {% if is_rtl %}margin-right{% else %}margin-left{% endif %}: 0; }
         }
     </style>
 
@@ -302,7 +183,7 @@
         {% if current_user.role == 'super_admin' or current_user.can_manage_bookings %}
         <li class="nav-item">
             <a href="{{ url_for('admin.pending_bookings') }}"
-               class="nav-link {% if 'pending' in request.endpoint %}active{% endif %}"
+               class="nav-link {% if request.endpoint == 'admin.pending_bookings' %}active{% endif %}"
                id="pendingBookingsNav"
                style="{% if pending_bookings_count > 0 %}background: rgba(255,193,7,0.2); border-{% if is_rtl %}right{% else %}left{% endif %}: 3px solid #ffc107;{% endif %}">
                 <span>
@@ -312,8 +193,29 @@
                     {% else %}Pending Bookings{% endif %}
                 </span>
                 <span id="pendingBookingsBadge"
-                      class="badge bg-danger pending-badge {% if pending_bookings_count <= 0 %}d-none{% endif %}">
+                      class="badge bg-warning text-dark pending-badge {% if pending_bookings_count <= 0 %}d-none{% endif %}">
                     {{ pending_bookings_count }}
+                </span>
+            </a>
+        </li>
+        {% endif %}
+
+        <!-- ✅ Cancel Requests — جديد -->
+        {% if current_user.role == 'super_admin' or current_user.can_manage_bookings %}
+        <li class="nav-item">
+            <a href="{{ url_for('admin.cancel_requests') }}"
+               class="nav-link {% if request.endpoint == 'admin.cancel_requests' %}active{% endif %}"
+               id="cancelRequestsNav"
+               style="{% if cancel_requests_count > 0 %}background: rgba(220,53,69,0.15); border-{% if is_rtl %}right{% else %}left{% endif %}: 3px solid #dc3545;{% endif %}">
+                <span>
+                    <i class="fas fa-times-circle me-2"></i>
+                    {% if current_lang == 'ku' %}داواکارییەکانی هەڵوەشاندنەوە
+                    {% elif current_lang == 'ar' %}طلبات الإلغاء
+                    {% else %}Cancel Requests{% endif %}
+                </span>
+                <span id="cancelRequestsBadge"
+                      class="badge bg-danger pending-badge {% if cancel_requests_count <= 0 %}d-none{% endif %}">
+                    {{ cancel_requests_count }}
                 </span>
             </a>
         </li>
@@ -348,27 +250,18 @@
         {% endif %}
 
         {% if current_user.role == 'super_admin' or current_user.can_manage_bookings %}
-<li class="nav-item">
-    <a href="{{ url_for('admin.manage_coaches') }}"
-       class="nav-link {% if request.endpoint == 'admin.manage_coaches' %}active{% endif %}">
-        <span>
-            <i class="fas fa-user-tie me-2"></i>
-            {% if current_lang == 'ku' %}ڕاهێنەران
-            {% elif current_lang == 'ar' %}المدربون
-            {% else %}Coaches{% endif %}
-        </span>
-    </a>
-</li>
-{% endif %}
-
-
-
-
-
-
-
-
-
+        <li class="nav-item">
+            <a href="{{ url_for('admin.manage_coaches') }}"
+               class="nav-link {% if request.endpoint == 'admin.manage_coaches' %}active{% endif %}">
+                <span>
+                    <i class="fas fa-user-tie me-2"></i>
+                    {% if current_lang == 'ku' %}ڕاهێنەران
+                    {% elif current_lang == 'ar' %}المدربون
+                    {% else %}Coaches{% endif %}
+                </span>
+            </a>
+        </li>
+        {% endif %}
 
         {% if current_user.role == 'super_admin' or current_user.can_manage_orders %}
         <li class="nav-item">
@@ -487,11 +380,7 @@
 
     </ul>
 </aside>
-<li>
-<a href="{{ url_for('admin.manage_coaches') }}">
-🏆 Coaches
-</a>
-</li>
+
 <div class="main-content">
 
     <div class="d-flex justify-content-end mb-3">
@@ -562,7 +451,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function setBadgeValue(elementId, value) {
         const el = document.getElementById(elementId);
         if (!el) return;
-
         if (value > 0) {
             el.textContent = value;
             el.classList.remove('d-none');
@@ -578,20 +466,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function formatNumber(num) {
-        try {
-            return new Intl.NumberFormat().format(num || 0);
-        } catch (e) {
-            return String(num || 0);
-        }
+        try { return new Intl.NumberFormat().format(num || 0); }
+        catch (e) { return String(num || 0); }
     }
 
     async function refreshAdminLiveData() {
         try {
             const response = await fetch('/admin/api/live-dashboard', {
                 method: 'GET',
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
 
             const data = await response.json();
@@ -600,6 +483,9 @@ document.addEventListener('DOMContentLoaded', () => {
             setBadgeValue('pendingBookingsBadge', data.counts.pending_bookings);
             setBadgeValue('pendingOrdersBadge', data.counts.pending_orders);
             setBadgeValue('trainingRequestsBadge', data.counts.new_training_requests);
+
+            // ✅ cancel requests badge
+            setBadgeValue('cancelRequestsBadge', data.counts.cancel_requests || 0);
 
             const notifBadge = document.getElementById('notifBadge');
             if (notifBadge) {

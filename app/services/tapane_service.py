@@ -45,6 +45,23 @@ def _normalize_status_to_tapane(status: str) -> str:
     return mapping.get(status, 'pending')
 
 
+def get_midnight_save_date(booking_date_obj, start_hour: int):
+    """
+    ✅ الساعات بعد منتصف الليل (0..closing) تُحفظ على اليوم التالي.
+    مثال: date=Mar19, hour=1 → يُحفظ كـ date=Mar20, start=01:00
+    هذا يضمن توافق الحجوزات بين الموقع و Tapane.
+    """
+    from app.models.settings import Settings
+    settings = Settings.query.first()
+    opening_hour = int(settings.opening_hour or 12) if settings else 12
+    closing_hour = int(settings.closing_hour or 4) if settings else 4
+
+    if opening_hour > closing_hour and start_hour < closing_hour:
+        return booking_date_obj + timedelta(days=1)
+
+    return booking_date_obj
+
+
 def ping_tapane():
     if not TAPANE_API_KEY:
         return False, {'error': 'Missing TAPANE_API_KEY'}
@@ -70,15 +87,31 @@ def get_tapane_field_id(stadium):
 
 
 def build_tapane_booking_payload(booking):
+    """
+    ✅ عند إرسال الحجز لـ Tapane، نرسل التاريخ الأصلي الذي اختاره المستخدم
+    (وليس save_date) لأن Tapane يفهم التاريخ بطريقته الخاصة.
+    مثال: حجز date=Mar20, start=01:00 → نرسل لـ Tapane date=Mar19, hour=1
+    """
+    from app.models.settings import Settings
+    settings = Settings.query.first()
+    opening_hour = int(settings.opening_hour or 12) if settings else 12
+    closing_hour = int(settings.closing_hour or 4) if settings else 4
+
+    booking_date = booking.date
+    start_hour = int(booking.start_time.hour) % 24 if booking.start_time else 0
+
+    # إذا كانت الساعة بعد منتصف الليل، Tapane يتوقع التاريخ السابق
+    if opening_hour > closing_hour and start_hour < closing_hour:
+        booking_date = booking.date - timedelta(days=1)
+
     payload = {
         "field_id": get_tapane_field_id(booking.stadium),
-        "date": booking.date.strftime('%Y-%m-%d') if booking.date else None,
+        "date": booking_date.strftime('%Y-%m-%d') if booking_date else None,
         "customer_name": booking.customer_name,
         "customer_phone": booking.customer_phone,
     }
 
     if booking.start_time:
-        start_hour = int(booking.start_time.hour) % 24
         duration = max(1, int(booking.duration_hours or 1))
 
         if duration <= 1:
@@ -359,6 +392,7 @@ def sync_tapane_bookings_to_local(date=None, field_ids=None, page_size=100):
     from app import db
     from app.models.booking import Booking
     from app.models.stadium import Stadium
+    from app.models.settings import Settings
 
     if not TAPANE_API_KEY:
         return False, {'error': 'Missing TAPANE_API_KEY'}
@@ -368,6 +402,11 @@ def sync_tapane_bookings_to_local(date=None, field_ids=None, page_size=100):
         field_ids = [str(s.id) for s in stadiums]
     else:
         field_ids = [str(x) for x in field_ids]
+
+    # ✅ جلب إعدادات أوقات الافتتاح والإغلاق مرة واحدة
+    settings = Settings.query.first()
+    opening_hour = int(settings.opening_hour or 12) if settings else 12
+    closing_hour = int(settings.closing_hour or 4) if settings else 4
 
     created_count = 0
     updated_count = 0
@@ -431,7 +470,6 @@ def sync_tapane_bookings_to_local(date=None, field_ids=None, page_size=100):
 
                     hours_list = _extract_booking_hours(details_item)
                     if not hours_list:
-                        # fallback to list item if details endpoint still doesn't include hours
                         hours_list = _extract_booking_hours(item)
 
                     if not hours_list:
@@ -446,8 +484,18 @@ def sync_tapane_bookings_to_local(date=None, field_ids=None, page_size=100):
                     start_hour = int(hours_list[0]) % 24
                     duration_hours = len(hours_list)
 
+                    # ✅ التعديل الرئيسي: تحويل التاريخ الصحيح
+                    # Tapane يرسل date=Mar19, hour=1
+                    # نحن نحفظه كـ date=Mar20, start=01:00
+                    # (نفس منطق booking.py و tapane.py)
                     date_obj = datetime.strptime(booking_date, '%Y-%m-%d').date()
-                    start_dt = datetime.combine(date_obj, time(hour=start_hour, minute=0))
+
+                    if opening_hour > closing_hour and start_hour < closing_hour:
+                        save_date = date_obj + timedelta(days=1)
+                    else:
+                        save_date = date_obj
+
+                    start_dt = datetime.combine(save_date, time(hour=start_hour, minute=0))
                     end_dt = start_dt + timedelta(hours=duration_hours)
 
                     local_status = _normalize_status_from_tapane(tapane_status)
@@ -464,7 +512,7 @@ def sync_tapane_bookings_to_local(date=None, field_ids=None, page_size=100):
                         booking.stadium_id = stadium.id
                         booking.customer_name = user_name
                         booking.customer_phone = user_phone or booking.customer_phone or '-'
-                        booking.date = date_obj
+                        booking.date = save_date          # ✅ استخدام save_date
                         booking.start_time = start_dt.time()
                         booking.end_time = end_dt.time()
                         booking.duration_hours = duration_hours
@@ -483,7 +531,7 @@ def sync_tapane_bookings_to_local(date=None, field_ids=None, page_size=100):
                             customer_name=user_name,
                             customer_phone=user_phone or '-',
                             customer_email=None,
-                            date=date_obj,
+                            date=save_date,               # ✅ استخدام save_date
                             start_time=start_dt.time(),
                             end_time=end_dt.time(),
                             duration_hours=duration_hours,

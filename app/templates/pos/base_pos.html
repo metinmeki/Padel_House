@@ -11,295 +11,676 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Google Fonts - Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         :root {
-            --primary-color: #E57625;
-            --primary-dark: #d4691f;
-            --secondary-color: #2c3e50;
-            --success-color: #28a745;
-            --danger-color: #dc3545;
-            --warning-color: #ffc107;
-            --info-color: #17a2b8;
+            /* Padel House Brand */
+            --primary:       #E57625;
+            --primary-dark:  #C4601A;
+            --primary-light: #FF8C3A;
+            --primary-glow:  rgba(229, 118, 37, 0.18);
+
+            /* Dark Navy Palette */
+            --bg-base:       #0D1117;
+            --bg-surface:    #161B24;
+            --bg-card:       #1C2333;
+            --bg-card-hover: #222B3D;
+            --bg-input:      #141921;
+            --border:        rgba(255,255,255,0.07);
+            --border-strong: rgba(229,118,37,0.35);
+
+            /* Text */
+            --text-primary:  #F0F4FF;
+            --text-secondary:#8B95A8;
+            --text-muted:    #4E5A6B;
+
+            /* Status */
+            --success:       #22C55E;
+            --success-bg:    rgba(34,197,94,0.12);
+            --danger:        #EF4444;
+            --danger-bg:     rgba(239,68,68,0.12);
+            --warning:       #F59E0B;
+            --warning-bg:    rgba(245,158,11,0.12);
+            --info:          #3B82F6;
+            --info-bg:       rgba(59,130,246,0.12);
         }
 
         * {
             font-family: 'Cairo', sans-serif;
+            box-sizing: border-box;
         }
 
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background-color: var(--bg-base);
+            background-image:
+                radial-gradient(ellipse 80% 50% at 50% -10%, rgba(229,118,37,0.08) 0%, transparent 70%),
+                radial-gradient(ellipse 40% 30% at 90% 80%, rgba(229,118,37,0.04) 0%, transparent 60%);
+            color: var(--text-primary);
             min-height: 100vh;
             padding-bottom: 2rem;
         }
 
-        /* Navbar */
+        /* ─── Scrollbar ─── */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-base); }
+        ::-webkit-scrollbar-thumb { background: var(--primary-dark); border-radius: 3px; }
+
+        /* ─── Navbar ─── */
         .navbar {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 1rem 0;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 24px rgba(0,0,0,0.4);
+            padding: 0.75rem 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .navbar::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
         }
 
         .navbar-brand {
-            color: white !important;
-            font-weight: 700;
-            font-size: 1.5rem;
+            color: var(--text-primary) !important;
+            font-weight: 800;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
         }
 
-        .navbar-brand i {
-            margin-left: 10px;
+        .brand-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            box-shadow: 0 0 12px var(--primary-glow);
         }
+
+        .brand-icon i { color: white; }
 
         .nav-link {
-            color: rgba(255, 255, 255, 0.9) !important;
+            color: var(--text-secondary) !important;
             font-weight: 600;
-            padding: 0.5rem 1rem !important;
+            font-size: 0.9rem;
+            padding: 0.45rem 0.9rem !important;
             border-radius: 8px;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
         }
 
         .nav-link:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: white !important;
+            background: var(--primary-glow);
+            color: var(--primary) !important;
         }
 
-        /* Cards */
+        .nav-link.active-link {
+            background: var(--primary-glow);
+            color: var(--primary) !important;
+        }
+
+        /* ─── Cards ─── */
         .stat-card, .table-card {
-            background: white;
-            border-radius: 15px;
+            background: var(--bg-card);
+            border-radius: 14px;
             padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            border: none;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
         .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+            border-color: var(--border-strong);
+            box-shadow: 0 4px 24px rgba(229,118,37,0.08);
         }
 
-        .icon {
-            width: 60px;
-            height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 12px;
-            font-size: 1.5rem;
-        }
-
-        /* Buttons */
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            border: none;
-            padding: 0.6rem 1.5rem;
-            font-weight: 600;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(229, 118, 37, 0.3);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #28a745 0%, #218838 100%);
-            border: none;
-            padding: 0.6rem 1.5rem;
-            font-weight: 600;
-            border-radius: 8px;
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-            border: none;
-            padding: 0.6rem 1.5rem;
-            font-weight: 600;
-            border-radius: 8px;
-        }
-
-        /* Stadium/Table Cards */
-        .stadium-card {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-            border: 3px solid transparent;
-            cursor: pointer;
-        }
-
-        .stadium-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-            border-color: var(--primary-color);
-        }
-
-        .stadium-card.available {
-            border-color: var(--success-color);
-        }
-
-        .stadium-card.occupied {
-            border-color: var(--danger-color);
-            opacity: 0.8;
-        }
-
-        .stadium-number {
-            width: 50px;
-            height: 50px;
-            background: var(--primary-color);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
-
-        .status-badge {
-            padding: 0.4rem 1rem;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .status-available {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status-occupied {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        /* Tables */
-        .table {
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-
-        .table thead th {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            color: white;
-            font-weight: 600;
-            border: none;
-            padding: 1rem;
-        }
-
-        .table tbody tr {
-            transition: all 0.2s ease;
-        }
-
-        .table tbody tr:hover {
-            background: #f8f9fa;
-        }
-
-        /* Form Controls */
-        .form-control, .form-select {
-            border-radius: 8px;
-            border: 2px solid #e9ecef;
-            padding: 0.6rem 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(229, 118, 37, 0.25);
-        }
-
-        .form-label {
-            font-weight: 600;
-            color: #495057;
-            margin-bottom: 0.5rem;
-        }
-
-        /* Alerts */
-        .alert {
-            border-radius: 10px;
-            border: none;
-            padding: 1rem 1.5rem;
-            font-weight: 600;
-        }
-
-        /* Page Title */
         .page-header {
-            background: white;
-            border-radius: 15px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border);
         }
 
-        .page-header h2 {
-            color: var(--primary-color);
+        .page-header h2, .page-header h4 {
+            color: var(--text-primary);
             font-weight: 700;
             margin: 0;
         }
 
-        /* Barcode Scanner */
-        .barcode-scanner {
-            background: white;
-            border-radius: 15px;
+        /* ─── Stadium / Table Cards ─── */
+        .stadium-card {
+            background: var(--bg-card);
+            border-radius: 14px;
             padding: 1.5rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .stadium-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            border-color: var(--primary);
+        }
+
+        .stadium-card.available {
+            border-color: rgba(34,197,94,0.4);
+        }
+
+        .stadium-card.occupied {
+            border-color: rgba(239,68,68,0.35);
+            background: linear-gradient(135deg, var(--bg-card), rgba(239,68,68,0.04));
+        }
+
+        .stadium-number {
+            width: 46px;
+            height: 46px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            box-shadow: 0 0 14px var(--primary-glow);
+            flex-shrink: 0;
+        }
+
+        .status-badge {
+            padding: 0.35rem 0.9rem;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 0.02em;
+        }
+
+        .status-available {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(34,197,94,0.25);
+        }
+
+        .status-occupied {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(239,68,68,0.25);
+        }
+
+        /* ─── Buttons ─── */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            border: none;
+            color: white;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 0.6rem 1.4rem;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 10px rgba(229,118,37,0.25);
+        }
+
+        .btn-primary:hover, .btn-primary:focus {
+            background: linear-gradient(135deg, var(--primary-light), var(--primary));
+            box-shadow: 0 4px 16px rgba(229,118,37,0.4);
+            transform: translateY(-1px);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #22C55E, #16A34A);
+            border: none;
+            color: white;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 0.6rem 1.4rem;
+            box-shadow: 0 2px 10px rgba(34,197,94,0.2);
+            transition: all 0.2s ease;
+        }
+
+        .btn-success:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(34,197,94,0.35); color: white; }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #EF4444, #DC2626);
+            border: none;
+            color: white;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 0.6rem 1.4rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-danger:hover { transform: translateY(-1px); color: white; }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #F59E0B, #D97706);
+            border: none;
+            color: white;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 0.6rem 1.4rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-warning:hover { transform: translateY(-1px); color: white; }
+
+        .btn-info {
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            border: none;
+            color: white;
+            font-weight: 700;
+            border-radius: 10px;
+            padding: 0.6rem 1.4rem;
+            transition: all 0.2s ease;
+        }
+
+        .btn-info:hover { transform: translateY(-1px); color: white; }
+
+        .btn-outline-secondary {
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            background: transparent;
+            font-weight: 600;
+            border-radius: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-outline-secondary:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+            border-color: var(--text-muted);
+        }
+
+        .btn-outline-danger {
+            border: 1px solid rgba(239,68,68,0.4);
+            color: var(--danger);
+            background: transparent;
+            font-weight: 600;
+            border-radius: 10px;
+        }
+
+        .btn-outline-danger:hover {
+            background: var(--danger-bg);
+            color: var(--danger);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card-hover);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-weight: 600;
+            border-radius: 10px;
+        }
+
+        /* ─── Form Controls ─── */
+        .form-control, .form-select {
+            background: var(--bg-input);
+            border: 1.5px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 10px;
+            padding: 0.65rem 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background: var(--bg-input);
+            border-color: var(--primary);
+            color: var(--text-primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+            outline: none;
+        }
+
+        .form-control::placeholder { color: var(--text-muted); }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            margin-bottom: 0.4rem;
+        }
+
+        /* ─── Table ─── */
+        .table {
+            color: var(--text-primary);
+        }
+
+        .table thead th {
+            background: var(--bg-card-hover);
+            color: var(--primary);
+            font-weight: 700;
+            border-bottom: 1px solid var(--border-strong);
+            padding: 1rem;
+            font-size: 0.88rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .table tbody tr {
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s ease;
+        }
+
+        .table tbody tr:hover { background: var(--bg-card-hover); }
+
+        .table tbody td {
+            padding: 0.9rem 1rem;
+            vertical-align: middle;
+            color: var(--text-primary);
+        }
+
+        /* ─── Alerts ─── */
+        .alert {
+            border-radius: 12px;
+            border: 1px solid;
+            padding: 0.9rem 1.2rem;
+            font-weight: 600;
+            font-size: 0.92rem;
+        }
+
+        .alert-success {
+            background: var(--success-bg);
+            border-color: rgba(34,197,94,0.3);
+            color: var(--success);
+        }
+
+        .alert-danger {
+            background: var(--danger-bg);
+            border-color: rgba(239,68,68,0.3);
+            color: var(--danger);
+        }
+
+        .alert-warning {
+            background: var(--warning-bg);
+            border-color: rgba(245,158,11,0.3);
+            color: var(--warning);
+        }
+
+        .alert-info {
+            background: var(--info-bg);
+            border-color: rgba(59,130,246,0.3);
+            color: var(--info);
+        }
+
+        /* ─── Badges ─── */
+        .badge.bg-primary {
+            background: var(--primary) !important;
+            color: white;
+        }
+
+        .badge.bg-success {
+            background: var(--success-bg) !important;
+            color: var(--success) !important;
+            border: 1px solid rgba(34,197,94,0.3);
+        }
+
+        .badge.bg-info {
+            background: var(--info-bg) !important;
+            color: var(--info) !important;
+            border: 1px solid rgba(59,130,246,0.25);
+        }
+
+        /* ─── Barcode Scanner Section ─── */
+        .barcode-scanner {
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 1.25rem 1.5rem;
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
         }
 
         .barcode-input {
-            font-size: 1.2rem;
+            font-size: 1.1rem;
+            padding: 0.9rem 1rem;
+            border: 2px solid var(--primary);
+            background: var(--bg-input) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .barcode-input:focus {
+            box-shadow: 0 0 0 4px var(--primary-glow) !important;
+        }
+
+        /* ─── Icon circles ─── */
+        .icon {
+            width: 52px;
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+            font-size: 1.4rem;
+        }
+
+        /* ─── Modal ─── */
+        .modal-content {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            color: var(--text-primary);
+        }
+
+        .modal-header {
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-footer {
+            border-top: 1px solid var(--border);
+        }
+
+        .modal-body { background: var(--bg-card); border-radius: 0 0 16px 16px; }
+
+        /* ─── Search Card ─── */
+        .search-card {
+            background: var(--bg-card);
+            border-radius: 12px;
             padding: 1rem;
-            border: 3px solid var(--primary-color);
+            border: 1px solid var(--border);
+            margin-bottom: 1rem;
+        }
+
+        /* ─── Category Tabs ─── */
+        .category-tab {
+            padding: 0.5rem 1.1rem;
+            border-radius: 22px;
+            border: 1.5px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.88rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .category-tab:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--primary-glow);
+        }
+
+        .category-tab.active {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 2px 10px var(--primary-glow);
+        }
+
+        /* ─── Product Cards ─── */
+        .product-card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            border: 1.5px solid var(--border);
+            user-select: none;
+        }
+
+        .product-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+            box-shadow: 0 6px 20px rgba(229,118,37,0.15);
+            background: var(--bg-card-hover);
+        }
+
+        .product-card h6 { color: var(--text-primary); font-size: 0.88rem; margin: 0.5rem 0; }
+        .product-card .price { color: var(--primary); font-weight: 700; font-size: 0.98rem; }
+
+        /* ─── Cart Items ─── */
+        .cart-item {
+            background: var(--bg-surface);
+            border-radius: 10px;
+            padding: 0.9rem;
+            margin-bottom: 0.7rem;
+            border: 1px solid var(--border);
+        }
+
+        .qty-control {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: var(--bg-input);
+            border-radius: 8px;
+            padding: 0.25rem 0.4rem;
+        }
+
+        .qty-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            border: 1px solid var(--primary);
+            background: transparent;
+            color: var(--primary);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-size: 1rem;
+        }
+
+        .qty-btn:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .total-amount {
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        /* ─── Timer ─── */
+        .timer-card {
+            background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
+            border: 1px solid rgba(245,158,11,0.3);
+            border-radius: 14px;
+            padding: 1.25rem;
+            text-align: center;
+        }
+
+        .timer-display {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: var(--warning);
+            text-shadow: 0 0 20px rgba(245,158,11,0.4);
+            font-feature-settings: 'tnum';
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ─── Summary Row ─── */
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.45rem 0;
+            color: var(--text-secondary);
+            font-size: 0.93rem;
+        }
+
+        hr {
+            border-color: var(--border);
+            opacity: 1;
+        }
+
+        /* ─── Flash message close btn ─── */
+        .btn-close {
+            filter: invert(1);
+            opacity: 0.6;
+        }
+
+        .btn-close:hover { opacity: 1; }
+
+        /* ─── Responsive ─── */
+        @media (max-width: 991px) {
+            .timer-display { font-size: 2rem; }
         }
 
         {% block extra_css %}{% endblock %}
     </style>
 </head>
 <body>
+
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
+    <nav class="navbar navbar-expand-lg">
+        <div class="container-fluid px-4">
             <a class="navbar-brand" href="{{ url_for('pos.index') }}">
-                <i class="fas fa-cash-register"></i>
-                Padel House POS
+                <div class="brand-icon">
+                    <i class="fas fa-table-tennis"></i>
+                </div>
+                Padel House <span style="color: var(--primary); margin-right: 0.3rem;">POS</span>
             </a>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                    style="color: var(--text-secondary);">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
+                <ul class="navbar-nav me-auto gap-1">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('pos.index') }}">
-                            <i class="fas fa-home me-2"></i>الرئيسية
+                            <i class="fas fa-home"></i>الرئيسية
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('pos.quick_sale') }}">
-                            <i class="fas fa-shopping-cart me-2"></i>بيع سريع
+                            <i class="fas fa-bolt"></i>بيع سريع
                         </a>
-                    </li>
-                    <li class="nav-item">
-
                     </li>
                 </ul>
 
-                <ul class="navbar-nav">
+                <ul class="navbar-nav gap-1 align-items-center">
+                    <!-- Live clock -->
+                    <li class="nav-item d-none d-lg-block">
+                        <span class="nav-link" id="navClock" style="color: var(--primary); font-size: 0.95rem; font-feature-settings:'tnum';">
+                            <i class="fas fa-clock me-1"></i>
+                            <span id="clockTime">--:--</span>
+                        </span>
+                    </li>
+
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('admin.dashboard') }}">
-                            <i class="fas fa-cog me-2"></i>الإدارة
+                            <i class="fas fa-cog"></i>الإدارة
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('auth.logout') }}">
-                            <i class="fas fa-sign-out-alt me-2"></i>خروج
+                        <a class="nav-link" href="{{ url_for('auth.logout') }}"
+                           style="color: var(--danger) !important;">
+                            <i class="fas fa-sign-out-alt"></i>خروج
                         </a>
                     </li>
                 </ul>
@@ -308,7 +689,7 @@
     </nav>
 
     <!-- Flash Messages -->
-    <div class="container-fluid mt-3">
+    <div class="container-fluid px-4 mt-3">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -323,12 +704,33 @@
     </div>
 
     <!-- Main Content -->
-    <div class="container-fluid mt-4">
+    <div class="container-fluid px-4 mt-4">
         {% block content %}{% endblock %}
     </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // Live clock in navbar
+        function updateClock() {
+            const now = new Date();
+            const h = String(now.getHours()).padStart(2,'0');
+            const m = String(now.getMinutes()).padStart(2,'0');
+            const el = document.getElementById('clockTime');
+            if (el) el.textContent = h + ':' + m;
+        }
+        updateClock();
+        setInterval(updateClock, 10000);
+
+        // Active nav highlighting
+        const currentPath = window.location.pathname;
+        document.querySelectorAll('.nav-link').forEach(link => {
+            if (link.getAttribute('href') === currentPath) {
+                link.classList.add('active-link');
+            }
+        });
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>

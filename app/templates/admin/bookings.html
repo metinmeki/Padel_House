@@ -23,66 +23,26 @@
             <label class="form-label">
                 {% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}
             </label>
-
             <select id="filter-status" class="form-select">
-                {% if not current_status or current_status == 'all' %}
-                    <option value="all" selected>{{ t('all') }}</option>
-                {% else %}
-                    <option value="all">{{ t('all') }}</option>
-                {% endif %}
-
-                {% if current_status == 'pending' %}
-                    <option value="pending" selected>{{ t('pending') }}</option>
-                {% else %}
-                    <option value="pending">{{ t('pending') }}</option>
-                {% endif %}
-
-                {% if current_status == 'pending_cancel' %}
-                    <option value="pending_cancel" selected>
-                        {% if current_lang == 'ku' %}داواکاری هەڵوەشاندنەوە{% elif current_lang == 'ar' %}طلب إلغاء{% else %}Cancel Request{% endif %}
-                    </option>
-                {% else %}
-                    <option value="pending_cancel">
-                        {% if current_lang == 'ku' %}داواکاری هەڵوەشاندنەوە{% elif current_lang == 'ar' %}طلب إلغاء{% else %}Cancel Request{% endif %}
-                    </option>
-                {% endif %}
-
-                {% if current_status == 'confirmed' %}
-                    <option value="confirmed" selected>{{ t('confirmed') }}</option>
-                {% else %}
-                    <option value="confirmed">{{ t('confirmed') }}</option>
-                {% endif %}
-
-                {% if current_status == 'completed' %}
-                    <option value="completed" selected>{{ t('completed') }}</option>
-                {% else %}
-                    <option value="completed">{{ t('completed') }}</option>
-                {% endif %}
-
-                {% if current_status == 'cancelled' %}
-                    <option value="cancelled" selected>{{ t('cancelled') }}</option>
-                {% else %}
-                    <option value="cancelled">{{ t('cancelled') }}</option>
-                {% endif %}
+                <option value="all" {% if not current_status or current_status == 'all' %}selected{% endif %}>{{ t('all') }}</option>
+                <option value="pending" {% if current_status == 'pending' %}selected{% endif %}>{{ t('pending') }}</option>
+                <option value="pending_cancel" {% if current_status == 'pending_cancel' %}selected{% endif %}>
+                    {% if current_lang == 'ku' %}داواکاری هەڵوەشاندنەوە{% elif current_lang == 'ar' %}طلب إلغاء{% else %}Cancel Request{% endif %}
+                </option>
+                <option value="confirmed" {% if current_status == 'confirmed' %}selected{% endif %}>{{ t('confirmed') }}</option>
+                <option value="completed" {% if current_status == 'completed' %}selected{% endif %}>{{ t('completed') }}</option>
+                <option value="cancelled" {% if current_status == 'cancelled' %}selected{% endif %}>{{ t('cancelled') }}</option>
             </select>
         </div>
 
         <div class="col-md-2">
             <label class="form-label">{{ t('select_stadium') }}</label>
-
             <select id="filter-stadium" class="form-select">
-                {% if not current_stadium or current_stadium == 'all' %}
-                    <option value="all" selected>{{ t('all') }}</option>
-                {% else %}
-                    <option value="all">{{ t('all') }}</option>
-                {% endif %}
-
+                <option value="all" {% if not current_stadium or current_stadium == 'all' %}selected{% endif %}>{{ t('all') }}</option>
                 {% for stadium in stadiums %}
-                    {% if current_stadium is not none and current_stadium|string == stadium.id|string %}
-                        <option value="{{ stadium.id }}" selected>{{ stadium.name }}</option>
-                    {% else %}
-                        <option value="{{ stadium.id }}">{{ stadium.name }}</option>
-                    {% endif %}
+                    <option value="{{ stadium.id }}" {% if current_stadium is not none and current_stadium|string == stadium.id|string %}selected{% endif %}>
+                        {{ stadium.name }}
+                    </option>
                 {% endfor %}
             </select>
         </div>
@@ -91,17 +51,12 @@
             <label class="form-label">
                 {% if current_lang == 'ku' %}سەرچاوە{% elif current_lang == 'ar' %}المصدر{% else %}Source{% endif %}
             </label>
-
             <select id="filter-source" class="form-select">
-                <option value="all" {% if not current_source or current_source == 'all' %}selected{% endif %}>
-                    {{ t('all') }}
-                </option>
+                <option value="all" {% if not current_source or current_source == 'all' %}selected{% endif %}>{{ t('all') }}</option>
                 <option value="website" {% if current_source == 'website' %}selected{% endif %}>
                     {% if current_lang == 'ku' %}ماڵپەڕ{% elif current_lang == 'ar' %}الموقع{% else %}Website{% endif %}
                 </option>
-                <option value="tapane" {% if current_source == 'tapane' %}selected{% endif %}>
-                    Tapane
-                </option>
+                <option value="tapane" {% if current_source == 'tapane' %}selected{% endif %}>Tapane</option>
             </select>
         </div>
 
@@ -129,9 +84,7 @@
                     <th>{{ t('select_stadium') }}</th>
                     <th>{{ t('select_date') }}</th>
                     <th>{{ t('select_time') }}</th>
-                    <th>
-                        {% if current_lang == 'ku' %}سەرچاوە{% elif current_lang == 'ar' %}المصدر{% else %}Source{% endif %}
-                    </th>
+                    <th>{% if current_lang == 'ku' %}سەرچاوە{% elif current_lang == 'ar' %}المصدر{% else %}Source{% endif %}</th>
                     <th>{{ t('total') }}</th>
                     <th>{% if current_lang == 'ku' %}دۆخ{% elif current_lang == 'ar' %}الحالة{% else %}Status{% endif %}</th>
                     <th>{{ t('actions') }}</th>
@@ -146,7 +99,9 @@
                         <td>{{ booking.customer_name }}</td>
                         <td>{{ booking.customer_phone }}</td>
                         <td>{{ booking.stadium.name if booking.stadium else '-' }}</td>
-                        <td>{{ booking.date }}</td>
+
+                        <!-- ✅ display_date بدلاً من date -->
+                        <td>{{ booking.display_date }}</td>
 
                         <td>
                             {% if booking.start_time and booking.end_time %}
@@ -168,9 +123,7 @@
                             {% endif %}
                         </td>
 
-                        <td>
-                            {{ "{:,.0f}".format(booking.final_price or 0) }} {{ t('iqd') }}
-                        </td>
+                        <td>{{ "{:,.0f}".format(booking.final_price or 0) }} {{ t('iqd') }}</td>
 
                         <td>
                             {% if booking.status == 'pending' %}
@@ -198,15 +151,12 @@
                                 </a>
 
                                 {% if booking.status == 'pending' %}
-                                <button type="button"
-                                        class="btn btn-outline-success"
+                                <button type="button" class="btn btn-outline-success"
                                         onclick="approveBooking({{ booking.id }}, this); return false;"
                                         title="{{ t('confirm') }}">
                                     <i class="fas fa-check"></i>
                                 </button>
-
-                                <button type="button"
-                                        class="btn btn-outline-danger"
+                                <button type="button" class="btn btn-outline-danger"
                                         onclick="cancelBooking({{ booking.id }}, this); return false;"
                                         title="{{ t('cancel') }}">
                                     <i class="fas fa-times"></i>
@@ -214,8 +164,7 @@
                                 {% endif %}
 
                                 {% if booking.status == 'confirmed' %}
-                                <button type="button"
-                                        class="btn btn-outline-danger"
+                                <button type="button" class="btn btn-outline-danger"
                                         onclick="cancelBooking({{ booking.id }}, this); return false;"
                                         title="{{ t('cancel') }}">
                                     <i class="fas fa-times"></i>
@@ -223,15 +172,12 @@
                                 {% endif %}
 
                                 {% if booking.status == 'pending_cancel' %}
-                                <button type="button"
-                                        class="btn btn-outline-danger"
+                                <button type="button" class="btn btn-outline-danger"
                                         onclick="approveCancelRequest({{ booking.id }}, this); return false;"
                                         title="{% if current_lang == 'ku' %}پەسەندکردنی هەڵوەشاندنەوە{% elif current_lang == 'ar' %}قبول الإلغاء{% else %}Approve Cancel{% endif %}">
                                     <i class="fas fa-times-circle"></i>
                                 </button>
-
-                                <button type="button"
-                                        class="btn btn-outline-success"
+                                <button type="button" class="btn btn-outline-success"
                                         onclick="rejectCancelRequest({{ booking.id }}, this); return false;"
                                         title="{% if current_lang == 'ku' %}ڕەتکردنەوەی هەڵوەشاندنەوە{% elif current_lang == 'ar' %}رفض الإلغاء{% else %}Reject Cancel{% endif %}">
                                     <i class="fas fa-undo"></i>
@@ -292,9 +238,7 @@ async function syncTapaneBookings(btn) {
         });
 
         const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.success) {
-            throw new Error((data && data.message) || 'Tapane sync failed');
-        }
+        if (!res.ok || !data.success) throw new Error((data && data.message) || 'Tapane sync failed');
 
         const reloadParams = new URLSearchParams();
         reloadParams.set('source', 'tapane');
@@ -312,13 +256,11 @@ async function syncTapaneBookings(btn) {
     }
 }
 
-// auto apply on change
 document.getElementById('filter-status').addEventListener('change', applyFilters);
 document.getElementById('filter-stadium').addEventListener('change', applyFilters);
 document.getElementById('filter-source').addEventListener('change', applyFilters);
 document.getElementById('filter-date').addEventListener('change', applyFilters);
 
-// search: enter + typing delay
 document.getElementById('filter-search').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') applyFilters();
 });
@@ -333,16 +275,13 @@ async function approveBooking(id, btn) {
     btn.disabled = true;
     const oldHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
     try {
         const res = await fetch(`/admin/api/booking/${id}/approve`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' }
         });
-
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((data && data.message) || 'Approve failed');
-
         location.reload();
     } catch (err) {
         alert(err.message || 'Connection error');
@@ -355,17 +294,14 @@ async function cancelBooking(id, btn) {
     btn.disabled = true;
     const oldHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
     try {
         const res = await fetch(`/admin/api/booking/${id}/status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'cancelled' })
         });
-
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((data && data.message) || 'Cancel failed');
-
         location.reload();
     } catch (err) {
         alert(err.message || 'Connection error');
@@ -378,17 +314,14 @@ async function approveCancelRequest(id, btn) {
     btn.disabled = true;
     const oldHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
     try {
         const res = await fetch(`/admin/api/booking/${id}/status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'cancelled' })
         });
-
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((data && data.message) || 'Approve cancel failed');
-
         location.reload();
     } catch (err) {
         alert(err.message || 'Connection error');
@@ -401,17 +334,14 @@ async function rejectCancelRequest(id, btn) {
     btn.disabled = true;
     const oldHtml = btn.innerHTML;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-
     try {
         const res = await fetch(`/admin/api/booking/${id}/status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status: 'confirmed' })
         });
-
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error((data && data.message) || 'Reject cancel failed');
-
         location.reload();
     } catch (err) {
         alert(err.message || 'Connection error');

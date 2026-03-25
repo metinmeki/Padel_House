@@ -1,0 +1,311 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}
+{% if current_lang == 'ku' %}داواکارییەکانی هەڵوەشاندنەوە
+{% elif current_lang == 'ar' %}طلبات الإلغاء
+{% else %}Cancel Requests{% endif %} - {{ t('admin') }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .page-header h2 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0;
+        color: #1a1f2e;
+    }
+    .page-header p {
+        font-size: 0.78rem;
+        color: #6c757d;
+        margin: 2px 0 0 0;
+    }
+    .header-right { display: flex; gap: 8px; align-items: center; }
+
+    /* Compact Card */
+    .cancel-card {
+        background: #fff;
+        border-radius: 10px;
+        margin-bottom: 8px;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+        border: 1px solid #f0f0f0;
+        border-left: 4px solid #fd7e14;
+        overflow: hidden;
+        transition: all 0.25s ease;
+    }
+    .cancel-card:hover {
+        box-shadow: 0 3px 14px rgba(0,0,0,0.11);
+        transform: translateY(-1px);
+    }
+
+    .card-row {
+        display: flex;
+        align-items: center;
+        padding: 10px 14px;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .col-customer { min-width: 160px; flex: 1.5; }
+    .c-name {
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #1a1f2e;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        margin-bottom: 2px;
+    }
+    .c-phone { font-size: 0.82rem; font-weight: 600; color: var(--primary-color, #E57625); }
+    .c-phone a { color: inherit; text-decoration: none; }
+    .c-time { font-size: 0.7rem; color: #adb5bd; margin-top: 2px; }
+    .c-note {
+        font-size: 0.72rem;
+        color: #856404;
+        background: #fff8e1;
+        border-left: 2px solid #ffc107;
+        padding: 2px 7px;
+        border-radius: 4px;
+        margin-top: 4px;
+        max-width: 220px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .col-info { display: flex; gap: 6px; flex-wrap: wrap; flex: 2; }
+    .chip {
+        background: #f4f6f9;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 0.78rem;
+        color: #333;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+    }
+    .chip i { color: #adb5bd; font-size: 0.72rem; }
+    .chip.price { color: #28a745; font-weight: 700; }
+    .chip.price i { color: #28a745; }
+    .chip .disc {
+        background: #28a745; color: #fff;
+        font-size: 0.6rem; padding: 1px 4px;
+        border-radius: 10px; font-weight: 700;
+    }
+
+    .col-actions { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
+    .btn-xs {
+        border: none; border-radius: 7px;
+        padding: 7px 12px; font-size: 0.78rem;
+        font-weight: 600; cursor: pointer;
+        display: flex; align-items: center; gap: 5px;
+        transition: all 0.18s; text-decoration: none; white-space: nowrap;
+    }
+    .btn-xs:hover { transform: translateY(-1px); }
+    .bx-call   { background: #e3f6fa; color: #0891b2; }
+    .bx-call:hover { background: #0891b2; color: #fff; }
+    .bx-approve { background: #dc3545; color: #fff; box-shadow: 0 2px 6px rgba(220,53,69,0.25); }
+    .bx-approve:hover { background: #c82333; }
+    .bx-reject  { background: #28a745; color: #fff; box-shadow: 0 2px 6px rgba(40,167,69,0.25); }
+    .bx-reject:hover { background: #218838; }
+    .bx-details { background: #f4f6f9; color: #555; border: 1px solid #e0e0e0; }
+    .bx-details:hover { background: #e9ecef; }
+
+    .empty-state {
+        text-align: center; padding: 60px 20px;
+        background: #fff; border-radius: 12px;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.05);
+    }
+    .empty-state i { font-size: 3rem; color: #28a745; }
+    .empty-state h5 { margin-top: 14px; font-weight: 700; color: #1a1f2e; }
+    .empty-state p { color: #6c757d; font-size: 0.85rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+
+    <div class="page-header">
+        <div>
+            <h2>
+                <i class="fas fa-times-circle text-danger me-2"></i>
+                {% if current_lang == 'ku' %}داواکارییەکانی هەڵوەشاندنەوە
+                {% elif current_lang == 'ar' %}طلبات الإلغاء
+                {% else %}Cancel Requests{% endif %}
+                {% if bookings %}
+                <span class="badge bg-danger ms-1" style="font-size:0.75rem;">{{ bookings|length }}</span>
+                {% endif %}
+            </h2>
+            <p>
+                {% if current_lang == 'ar' %}قرر قبول أو رفض كل طلب إلغاء
+                {% elif current_lang == 'ku' %}هەر داواکارییەک پەسەند یان ڕەت بکەرەوە
+                {% else %}Approve or reject each cancel request{% endif %}
+            </p>
+        </div>
+        <div class="header-right">
+            <a href="{{ url_for('admin.pending_bookings') }}" class="btn btn-outline-warning btn-sm">
+                <i class="fas fa-clock me-1"></i>
+                {% if current_lang == 'ar' %}الحجوزات المعلقة{% elif current_lang == 'ku' %}چاوەڕوانەکان{% else %}Pending Bookings{% endif %}
+            </a>
+        </div>
+    </div>
+
+    {% if bookings %}
+    <div class="bookings-list">
+        {% for booking in bookings %}
+        <div class="cancel-card" id="cancel-card-{{ booking.id }}">
+            <div class="card-row">
+
+                <div class="col-customer">
+                    <div class="c-name">
+                        <i class="fas fa-user text-secondary" style="font-size:0.75rem;"></i>
+                        {{ booking.customer_name }}
+                    </div>
+                    <div class="c-phone">
+                        <a href="tel:{{ booking.customer_phone }}">
+                            <i class="fas fa-phone me-1" style="font-size:0.7rem;"></i>{{ booking.customer_phone }}
+                        </a>
+                    </div>
+                    <div class="c-time">
+                        <i class="fas fa-clock me-1"></i>
+                        {{ booking.created_at.strftime('%Y-%m-%d %H:%M') if booking.created_at else '' }}
+                    </div>
+                    {% if booking.notes %}
+                    <div class="c-note" title="{{ booking.notes }}">
+                        <i class="fas fa-sticky-note me-1"></i>{{ booking.notes }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-info">
+                    <div class="chip">
+                        <i class="fas fa-futbol"></i>
+                        {{ booking.stadium.name if booking.stadium else '-' }}
+                    </div>
+                    <div class="chip">
+                        <i class="fas fa-calendar"></i>
+                        {{ booking.display_date_str or '-' }}
+                    </div>
+                    <div class="chip">
+                        <i class="fas fa-clock"></i>
+                        {{ booking.start_time.strftime('%H:%M') if booking.start_time else '--' }}
+                        –
+                        {{ booking.end_time.strftime('%H:%M') if booking.end_time else '--' }}
+                    </div>
+                    <div class="chip price">
+                        <i class="fas fa-tag"></i>
+                        {% if booking.discount_percentage and booking.discount_percentage > 0 %}
+                            <span class="disc">-{{ booking.discount_percentage }}%</span>
+                        {% endif %}
+                        {{ "{:,.0f}".format(booking.final_price or 0) }} IQD
+                    </div>
+                </div>
+
+                <div class="col-actions">
+                    <a href="tel:{{ booking.customer_phone }}" class="btn-xs bx-call">
+                        <i class="fas fa-phone"></i>
+                        {% if current_lang == 'ar' %}اتصال{% elif current_lang == 'ku' %}پەیوەندی{% else %}Call{% endif %}
+                    </a>
+                    <button class="btn-xs bx-approve"
+                            onclick="approveCancelRequest({{ booking.id }}, '{{ booking.customer_name }}', this)">
+                        <i class="fas fa-check"></i>
+                        {% if current_lang == 'ar' %}قبول{% elif current_lang == 'ku' %}پەسەند{% else %}Approve{% endif %}
+                    </button>
+                    <button class="btn-xs bx-reject"
+                            onclick="rejectCancelRequest({{ booking.id }}, '{{ booking.customer_name }}', this)">
+                        <i class="fas fa-undo"></i>
+                        {% if current_lang == 'ar' %}رفض{% elif current_lang == 'ku' %}ڕەت{% else %}Reject{% endif %}
+                    </button>
+                    <a href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}" class="btn-xs bx-details">
+                        <i class="fas fa-eye"></i>
+                    </a>
+                </div>
+
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-check-circle"></i>
+        <h5>{% if current_lang == 'ar' %}لا توجد طلبات إلغاء{% elif current_lang == 'ku' %}هیچ داواکارییەکی هەڵوەشاندنەوە نییە{% else %}No Cancel Requests{% endif %}</h5>
+        <p>{% if current_lang == 'ar' %}جميع الحجوزات بخير ✅{% elif current_lang == 'ku' %}هەموو حجوزەکان باشن ✅{% else %}All bookings are fine ✅{% endif %}</p>
+        <a href="{{ url_for('admin.manage_bookings') }}" class="btn btn-outline-primary btn-sm mt-1">
+            <i class="fas fa-list me-1"></i>
+            {% if current_lang == 'ar' %}عرض كل الحجوزات{% else %}View All Bookings{% endif %}
+        </a>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function removeCancelCard(bookingId) {
+    const card = document.getElementById(`cancel-card-${bookingId}`);
+    if (card) {
+        card.style.transition = 'all 0.3s ease';
+        card.style.opacity = '0';
+        card.style.transform = 'translateX(20px)';
+        setTimeout(() => {
+            card.remove();
+            if (!document.querySelector('.cancel-card')) location.reload();
+        }, 300);
+    }
+}
+
+async function approveCancelRequest(bookingId, customerName, btn) {
+    if (!confirm(`{% if current_lang == 'ar' %}قبول إلغاء حجز {% else %}Approve cancel for {% endif %}"${customerName}"?`)) return;
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const res = await fetch(`/admin/api/booking/${bookingId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'cancelled' })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Failed');
+        removeCancelCard(bookingId);
+    } catch (err) {
+        alert(err.message || 'Error');
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+    }
+}
+
+async function rejectCancelRequest(bookingId, customerName, btn) {
+    if (!confirm(`{% if current_lang == 'ar' %}رفض إلغاء حجز {% else %}Reject cancel for {% endif %}"${customerName}"?`)) return;
+    const oldHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    try {
+        const res = await fetch(`/admin/api/booking/${bookingId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'confirmed' })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || 'Failed');
+        removeCancelCard(bookingId);
+    } catch (err) {
+        alert(err.message || 'Error');
+        btn.disabled = false;
+        btn.innerHTML = oldHtml;
+    }
+}
+
+setInterval(() => location.reload(), 30000);
+</script>
+{% endblock %}

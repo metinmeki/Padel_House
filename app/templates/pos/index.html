@@ -46,7 +46,7 @@
 <!-- Stadiums Section -->
 <div class="page-header">
     <h4>
-        <i class="fas fa-futbol me-2" style="color: var(--primary-color);"></i>
+        <i class="fas fa-futbol me-2" style="color: var(--primary);"></i>
         الملاعب
         <span class="badge bg-success ms-2">عرض 2 فقط</span>
     </h4>
@@ -61,14 +61,15 @@
         <div class="stadium-card {{ 'occupied' if is_occupied else 'available' }}">
             <div class="d-flex justify-content-between align-items-start mb-3">
                 <div class="d-flex align-items-center">
-                    <div class="stadium-number">{{ loop.index }}</div>
+                    <div class="stadium-number">
+                        <i class="fas fa-futbol"></i>
+                    </div>
                     <div class="ms-3">
-                        <h5 class="mb-1" style="color: var(--primary-color);">
-                            <i class="fas fa-futbol me-2"></i>
+                        <h5 class="mb-1" style="color: var(--primary);">
                             {% set court_name = 'Black Court' if loop.index == 1 else ('Orange Court' if loop.index == 2 else ('Court ' ~ loop.index)) %}
                             {{ court_name }}
                         </h5>
-                        <p class="text-muted mb-0">
+                        <p style="color: var(--text-secondary); margin-bottom: 0; font-size: 0.88rem;">
                             <i class="fas fa-money-bill-wave me-2"></i>
                             سعر الساعة: {{ "{:,.0f}".format(stadium.price_per_hour or settings.price_per_hour or 40000) }} IQD
                         </p>
@@ -94,7 +95,7 @@
                             </strong>
                         </div>
                         <div>
-                            <strong style="color: var(--primary-color);">
+                            <strong style="color: var(--primary);">
                                 {{ "{:,.0f}".format(stadium_live[stadium.id].price) }} IQD
                             </strong>
                         </div>
@@ -132,7 +133,7 @@
 <!-- Tables Section -->
 <div class="page-header">
     <h4>
-        <i class="fas fa-chair me-2" style="color: var(--warning-color);"></i>
+        <i class="fas fa-chair me-2" style="color: var(--warning);"></i>
         الطاولات
         <span class="badge bg-info ms-2">عرض الطاولات: {{ tables|length }}</span>
     </h4>
@@ -146,12 +147,12 @@
 
         <div class="stadium-card {{ 'occupied' if is_occupied else 'available' }}" style="padding: 1rem;">
             <div class="text-center mb-2">
-                <div class="stadium-number" style="width: 40px; height: 40px; font-size: 1.2rem; margin: 0 auto; background: var(--warning-color);">
-                    #{{ loop.index }}
+                <div class="stadium-number" style="width: 40px; height: 40px; font-size: 1rem; margin: 0 auto; background: linear-gradient(135deg, var(--warning), #B45309);">
+                    <i class="fas fa-chair"></i>
                 </div>
             </div>
 
-            <h6 class="text-center mb-2" style="color: var(--secondary-color);">
+            <h6 class="text-center mb-2" style="color: var(--text-primary); font-weight: 700;">
                 طاولة {{ loop.index }}
             </h6>
 
@@ -185,8 +186,8 @@
 <!-- Start Session Modal (for stadiums only) -->
 <div class="modal fade" id="startModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content" style="border-radius: 15px; border: none;">
-            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%); color: white; border-radius: 15px 15px 0 0;">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border-radius: 16px 16px 0 0;">
                 <h5 class="modal-title">
                     <i class="fas fa-play-circle me-2"></i>
                     بدء جلسة جديدة
@@ -198,8 +199,8 @@
                     <input type="hidden" name="session_type" id="session_type">
                     <input type="hidden" name="location_id" id="location_id">
 
-                    <i class="fas fa-question-circle fa-3x mb-3" style="color: var(--primary-color);"></i>
-                    <h5>هل تريد بدء الجلسة؟</h5>
+                    <i class="fas fa-question-circle fa-3x mb-3" style="color: var(--primary);"></i>
+                    <h5 style="color: var(--text-primary);">هل تريد بدء الجلسة؟</h5>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">

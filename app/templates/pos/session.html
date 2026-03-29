@@ -275,6 +275,13 @@
     color: var(--text-primary);
   }
 
+  /* ✅ Barcode flash feedback */
+  @keyframes barcodeFlash {
+    0%   { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(229,118,37,0.3); }
+    100% { border-color: var(--border); box-shadow: none; }
+  }
+  .barcode-flash { animation: barcodeFlash 0.4s ease-out; }
+
   @media (max-width: 991px) {
     .cart-summary { position: static; }
     .cart-items-list { max-height: 28vh; }
@@ -328,7 +335,14 @@
         <div class="col-md-6">
           <div style="position:relative;">
             <i class="fas fa-barcode" style="position:absolute;right:11px;top:50%;transform:translateY(-50%);color:var(--primary);pointer-events:none;"></i>
-            <input type="text" id="barcodeInput" class="form-control" style="padding-right:2.4rem;" placeholder="امسح الباركود...">
+            <!-- ✅ autofocus + autocomplete off -->
+            <input type="text"
+                   id="barcodeInput"
+                   class="form-control"
+                   style="padding-right:2.4rem;"
+                   placeholder="امسح الباركود..."
+                   autofocus
+                   autocomplete="off">
           </div>
         </div>
         <div class="col-md-6">
@@ -358,7 +372,8 @@
         {% set can_buy = (product.stock is none) or (product.stock > 0) %}
         <div class="product-item"
              data-category="{{ product.category_id }}"
-             data-name="{{ product.name_ku|lower }}">
+             data-name="{{ product.name_ku|lower }}"
+             data-barcode="{{ product.barcode or '' }}">
           <div class="product-card {{ '' if can_buy else 'opacity-50' }}"
                {% if can_buy %}
                  role="button" tabindex="0"
@@ -707,14 +722,22 @@ function restoreState() {
 function applyFilters() {
   const search = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
   document.querySelectorAll('.product-item').forEach(item => {
-    const catOk = activeCategory === 'all' || item.dataset.category === activeCategory;
-    const nameOk = !search || (item.dataset.name || '').includes(search);
+    const catOk  = activeCategory === 'all' || item.dataset.category === activeCategory;
+    const nameOk = !search
+      || (item.dataset.name || '').includes(search)
+      || (item.dataset.barcode || '').includes(search);
     item.style.display = (catOk && nameOk) ? 'block' : 'none';
   });
 }
 
 function handleProductKey(e, id) {
   if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addToCart(id); }
+}
+
+// ✅ إرجاع الفوكس لحقل الباركود
+function focusBarcode() {
+  const bi = document.getElementById('barcodeInput');
+  if (bi) bi.focus({ preventScroll: true });
 }
 
 // ── Timer ─────────────────────────────────────────────────
@@ -753,10 +776,10 @@ function updateTimer() {
   const grandTotal = Math.max(0, currentTimePrice + ordersTotal - currentAutoDiscount);
 
   const el2 = id => document.getElementById(id);
-  if (el2('playTimeText'))    el2('playTimeText').textContent    = currentHours + ' ساعة';
-  if (el2('playTimePrice'))   el2('playTimePrice').textContent   = fmt(currentTimePrice) + ' IQD';
-  if (el2('timePriceSummary'))el2('timePriceSummary').textContent= fmt(currentTimePrice) + ' IQD';
-  if (el2('totalAmount'))     el2('totalAmount').textContent     = fmt(grandTotal) + ' IQD';
+  if (el2('playTimeText'))     el2('playTimeText').textContent     = currentHours + ' ساعة';
+  if (el2('playTimePrice'))    el2('playTimePrice').textContent    = fmt(currentTimePrice) + ' IQD';
+  if (el2('timePriceSummary')) el2('timePriceSummary').textContent = fmt(currentTimePrice) + ' IQD';
+  if (el2('totalAmount'))      el2('totalAmount').textContent      = fmt(grandTotal) + ' IQD';
 }
 
 if (sessionType === 'stadium') {
@@ -774,9 +797,9 @@ function updateModalTotals() {
   const grand    = Math.max(0, subtotal - currentAutoDiscount - manual);
 
   const el = id => document.getElementById(id);
-  if (el('modalSubtotal'))     el('modalSubtotal').textContent     = fmt(subtotal) + ' IQD';
+  if (el('modalSubtotal'))      el('modalSubtotal').textContent      = fmt(subtotal) + ' IQD';
   if (el('modalManualDiscount'))el('modalManualDiscount').textContent = '-' + fmt(manual) + ' IQD';
-  if (el('modalTotal'))        el('modalTotal').textContent        = fmt(grand) + ' IQD';
+  if (el('modalTotal'))         el('modalTotal').textContent         = fmt(grand) + ' IQD';
 
   const mr = el('modalManualDiscountRow');
   if (mr) mr.classList.toggle('d-none', manual <= 0);
@@ -820,9 +843,9 @@ function removeItem(itemId) {
 function closeSession() {
   const el = id => document.getElementById(id);
 
-  if (el('playTimeMinutes'))   el('playTimeMinutes').value   = currentHours * 60;
-  if (el('playTimePriceInput'))el('playTimePriceInput').value = currentTimePrice;
-  if (el('autoDiscountInput')) el('autoDiscountInput').value  = currentAutoDiscount;
+  if (el('playTimeMinutes'))    el('playTimeMinutes').value    = currentHours * 60;
+  if (el('playTimePriceInput')) el('playTimePriceInput').value = currentTimePrice;
+  if (el('autoDiscountInput'))  el('autoDiscountInput').value  = currentAutoDiscount;
 
   if (sessionType === 'stadium') {
     if (el('modalPlayTime')) el('modalPlayTime').textContent = fmt(currentTimePrice) + ' IQD';
@@ -843,7 +866,6 @@ document.getElementById('paymentForm')?.addEventListener('submit', function() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري المعالجة...';
   }
-  // Store flag so receipt page knows to auto-print
   sessionStorage.setItem('pos_autoprint', '1');
 });
 
@@ -873,6 +895,7 @@ document.querySelectorAll('.category-tab').forEach(tab => {
     sessionStorage.setItem('pos_active_category', activeCategory);
     document.querySelectorAll('.category-tab').forEach(t => t.classList.toggle('active', t === this));
     applyFilters();
+    focusBarcode(); // ✅ إرجاع الفوكس بعد اختيار الكاتيغوري
   });
 });
 
@@ -882,30 +905,56 @@ document.getElementById('searchInput')?.addEventListener('input', function() {
   applyFilters();
 });
 
-// ── Barcode ───────────────────────────────────────────────
-document.getElementById('barcodeInput')?.addEventListener('keydown', function(e) {
-  if (e.key !== 'Enter') return;
-  e.preventDefault();
-  const barcode = this.value.trim();
-  if (!barcode) return;
+// ── Barcode Scanner ───────────────────────────────────────
+const barcodeInput = document.getElementById('barcodeInput');
+if (barcodeInput) {
+  barcodeInput.addEventListener('keydown', function(e) {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const barcode = this.value.trim();
+    if (!barcode) return;
 
-  const now = Date.now();
-  if (barcode === lastScanned && (now - lastScanAt) < 300) { this.value = ''; return; }
-  lastScanned = barcode;
-  lastScanAt  = now;
+    const now = Date.now();
+    if (barcode === lastScanned && (now - lastScanAt) < 300) { this.value = ''; return; }
+    lastScanned = barcode;
+    lastScanAt  = now;
 
-  saveState();
-  fetch('/pos/scan-barcode', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ barcode })
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.success) { addToCart(d.product.id); this.value = ''; this.focus(); }
-    else { alert(d.message || 'المنتج غير موجود!'); this.value = ''; }
-  })
-  .catch(() => { this.value = ''; alert('حدث خطأ في المسح'); });
+    // ✅ Flash animation على حقل الباركود
+    this.classList.remove('barcode-flash');
+    void this.offsetWidth;
+    this.classList.add('barcode-flash');
+
+    saveState();
+    const self = this;
+
+    fetch('/pos/scan-barcode', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ barcode })
+    })
+    .then(r => r.json())
+    .then(d => {
+      self.value = '';
+      if (d.success) {
+        addToCart(d.product.id);
+      } else {
+        alert('❌ ' + (d.message || 'المنتج غير موجود!'));
+        focusBarcode();
+      }
+    })
+    .catch(() => {
+      self.value = '';
+      alert('حدث خطأ في المسح');
+      focusBarcode();
+    });
+  });
+}
+
+// ✅ إرجاع الفوكس لحقل الباركود عند إغلاق أي modal
+document.querySelectorAll('.modal').forEach(modal => {
+  modal.addEventListener('hidden.bs.modal', function() {
+    focusBarcode();
+  });
 });
 
 // ── Debt Modal ────────────────────────────────────────────
@@ -938,5 +987,10 @@ document.getElementById('debtModal')?.addEventListener('hidden.bs.modal', functi
 // ── Init ──────────────────────────────────────────────────
 restoreState();
 applyFilters();
+
+// ✅ فوكس تلقائي على الباركود بعد تحميل الصفحة
+window.addEventListener('load', function() {
+  focusBarcode();
+});
 </script>
 {% endblock %}

@@ -443,7 +443,7 @@ def _sync_booking_after_admin_status_change(booking, target_status):
         elif booking.source == 'tapane':
             # ✅ الحجوزات من Tapane لا تحتاج sync عند القبول
             # Tapane هو اللي أرسل الحجز، يعرف حالته
-            if target_status in ('cancelled', 'completed'):
+            if target_status in ('confirmed', 'cancelled', 'completed'):
                 if booking.external_booking_id:
                     ok, result = sync_booking_status_to_tapane(booking, target_status)
                 else:

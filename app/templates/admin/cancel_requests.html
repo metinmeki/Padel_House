@@ -29,7 +29,6 @@
     }
     .header-right { display: flex; gap: 8px; align-items: center; }
 
-    /* Compact Card */
     .cancel-card {
         background: #fff;
         border-radius: 10px;
@@ -100,6 +99,8 @@
         font-size: 0.6rem; padding: 1px 4px;
         border-radius: 10px; font-weight: 700;
     }
+    .chip.source-tapane { background: #fff3cd; color: #856404; }
+    .chip.source-website { background: #d1ecf1; color: #0c5460; }
 
     .col-actions { display: flex; gap: 5px; align-items: center; flex-shrink: 0; }
     .btn-xs {
@@ -119,6 +120,14 @@
     .bx-details { background: #f4f6f9; color: #555; border: 1px solid #e0e0e0; }
     .bx-details:hover { background: #e9ecef; }
 
+    .tapane-badge {
+        display: inline-flex; align-items: center; gap: 4px;
+        background: #fff3cd; color: #856404;
+        border-radius: 5px; padding: 2px 7px;
+        font-size: 0.68rem; font-weight: 700;
+        margin-top: 3px;
+    }
+
     .empty-state {
         text-align: center; padding: 60px 20px;
         background: #fff; border-radius: 12px;
@@ -127,6 +136,19 @@
     .empty-state i { font-size: 3rem; color: #28a745; }
     .empty-state h5 { margin-top: 14px; font-weight: 700; color: #1a1f2e; }
     .empty-state p { color: #6c757d; font-size: 0.85rem; }
+
+    /* Toast */
+    .toast-msg {
+        position: fixed; bottom: 20px; left: 20px; z-index: 9999;
+        padding: 12px 20px; border-radius: 10px;
+        font-size: 0.88rem; font-weight: 600;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease;
+    }
+    .toast-success { background: #28a745; color: #fff; }
+    .toast-error   { background: #dc3545; color: #fff; }
+    .toast-info    { background: #17a2b8; color: #fff; }
+    @keyframes slideIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
 </style>
 {% endblock %}
 
@@ -145,9 +167,9 @@
                 {% endif %}
             </h2>
             <p>
-                {% if current_lang == 'ar' %}قرر قبول أو رفض كل طلب إلغاء
-                {% elif current_lang == 'ku' %}هەر داواکارییەک پەسەند یان ڕەت بکەرەوە
-                {% else %}Approve or reject each cancel request{% endif %}
+                {% if current_lang == 'ar' %}قرر قبول أو رفض كل طلب إلغاء — سيتم إرسال القرار لـ Tapane تلقائياً
+                {% elif current_lang == 'ku' %}هەر داواکارییەک پەسەند یان ڕەت بکەرەوە — بۆ Tapane دەنێردرێت
+                {% else %}Approve or reject each cancel request — synced to Tapane automatically{% endif %}
             </p>
         </div>
         <div class="header-right">
@@ -178,6 +200,16 @@
                         <i class="fas fa-clock me-1"></i>
                         {{ booking.created_at.strftime('%Y-%m-%d %H:%M') if booking.created_at else '' }}
                     </div>
+                    <!-- ✅ مصدر الحجز -->
+                    {% if booking.source == 'tapane' %}
+                    <div class="tapane-badge">
+                        <i class="fas fa-sync-alt"></i> Tapane
+                    </div>
+                    {% elif booking.source == 'website' %}
+                    <div class="tapane-badge" style="background:#d1ecf1;color:#0c5460;">
+                        <i class="fas fa-globe"></i> Website
+                    </div>
+                    {% endif %}
                     {% if booking.notes %}
                     <div class="c-note" title="{{ booking.notes }}">
                         <i class="fas fa-sticky-note me-1"></i>{{ booking.notes }}
@@ -214,16 +246,21 @@
                         <i class="fas fa-phone"></i>
                         {% if current_lang == 'ar' %}اتصال{% elif current_lang == 'ku' %}پەیوەندی{% else %}Call{% endif %}
                     </a>
+
+                    <!-- ✅ قبول الإلغاء → يلغي الحجز ويُرسل لـ Tapane -->
                     <button class="btn-xs bx-approve"
                             onclick="approveCancelRequest({{ booking.id }}, '{{ booking.customer_name }}', this)">
                         <i class="fas fa-check"></i>
-                        {% if current_lang == 'ar' %}قبول{% elif current_lang == 'ku' %}پەسەند{% else %}Approve{% endif %}
+                        {% if current_lang == 'ar' %}قبول الإلغاء{% elif current_lang == 'ku' %}پەسەند{% else %}Approve{% endif %}
                     </button>
+
+                    <!-- ✅ رفض الإلغاء → يعيد الحجز لـ confirmed ويُرسل لـ Tapane -->
                     <button class="btn-xs bx-reject"
                             onclick="rejectCancelRequest({{ booking.id }}, '{{ booking.customer_name }}', this)">
                         <i class="fas fa-undo"></i>
-                        {% if current_lang == 'ar' %}رفض{% elif current_lang == 'ku' %}ڕەت{% else %}Reject{% endif %}
+                        {% if current_lang == 'ar' %}رفض الإلغاء{% elif current_lang == 'ku' %}ڕەت{% else %}Reject{% endif %}
                     </button>
+
                     <a href="{{ url_for('admin.booking_detail', booking_id=booking.id) }}" class="btn-xs bx-details">
                         <i class="fas fa-eye"></i>
                     </a>
@@ -251,6 +288,14 @@
 
 {% block extra_js %}
 <script>
+function showToast(msg, type = 'success') {
+    const t = document.createElement('div');
+    t.className = `toast-msg toast-${type}`;
+    t.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : type === 'error' ? 'times' : 'info'}-circle me-2"></i>${msg}`;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3500);
+}
+
 function removeCancelCard(bookingId) {
     const card = document.getElementById(`cancel-card-${bookingId}`);
     if (card) {
@@ -259,53 +304,85 @@ function removeCancelCard(bookingId) {
         card.style.transform = 'translateX(20px)';
         setTimeout(() => {
             card.remove();
-            if (!document.querySelector('.cancel-card')) location.reload();
+            // إذا لا يوجد cards، reload لإظهار empty state
+            if (!document.querySelector('.cancel-card')) {
+                setTimeout(() => location.reload(), 500);
+            }
         }, 300);
     }
 }
 
+// ✅ قبول الإلغاء — يستخدم route المخصص الذي يُرسل لـ Tapane
 async function approveCancelRequest(bookingId, customerName, btn) {
-    if (!confirm(`{% if current_lang == 'ar' %}قبول إلغاء حجز {% else %}Approve cancel for {% endif %}"${customerName}"?`)) return;
+    const confirmMsg = `{% if current_lang == 'ar' %}قبول إلغاء حجز{% else %}Approve cancel for{% endif %} "${customerName}"?\n{% if current_lang == 'ar' %}سيتم إلغاء الحجز وإرسال القرار لـ Tapane.{% else %}Booking will be cancelled and synced to Tapane.{% endif %}`;
+    if (!confirm(confirmMsg)) return;
+
     const oldHtml = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
     try {
-        const res = await fetch(`/admin/api/booking/${bookingId}/status`, {
+        const res = await fetch(`/admin/api/booking/${bookingId}/approve-cancel`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'cancelled' })
+            credentials: 'same-origin'
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || 'Failed');
+
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || 'Failed');
+        }
+
+        const tapaneMsg = data.tapane_synced
+            ? ' ✅ Tapane synced'
+            : (data.tapane_error ? ` ⚠️ Tapane: ${data.tapane_error}` : '');
+
+        showToast((data.message || '{% if current_lang == "ar" %}تم قبول الإلغاء{% else %}Cancel approved{% endif %}') + tapaneMsg, 'success');
         removeCancelCard(bookingId);
+
     } catch (err) {
-        alert(err.message || 'Error');
+        showToast(err.message || '{% if current_lang == "ar" %}حدث خطأ{% else %}Error{% endif %}', 'error');
         btn.disabled = false;
         btn.innerHTML = oldHtml;
     }
 }
 
+// ✅ رفض الإلغاء — يعيد الحجز لـ confirmed ويُرسل لـ Tapane
 async function rejectCancelRequest(bookingId, customerName, btn) {
-    if (!confirm(`{% if current_lang == 'ar' %}رفض إلغاء حجز {% else %}Reject cancel for {% endif %}"${customerName}"?`)) return;
+    const confirmMsg = `{% if current_lang == 'ar' %}رفض إلغاء حجز{% else %}Reject cancel for{% endif %} "${customerName}"?\n{% if current_lang == 'ar' %}سيبقى الحجز مؤكداً وسيتم إخبار Tapane.{% else %}Booking remains confirmed and Tapane will be notified.{% endif %}`;
+    if (!confirm(confirmMsg)) return;
+
     const oldHtml = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
     try {
-        const res = await fetch(`/admin/api/booking/${bookingId}/status`, {
+        const res = await fetch(`/admin/api/booking/${bookingId}/reject-cancel`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'confirmed' })
+            credentials: 'same-origin'
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.message || 'Failed');
+
+        if (!res.ok || !data.success) {
+            throw new Error(data.message || 'Failed');
+        }
+
+        const tapaneMsg = data.tapane_synced
+            ? ' ✅ Tapane synced'
+            : (data.tapane_error ? ` ⚠️ Tapane: ${data.tapane_error}` : '');
+
+        showToast((data.message || '{% if current_lang == "ar" %}تم رفض الإلغاء{% else %}Cancel rejected{% endif %}') + tapaneMsg, 'info');
         removeCancelCard(bookingId);
+
     } catch (err) {
-        alert(err.message || 'Error');
+        showToast(err.message || '{% if current_lang == "ar" %}حدث خطأ{% else %}Error{% endif %}', 'error');
         btn.disabled = false;
         btn.innerHTML = oldHtml;
     }
 }
 
+// Auto-refresh كل 30 ثانية
 setInterval(() => location.reload(), 30000);
 </script>
 {% endblock %}

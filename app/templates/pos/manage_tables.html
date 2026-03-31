@@ -1,0 +1,240 @@
+{% extends 'admin/base_admin.html' %}
+{% block title %}إدارة الطاولات - Padel House{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4" dir="rtl">
+
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h4 class="mb-0 fw-bold">
+        <i class="fas fa-chair text-warning me-2"></i> إدارة الطاولات
+      </h4>
+      <small class="text-muted">إجمالي الطاولات: <strong>{{ tables|length }}</strong></small>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- ===== ADD TABLE CARD ===== -->
+    <div class="col-12 col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-warning text-dark fw-bold">
+          <i class="fas fa-plus-circle me-1"></i> إضافة طاولة جديدة
+        </div>
+        <div class="card-body">
+          <form method="POST" action="{{ url_for('pos.add_table') }}">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">اسم الطاولة <span class="text-danger">*</span></label>
+              <input type="text" name="name" class="form-control" placeholder="مثال: طاولة 11" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">السعة (عدد الأشخاص)</label>
+              <input type="number" name="capacity" class="form-control" value="4" min="1" max="20">
+            </div>
+            <button type="submit" class="btn w-100 fw-bold" style="background:#E57625;color:#fff;">
+              <i class="fas fa-plus me-1"></i> إضافة الطاولة
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== TABLES LIST ===== -->
+    <div class="col-12 col-md-8">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header d-flex align-items-center justify-content-between" style="background:#1a1a2e;color:#fff;">
+          <span class="fw-bold"><i class="fas fa-list me-1"></i> قائمة الطاولات</span>
+          <span class="badge bg-warning text-dark">{{ tables|length }} طاولة</span>
+        </div>
+        <div class="card-body p-0">
+          {% if tables %}
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light text-center">
+                <tr>
+                  <th>#</th>
+                  <th>الاسم</th>
+                  <th>السعة</th>
+                  <th>الحالة</th>
+                  <th>الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for table in tables %}
+                <tr id="row-{{ table.id }}">
+                  <td class="text-center text-muted fw-bold">{{ table.id }}</td>
+
+                  <td class="fw-bold">
+                    <i class="fas fa-chair text-warning me-1"></i>
+                    {{ table.name }}
+                  </td>
+
+                  <td class="text-center">
+                    <span class="badge bg-light text-dark border">
+                      <i class="fas fa-users me-1"></i>{{ table.capacity }}
+                    </span>
+                  </td>
+
+                  <td class="text-center">
+                    <div class="form-check form-switch d-flex justify-content-center">
+                      <input class="form-check-input toggle-active" type="checkbox"
+                        data-id="{{ table.id }}"
+                        {% if table.is_active %}checked{% endif %}
+                        style="cursor:pointer;width:2.5em;height:1.3em;">
+                    </div>
+                    <small class="status-label text-{{ 'success' if table.is_active else 'danger' }}">
+                      {{ 'متاح' if table.is_active else 'مخفي' }}
+                    </small>
+                  </td>
+
+                  <td class="text-center">
+                    <button class="btn btn-sm btn-outline-primary me-1"
+                      data-bs-toggle="modal"
+                      data-bs-target="#editModal"
+                      data-id="{{ table.id }}"
+                      data-name="{{ table.name }}"
+                      data-capacity="{{ table.capacity }}"
+                      data-active="{{ '1' if table.is_active else '0' }}"
+                      title="تعديل">
+                      <i class="fas fa-edit"></i>
+                    </button>
+
+                    <button class="btn btn-sm btn-outline-danger"
+                      data-bs-toggle="modal"
+                      data-bs-target="#deleteModal"
+                      data-id="{{ table.id }}"
+                      data-name="{{ table.name }}"
+                      title="حذف">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="text-center py-5 text-muted">
+            <i class="fas fa-chair fa-3x mb-3 opacity-25"></i>
+            <p>لا توجد طاولات بعد. أضف أول طاولة من اليسار.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EDIT MODAL ===== -->
+<div class="modal fade" id="editModal" tabindex="-1" dir="rtl">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header" style="background:#E57625;">
+        <h5 class="modal-title text-white fw-bold">
+          <i class="fas fa-edit me-1"></i> تعديل الطاولة
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="editForm" action="">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">اسم الطاولة <span class="text-danger">*</span></label>
+            <input type="text" name="name" id="editName" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">السعة</label>
+            <input type="number" name="capacity" id="editCapacity" class="form-control" min="1" max="20">
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">الحالة</label>
+            <select name="is_active" id="editIsActive" class="form-select">
+              <option value="1">✅ متاح (مرئي في POS)</option>
+              <option value="0">🚫 مخفي</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+          <button type="submit" class="btn fw-bold" style="background:#E57625;color:#fff;">
+            <i class="fas fa-save me-1"></i> حفظ التعديلات
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DELETE MODAL ===== -->
+<div class="modal fade" id="deleteModal" tabindex="-1" dir="rtl">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-danger">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title fw-bold">
+          <i class="fas fa-trash me-1"></i> تأكيد الحذف
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
+        <p class="fs-5">هل أنت متأكد من حذف <strong id="deleteTableName"></strong>؟</p>
+        <p class="text-muted small">لا يمكن التراجع عن هذا الإجراء.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+        <form method="POST" id="deleteForm" action="">
+          <button type="submit" class="btn btn-danger fw-bold">
+            <i class="fas fa-trash me-1"></i> نعم، احذف
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('editModal').addEventListener('show.bs.modal', function(e) {
+  const btn = e.relatedTarget;
+  document.getElementById('editName').value = btn.getAttribute('data-name');
+  document.getElementById('editCapacity').value = btn.getAttribute('data-capacity');
+  document.getElementById('editIsActive').value = btn.getAttribute('data-active');
+  document.getElementById('editForm').action = `/pos/tables/${btn.getAttribute('data-id')}/edit`;
+});
+
+document.getElementById('deleteModal').addEventListener('show.bs.modal', function(e) {
+  const btn = e.relatedTarget;
+  document.getElementById('deleteTableName').textContent = btn.getAttribute('data-name');
+  document.getElementById('deleteForm').action = `/pos/tables/${btn.getAttribute('data-id')}/delete`;
+});
+
+document.querySelectorAll('.toggle-active').forEach(function(toggle) {
+  toggle.addEventListener('change', function() {
+    const tableId = this.getAttribute('data-id');
+    const label = this.closest('td').querySelector('.status-label');
+    const checkbox = this;
+
+    fetch(`/pos/tables/${tableId}/toggle`, { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          label.textContent = data.is_active ? 'متاح' : 'مخفي';
+          label.className = `status-label text-${data.is_active ? 'success' : 'danger'}`;
+          showToast(data.message, data.is_active ? 'success' : 'warning');
+        }
+      })
+      .catch(() => { checkbox.checked = !checkbox.checked; });
+  });
+});
+
+function showToast(msg, type) {
+  const toast = document.createElement('div');
+  toast.className = `alert alert-${type === 'success' ? 'success' : 'warning'} position-fixed shadow`;
+  toast.style.cssText = 'bottom:20px;left:20px;z-index:9999;min-width:220px;';
+  toast.innerHTML = `<i class="fas fa-check-circle me-1"></i> ${msg}`;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 2500);
+}
+</script>
+{% endblock %}

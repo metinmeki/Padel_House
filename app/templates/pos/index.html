@@ -11,7 +11,7 @@
         </h2>
         <span class="badge bg-primary" style="font-size: 1.1rem; padding: 0.6rem 1.2rem;">
             <i class="fas fa-futbol me-2"></i>الملاعب: 2 |
-            <i class="fas fa-chair me-2 ms-3"></i>الطاولات: 10
+            <i class="fas fa-chair me-2 ms-3"></i>الطاولات: {{ tables|length }}
         </span>
     </div>
 </div>
@@ -152,8 +152,9 @@
                 </div>
             </div>
 
+            <!-- ✅ يعرض اسم الطاولة من DB -->
             <h6 class="text-center mb-2" style="color: var(--text-primary); font-weight: 700;">
-                طاولة {{ loop.index }}
+                {{ table.name }}
             </h6>
 
             <span class="status-badge {{ 'status-occupied' if is_occupied else 'status-available' }} d-block text-center mb-2">

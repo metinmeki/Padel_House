@@ -2284,3 +2284,115 @@ def delete_expense(expense_id):
         db.session.rollback()
         flash(f'خطأ: {str(e)}', 'danger')
         return redirect(url_for('admin.manage_expenses'))
+
+
+
+# ========================================
+# ✅ CANCEL REQUESTS — قبول أو رفض طلب الإلغاء
+# ========================================
+
+@admin_bp.route('/api/booking/<int:booking_id>/approve-cancel', methods=['POST'])
+@login_required
+@permission_required('can_manage_bookings')
+def approve_cancel_request(booking_id):
+    """الأدمن يوافق على الإلغاء — يلغي الحجز ويُرسل لـ Tapane"""
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({'success': False, 'message': 'الحجز غير موجود'}), 404
+    if booking.status != 'pending_cancel':
+        return jsonify({'success': False, 'message': 'هذا الحجز ليس في حالة طلب إلغاء'}), 400
+
+    booking.status = 'cancelled'
+    booking.confirmed_at = None
+    if hasattr(booking, 'confirmed_by'):
+        booking.confirmed_by = None
+
+    existing_notes = booking.notes or ''
+    extra_note = '[Cancel approved by admin]'
+    if extra_note not in existing_notes:
+        booking.notes = f"{existing_notes}\n{extra_note}".strip()
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'خطأ: {str(e)}'}), 500
+
+    # ✅ أرسل إلى Tapane أن الإلغاء تم
+    tapane_synced, tapane_error = _sync_booking_after_admin_status_change(booking, 'cancelled')
+
+    try:
+        notify_admins(
+            title="Cancel request approved ✅",
+            message=f"Booking #{booking.id} cancelled for {booking.customer_name}",
+            url=f"/admin/booking/{booking.id}",
+            ntype="booking_cancelled"
+        )
+    except Exception as e:
+        print("❌ Notification error:", e)
+
+    try:
+        log_activity(
+            action="approve_cancel_request", entity_type="booking", entity_id=booking.id,
+            title="Approved cancel request",
+            note=f"Customer: {booking.customer_name} | Source: {booking.source}",
+            amount=int(booking.final_price or 0), payment_method="booking"
+        )
+    except Exception as e:
+        print("❌ Activity log error:", e)
+
+    return jsonify({
+        'success': True,
+        'message': f'تم قبول طلب الإلغاء وإلغاء الحجز ✅',
+        'booking_id': booking.id,
+        'new_status': 'cancelled',
+        'tapane_synced': tapane_synced,
+        'tapane_error': tapane_error
+    })
+
+
+@admin_bp.route('/api/booking/<int:booking_id>/reject-cancel', methods=['POST'])
+@login_required
+@permission_required('can_manage_bookings')
+def reject_cancel_request(booking_id):
+    """الأدمن يرفض طلب الإلغاء — يرجع الحجز لـ confirmed"""
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({'success': False, 'message': 'الحجز غير موجود'}), 404
+    if booking.status != 'pending_cancel':
+        return jsonify({'success': False, 'message': 'هذا الحجز ليس في حالة طلب إلغاء'}), 400
+
+    booking.status = 'confirmed'
+
+    existing_notes = booking.notes or ''
+    extra_note = '[Cancel request rejected by admin — booking remains confirmed]'
+    if extra_note not in existing_notes:
+        booking.notes = f"{existing_notes}\n{extra_note}".strip()
+
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'خطأ: {str(e)}'}), 500
+
+    # ✅ أخبر Tapane أن الحجز لا يزال confirmed
+    tapane_synced, tapane_error = _sync_booking_after_admin_status_change(booking, 'confirmed')
+
+    try:
+        log_activity(
+            action="reject_cancel_request", entity_type="booking", entity_id=booking.id,
+            title="Rejected cancel request",
+            note=f"Customer: {booking.customer_name} | Booking remains confirmed",
+            amount=int(booking.final_price or 0), payment_method="booking"
+        )
+    except Exception as e:
+        print("❌ Activity log error:", e)
+
+    return jsonify({
+        'success': True,
+        'message': f'تم رفض طلب الإلغاء — الحجز لا يزال مؤكداً ✅',
+        'booking_id': booking.id,
+        'new_status': 'confirmed',
+        'tapane_synced': tapane_synced,
+        'tapane_error': tapane_error
+    })

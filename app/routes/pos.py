@@ -68,7 +68,7 @@ def compute_play_time_and_price(session: POSSession, settings: Settings):
 @login_required
 def index():
     stadiums = Stadium.query.filter_by(is_active=True).order_by(Stadium.id.asc()).limit(2).all()
-    tables = Table.query.filter_by(is_active=True).order_by(Table.id.asc()).limit(10).all()
+    tables = Table.query.filter_by(is_active=True).order_by(Table.id.asc()).all()
 
     settings = Settings.query.first()
     active_sessions = POSSession.query.filter_by(status='active').all()
@@ -746,3 +746,107 @@ def export_excel():
     response.headers['Content-Disposition'] = f'attachment; filename=padel_reports_{period}_{today}.csv'
     response.headers['Content-Type'] = 'text/csv; charset=utf-8'
     return response
+
+
+# ==================== TABLE MANAGEMENT ====================
+
+@pos_bp.route('/tables/manage')
+@login_required
+def manage_tables():
+    tables = Table.query.order_by(Table.id.asc()).all()
+    return render_template('pos/manage_tables.html', tables=tables)
+
+
+@pos_bp.route('/tables/add', methods=['POST'])
+@login_required
+def add_table():
+    name = (request.form.get('name') or '').strip()
+    capacity = request.form.get('capacity', 4)
+
+    if not name:
+        flash('اسم الطاولة مطلوب!', 'danger')
+        return redirect(url_for('pos.manage_tables'))
+
+    # تحقق من عدم التكرار
+    existing = Table.query.filter_by(name=name).first()
+    if existing:
+        flash(f'يوجد طاولة باسم "{name}" مسبقاً!', 'warning')
+        return redirect(url_for('pos.manage_tables'))
+
+    try:
+        capacity = int(capacity)
+    except Exception:
+        capacity = 4
+
+    new_table = Table(name=name, capacity=capacity, is_active=True)
+    db.session.add(new_table)
+    db.session.commit()
+
+    flash(f'تم إضافة "{name}" بنجاح ✅', 'success')
+    return redirect(url_for('pos.manage_tables'))
+
+
+@pos_bp.route('/tables/<int:table_id>/edit', methods=['POST'])
+@login_required
+def edit_table(table_id):
+    table = Table.query.get_or_404(table_id)
+    name = (request.form.get('name') or '').strip()
+    capacity = request.form.get('capacity', table.capacity)
+    is_active = request.form.get('is_active') == '1'
+
+    if not name:
+        flash('اسم الطاولة مطلوب!', 'danger')
+        return redirect(url_for('pos.manage_tables'))
+
+    # تحقق من عدم التكرار (بستثناء الطاولة الحالية)
+    existing = Table.query.filter(Table.name == name, Table.id != table_id).first()
+    if existing:
+        flash(f'يوجد طاولة باسم "{name}" مسبقاً!', 'warning')
+        return redirect(url_for('pos.manage_tables'))
+
+    try:
+        capacity = int(capacity)
+    except Exception:
+        capacity = 4
+
+    table.name = name
+    table.capacity = capacity
+    table.is_active = is_active
+    db.session.commit()
+
+    flash(f'تم تعديل الطاولة بنجاح ✅', 'success')
+    return redirect(url_for('pos.manage_tables'))
+
+
+@pos_bp.route('/tables/<int:table_id>/delete', methods=['POST'])
+@login_required
+def delete_table(table_id):
+    table = Table.query.get_or_404(table_id)
+
+    # تحقق من وجود جلسات نشطة
+    active_session = POSSession.query.filter_by(
+        session_type='table',
+        table_id=table_id,
+        status='active'
+    ).first()
+
+    if active_session:
+        flash(f'لا يمكن حذف "{table.name}" - يوجد جلسة نشطة الآن!', 'danger')
+        return redirect(url_for('pos.manage_tables'))
+
+    name = table.name
+    db.session.delete(table)
+    db.session.commit()
+
+    flash(f'تم حذف "{name}" بنجاح 🗑️', 'success')
+    return redirect(url_for('pos.manage_tables'))
+
+
+@pos_bp.route('/tables/<int:table_id>/toggle', methods=['POST'])
+@login_required
+def toggle_table(table_id):
+    table = Table.query.get_or_404(table_id)
+    table.is_active = not table.is_active
+    db.session.commit()
+    status = 'مفعّل' if table.is_active else 'مخفي'
+    return jsonify({'success': True, 'is_active': table.is_active, 'message': f'{table.name} - {status}'})

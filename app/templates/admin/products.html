@@ -568,16 +568,34 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   // ===== FILTER & SEARCH =====
+  // ===== FILTER & SEARCH =====
+  const searchInput = document.getElementById('searchProduct');
+
+  // ✅ استرجاع الفلتر والبحث بعد reload
+  const savedFilter = sessionStorage.getItem('productFilter') || 'all';
+  const savedSearch = sessionStorage.getItem('productSearch') || '';
+
+  if (searchInput) searchInput.value = savedSearch;
+
   document.querySelectorAll('.filter-btn').forEach(btn => {
+    if (btn.dataset.filter === savedFilter) {
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
     btn.addEventListener('click', function() {
       document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
+      sessionStorage.setItem('productFilter', this.dataset.filter);
       applyFilterAndSearch();
     });
   });
 
-  const searchInput = document.getElementById('searchProduct');
-  if (searchInput) searchInput.addEventListener('input', applyFilterAndSearch);
+  if (searchInput) {
+    searchInput.addEventListener('input', function() {
+      sessionStorage.setItem('productSearch', this.value);
+      applyFilterAndSearch();
+    });
+  }
 
   function applyFilterAndSearch() {
     const activeBtn = document.querySelector('.filter-btn.active');
@@ -589,6 +607,9 @@ document.addEventListener('DOMContentLoaded', function() {
       row.style.display = (matchFilter && matchSearch) ? '' : 'none';
     });
   }
+
+  // ✅ تطبيق الفلتر المحفوظ عند التحميل
+  applyFilterAndSearch();
 
   // ===== ADD PRODUCT =====
   // ✅ فوكس تلقائي على حقل الباركود عند فتح المودال

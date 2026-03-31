@@ -200,7 +200,6 @@
         </li>
         {% endif %}
 
-        <!-- ✅ Cancel Requests — جديد -->
         {% if current_user.role == 'super_admin' or current_user.can_manage_bookings %}
         <li class="nav-item">
             <a href="{{ url_for('admin.cancel_requests') }}"
@@ -306,6 +305,21 @@
             <a href="{{ url_for('admin.manage_stadiums') }}"
                class="nav-link {% if 'stadium' in request.endpoint %}active{% endif %}">
                 <span><i class="fas fa-futbol me-2"></i>{{ t('stadiums') }}</span>
+            </a>
+        </li>
+        {% endif %}
+
+        <!-- ✅ إدارة الطاولات — جديد -->
+        {% if current_user.role == 'super_admin' or current_user.can_manage_stadiums %}
+        <li class="nav-item">
+            <a href="{{ url_for('pos.manage_tables') }}"
+               class="nav-link {% if request.endpoint == 'pos.manage_tables' %}active{% endif %}">
+                <span>
+                    <i class="fas fa-chair me-2"></i>
+                    {% if current_lang == 'ku' %}مێزەکان
+                    {% elif current_lang == 'ar' %}إدارة الطاولات
+                    {% else %}Tables{% endif %}
+                </span>
             </a>
         </li>
         {% endif %}
@@ -483,8 +497,6 @@ document.addEventListener('DOMContentLoaded', () => {
             setBadgeValue('pendingBookingsBadge', data.counts.pending_bookings);
             setBadgeValue('pendingOrdersBadge', data.counts.pending_orders);
             setBadgeValue('trainingRequestsBadge', data.counts.new_training_requests);
-
-            // ✅ cancel requests badge
             setBadgeValue('cancelRequestsBadge', data.counts.cancel_requests || 0);
 
             const notifBadge = document.getElementById('notifBadge');

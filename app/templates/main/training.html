@@ -631,11 +631,11 @@
                         {% endif %}
 
                         <img
-    src="{{ url_for('static', filename=coach.image if coach.image and '/' in coach.image else ('images/' ~ coach.image if coach.image else 'images/coming-soon.jpg')) }}"
-    alt="{{ coach.name }}"
-    loading="lazy"
-    class="coach-card-image {% if coach.status == 'coming_soon' %}coming{% endif %}"
-    onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/coming-soon.jpg') }}';">
+                            src="{{ url_for('static', filename=coach.image if coach.image and '/' in coach.image else ('images/' ~ coach.image if coach.image else 'images/coming-soon.jpg')) }}"
+                            alt="{{ coach.name }}"
+                            loading="lazy"
+                            class="coach-card-image {% if coach.status == 'coming_soon' %}coming{% endif %}"
+                            onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/coming-soon.jpg') }}';">
                     </div>
 
                     <div class="coach-card-body">
@@ -828,7 +828,6 @@
                                 <option value="">
                                     {% if current_lang == 'ku' %}ڕاهێنەر هەڵبژێرە{% elif current_lang == 'ar' %}اختر المدرب{% else %}Select a coach{% endif %}
                                 </option>
-
                                 {% for coach in coaches %}
                                 <option value="{{ coach.id }}">
                                     {{ coach.name }} - {{ coach.get_status_text(current_lang) }}
@@ -849,18 +848,19 @@
 
                         <div class="col-lg-6">
                             <label class="training-form-label">
-                                {% if current_lang == 'ku' %}الباقة التدريبية{% elif current_lang == 'ar' %}الباقة التدريبية{% else %}Training Package{% endif %}
+                                {% if current_lang == 'ku' %}پاکێجی ڕاهێنان{% elif current_lang == 'ar' %}الباقة التدريبية{% else %}Training Package{% endif %}
                             </label>
                             <select name="package_name" class="training-form-select" required id="packageSelect">
                                 <option value="">
                                     {% if current_lang == 'ku' %}پاکێج هەڵبژێرە{% elif current_lang == 'ar' %}اختر الباقة{% else %}Choose Package{% endif %}
                                 </option>
-                                <option value="1 Session" data-price="50000" data-sessions="1">1 Session - 50,000 IQD</option>
+                                <!-- ✅ UPDATED PRICES: data-price must match the displayed label price -->
+                                <option value="1 Session"  data-price="50000"  data-sessions="1">1 Session  - 50,000 IQD</option>
                                 <option value="4 Sessions" data-price="175000" data-sessions="4">4 Sessions - 175,000 IQD</option>
                                 <option value="6 Sessions" data-price="250000" data-sessions="6">6 Sessions - 250,000 IQD</option>
                                 <option value="8 Sessions" data-price="325000" data-sessions="8">8 Sessions - 325,000 IQD</option>
-                                <option value="10 Sessions" data-price="450000" data-sessions="10">10 Sessions - 450,000 IQD</option>
-                                <option value="12 Sessions" data-price="500000" data-sessions="12">12 Sessions - 500,000 IQD</option>
+                                <option value="10 Sessions" data-price="400000" data-sessions="10">10 Sessions - 400,000 IQD</option>
+                                <option value="12 Sessions" data-price="475000" data-sessions="12">12 Sessions - 475,000 IQD</option>
                             </select>
 
                             <input type="hidden" name="package_price" id="packagePriceInput">

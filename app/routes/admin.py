@@ -441,8 +441,6 @@ def _sync_booking_after_admin_status_change(booking, target_status):
                 else:
                     return False, None
         elif booking.source == 'tapane':
-            # ✅ الحجوزات من Tapane لا تحتاج sync عند القبول
-            # Tapane هو اللي أرسل الحجز، يعرف حالته
             if target_status in ('confirmed', 'cancelled', 'completed'):
                 if booking.external_booking_id:
                     ok, result = sync_booking_status_to_tapane(booking, target_status)
@@ -455,7 +453,7 @@ def _sync_booking_after_admin_status_change(booking, target_status):
         if not ok:
             tapane_error = str(result)
             print("❌ Tapane sync failed:", result)
-            return tapane_synced, tapane_error
+            return tapane_synced, tapane_error  # ← don't crash, just return
 
         if hasattr(booking, 'last_synced_at'):
             booking.last_synced_at = datetime.utcnow()
@@ -468,7 +466,7 @@ def _sync_booking_after_admin_status_change(booking, target_status):
     except Exception as e:
         tapane_error = str(e)
         print("❌ Tapane sync error:", e)
-        return False, tapane_error
+        return False, tapane_error  # ← never raise, always return
 
 
 # =====================================================================

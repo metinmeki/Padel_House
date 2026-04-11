@@ -147,7 +147,7 @@
   }
 
   .cart-items {
-    max-height: 46vh;
+    max-height: 40vh;
     overflow-y: auto;
     margin-bottom: 0.75rem;
     padding-left: 2px;
@@ -191,16 +191,73 @@
   .cart-empty i { font-size: 2.5rem; opacity: 0.3; margin-bottom: 0.75rem; }
   .cart-empty p { margin: 0; font-size: 0.88rem; }
 
+  /* ─── Discount ─── */
+  .discount-section {
+    margin-bottom: 0.75rem;
+  }
+
+  .discount-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  .discount-type-toggle {
+    display: flex;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    overflow: hidden;
+    align-self: flex-end;
+  }
+
+  .discount-type-toggle button {
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    background: var(--bg-surface);
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .discount-type-toggle button.active {
+    background: var(--primary);
+    color: #fff;
+  }
+
   /* ─── Total Bar ─── */
   .total-bar {
     background: var(--bg-surface);
     border-radius: 10px;
-    padding: 0.75rem 1rem;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 0.9rem;
+    border: 1px solid var(--border-strong);
+  }
+
+  .total-breakdown {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.9rem;
-    border: 1px solid var(--border-strong);
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+  }
+
+  .total-breakdown.discount-line {
+    color: var(--success, #22c55e);
+    font-weight: 600;
+  }
+
+  .total-final-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 0.4rem;
+    border-top: 1px solid var(--border);
+    margin-top: 0.15rem;
   }
 
   .total-label { color: var(--text-secondary); font-weight: 600; font-size: 0.92rem; }
@@ -231,7 +288,7 @@
     align-items: center;
   }
 
-  /* ─── Qty Control (already in base, reinforce here) ─── */
+  /* ─── Qty Control ─── */
   .qty-control {
     display: flex;
     align-items: center;
@@ -345,7 +402,7 @@
     </div>
 
     <!-- No results message -->
-    <div id="noResults" style="display:none;" class="text-center py-5" style="color: var(--text-muted);">
+    <div id="noResults" style="display:none;" class="text-center py-5">
       <i class="fas fa-search fa-2x mb-3" style="opacity:0.3;"></i>
       <p style="color: var(--text-muted);">لا توجد منتجات مطابقة</p>
     </div>
@@ -383,10 +440,41 @@
         </div>
       </div>
 
+      <!-- Discount Input -->
+      <div class="discount-section">
+        <label class="form-label mb-1" style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 600;">
+          <i class="fas fa-tag me-1" style="color: var(--primary);"></i>خصم
+        </label>
+        <div class="discount-row">
+          <div style="flex:1;">
+            <input type="number"
+                   id="discountValue"
+                   class="form-control"
+                   min="0"
+                   placeholder="0"
+                   oninput="updateCartUI()">
+          </div>
+          <div class="discount-type-toggle">
+            <button type="button" id="btnPct"   class="active" onclick="setDiscountType('pct')">%</button>
+            <button type="button" id="btnFixed" onclick="setDiscountType('fixed')">IQD</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Total -->
       <div class="total-bar">
-        <span class="total-label">المجموع</span>
-        <span class="total-amount" id="totalAmount">0 IQD</span>
+        <div class="total-breakdown" id="subtotalRow" style="display:none;">
+          <span>المجموع الفرعي</span>
+          <span id="subtotalDisplay">0 IQD</span>
+        </div>
+        <div class="total-breakdown discount-line" id="discountRow" style="display:none;">
+          <span id="discountLabel">خصم</span>
+          <span id="discountDisplay">− 0 IQD</span>
+        </div>
+        <div class="total-final-row">
+          <span class="total-label">الإجمالي</span>
+          <span class="total-amount" id="totalAmount">0 IQD</span>
+        </div>
       </div>
 
       <!-- Checkout Buttons -->
@@ -462,6 +550,7 @@
 {% block extra_js %}
 <script>
 let cart = [];
+let discountType = 'pct';
 let lastScanned = "";
 let lastScanAt = 0;
 let activeCategory = sessionStorage.getItem('quick_sale_active_category') || 'all';
@@ -500,6 +589,28 @@ function focusBarcode() {
   if (el) el.focus({ preventScroll: true });
 }
 
+// ── Discount ─────────────────────────────────────────────
+function setDiscountType(type) {
+  discountType = type;
+  document.getElementById('btnPct').classList.toggle('active', type === 'pct');
+  document.getElementById('btnFixed').classList.toggle('active', type === 'fixed');
+  updateCartUI();
+}
+
+function getDiscountAmount(subtotal) {
+  const val = parseFloat(document.getElementById('discountValue')?.value) || 0;
+  if (val <= 0) return 0;
+  if (discountType === 'pct') {
+    return Math.min(subtotal, Math.round(subtotal * val / 100));
+  }
+  return Math.min(subtotal, Math.round(val));
+}
+
+function getCartTotal() {
+  const subtotal = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  return subtotal - getDiscountAmount(subtotal);
+}
+
 // ── Filters ──────────────────────────────────────────────
 function applyFilters() {
   const search = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
@@ -521,16 +632,17 @@ function applyFilters() {
 
 // ── Cart UI ───────────────────────────────────────────────
 function updateCartUI() {
-  const cartItems   = document.getElementById('cartItems');
-  const totalAmount = document.getElementById('totalAmount');
-  const cashBtn     = document.getElementById('cashBtn');
-  const cardBtn     = document.getElementById('cardBtn');
-  const clearBtn    = document.getElementById('clearBtn');
-  const debtBtn     = document.getElementById('debtBtn');
-  const itemsCount  = document.getElementById('itemsCount');
-  const hasItems    = cart.length > 0;
+  const cartItems    = document.getElementById('cartItems');
+  const totalAmount  = document.getElementById('totalAmount');
+  const cashBtn      = document.getElementById('cashBtn');
+  const cardBtn      = document.getElementById('cardBtn');
+  const clearBtn     = document.getElementById('clearBtn');
+  const debtBtn      = document.getElementById('debtBtn');
+  const itemsCount   = document.getElementById('itemsCount');
+  const subtotalRow  = document.getElementById('subtotalRow');
+  const discountRow  = document.getElementById('discountRow');
+  const hasItems     = cart.length > 0;
 
-  // Toggle buttons
   [cashBtn, cardBtn, clearBtn, debtBtn].forEach(b => { if (b) b.disabled = !hasItems; });
 
   if (!hasItems) {
@@ -542,16 +654,18 @@ function updateCartUI() {
       </div>`;
     totalAmount.textContent = '0 IQD';
     itemsCount.textContent = '0';
+    if (subtotalRow) subtotalRow.style.display = 'none';
+    if (discountRow) discountRow.style.display = 'none';
     return;
   }
 
   let html = '';
-  let total = 0;
+  let subtotal = 0;
   let totalQty = 0;
 
   cart.forEach((item, index) => {
-    const subtotal = item.price * item.quantity;
-    total += subtotal;
+    const lineTotal = item.price * item.quantity;
+    subtotal += lineTotal;
     totalQty += item.quantity;
 
     html += `
@@ -575,14 +689,32 @@ function updateCartUI() {
             <span class="qty-display">${item.quantity}</span>
             <button type="button" class="qty-btn" onclick="updateQty(${index}, ${item.quantity + 1})">+</button>
           </div>
-          <span class="cart-item-subtotal">${formatNumber(subtotal)} IQD</span>
+          <span class="cart-item-subtotal">${formatNumber(lineTotal)} IQD</span>
         </div>
       </div>`;
   });
 
   cartItems.innerHTML = html;
-  totalAmount.textContent = formatNumber(total) + ' IQD';
   itemsCount.textContent = String(totalQty);
+
+  // Discount calculation
+  const discountAmt = getDiscountAmount(subtotal);
+  const finalTotal  = subtotal - discountAmt;
+
+  if (discountAmt > 0) {
+    const discVal = parseFloat(document.getElementById('discountValue')?.value) || 0;
+    subtotalRow.style.display = 'flex';
+    document.getElementById('subtotalDisplay').textContent = formatNumber(subtotal) + ' IQD';
+    discountRow.style.display = 'flex';
+    document.getElementById('discountLabel').textContent =
+      discountType === 'pct' ? `خصم ${discVal}%` : 'خصم ثابت';
+    document.getElementById('discountDisplay').textContent = '− ' + formatNumber(discountAmt) + ' IQD';
+  } else {
+    subtotalRow.style.display = 'none';
+    discountRow.style.display = 'none';
+  }
+
+  totalAmount.textContent = formatNumber(finalTotal) + ' IQD';
 }
 
 // ── Cart Actions ──────────────────────────────────────────
@@ -596,10 +728,9 @@ function addToCart(productId, name, price, image, cardEl) {
     cart.push({ product_id: productId, name, price: Number(price || 0), quantity: 1, image: image || '' });
   }
 
-  // Flash animation on card
   if (cardEl) {
     cardEl.classList.remove('flash');
-    void cardEl.offsetWidth; // reflow
+    void cardEl.offsetWidth;
     cardEl.classList.add('flash');
   }
 
@@ -629,6 +760,7 @@ function clearCart() {
   if (!confirm('إفراغ السلة؟')) return;
   const scrollY = getScrollY();
   cart = [];
+  document.getElementById('discountValue').value = '';
   updateCartUI();
   restoreScroll(scrollY);
 }
@@ -639,15 +771,21 @@ function checkout(method) {
   const debtBtn = document.getElementById('debtBtn');
   if (debtBtn) debtBtn.disabled = true;
 
-  // Show loading on clicked button
   const btn = document.getElementById(method === 'cash' ? 'cashBtn' : 'cardBtn');
   const origHTML = btn ? btn.innerHTML : '';
   if (btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
+  const discountValue = parseFloat(document.getElementById('discountValue')?.value) || 0;
+
   fetch('/pos/quick-sale/checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })), payment_method: method })
+    body: JSON.stringify({
+      items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+      payment_method: method,
+      discount_type: discountType,
+      discount_value: discountValue
+    })
   })
   .then(r => r.json())
   .then(data => {
@@ -667,10 +805,6 @@ function checkout(method) {
 }
 
 // ── Debt ──────────────────────────────────────────────────
-function getCartTotal() {
-  return cart.reduce((s, i) => s + i.price * i.quantity, 0);
-}
-
 function openDebtModal() {
   if (!cart.length) return;
   document.getElementById('debtTotalText').textContent = formatNumber(getCartTotal()) + ' IQD';
@@ -699,10 +833,17 @@ function submitDebt() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري الحفظ...';
 
+  const discountValue = parseFloat(document.getElementById('discountValue')?.value) || 0;
+
   fetch('/pos/quick-sale/debt', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name, phone, note, items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })) })
+    body: JSON.stringify({
+      name, phone, note,
+      items: cart.map(i => ({ product_id: i.product_id, quantity: i.quantity })),
+      discount_type: discountType,
+      discount_value: discountValue
+    })
   })
   .then(r => r.json())
   .then(data => {
@@ -715,8 +856,8 @@ function submitDebt() {
     }
     bootstrap.Modal.getInstance(document.getElementById('debtModal'))?.hide();
     cart = [];
+    document.getElementById('discountValue').value = '';
     updateCartUI();
-    // Show a nicer toast-like alert
     showToast('تم تسجيل الدين بنجاح ✅', 'success');
   })
   .catch(() => {

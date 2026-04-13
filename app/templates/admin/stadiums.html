@@ -27,13 +27,22 @@
                             <p class="mb-2">{{ stadium.description }}</p>
                             <h5 style="color: #E57625;">{{ "{:,.0f}".format(stadium.price_per_hour) }} {{ t('iqd') }}/{{ t('hour') }}</h5>
                         </div>
-                        <span class="badge {% if stadium.is_active %}bg-success{% else %}bg-secondary{% endif %}">
-                            {% if stadium.is_active %}
-                                {% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}نشط{% else %}Active{% endif %}
-                            {% else %}
-                                {% if current_lang == 'ku' %}ناچالاک{% elif current_lang == 'ar' %}غير نشط{% else %}Inactive{% endif %}
-                            {% endif %}
-                        </span>
+                        <div class="d-flex flex-column align-items-end gap-1">
+                            <span class="badge {% if stadium.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if stadium.is_active %}
+                                    {% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}نشط{% else %}Active{% endif %}
+                                {% else %}
+                                    {% if current_lang == 'ku' %}ناچالاک{% elif current_lang == 'ar' %}غير نشط{% else %}Inactive{% endif %}
+                                {% endif %}
+                            </span>
+                            <span class="badge {% if stadium.show_in_pos %}bg-info{% else %}bg-secondary{% endif %}">
+                                <i class="fas fa-cash-register me-1"></i>POS
+                            </span>
+                            <span class="badge {% if stadium.show_in_booking %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                <i class="fas fa-globe me-1"></i>
+                                {% if current_lang == 'ku' %}مەوزوو{% elif current_lang == 'ar' %}الموقع{% else %}Website{% endif %}
+                            </span>
+                        </div>
                     </div>
 
                     <hr>
@@ -42,10 +51,12 @@
                         <button class="btn btn-sm btn-outline-primary btn-edit"
                                 data-id="{{ stadium.id }}"
                                 data-name="{{ stadium.name }}"
-                                data-description="{{ stadium.description }}"
-                                data-location="{{ stadium.location }}"
+                                data-description="{{ stadium.description or '' }}"
+                                data-location="{{ stadium.location or '' }}"
                                 data-price="{{ stadium.price_per_hour }}"
-                                data-active="{{ stadium.is_active }}">
+                                data-active="{{ stadium.is_active }}"
+                                data-pos="{{ stadium.show_in_pos }}"
+                                data-booking="{{ stadium.show_in_booking }}">
                             <i class="fas fa-edit me-1"></i>{{ t('edit') }}
                         </button>
                         <button class="btn btn-sm btn-outline-danger btn-delete" data-id="{{ stadium.id }}">
@@ -98,12 +109,31 @@
                         <input type="number" id="stadium-price" class="form-control" required>
                     </div>
 
-                    <div class="form-check">
+                    <hr>
+
+                    <div class="form-check mb-2">
                         <input type="checkbox" id="stadium-active" class="form-check-input" checked>
                         <label class="form-check-label" for="stadium-active">
                             {% if current_lang == 'ku' %}چالاک{% elif current_lang == 'ar' %}نشط{% else %}Active{% endif %}
                         </label>
                     </div>
+
+                    <div class="form-check mb-2">
+                        <input type="checkbox" id="stadium-pos" class="form-check-input" checked>
+                        <label class="form-check-label" for="stadium-pos">
+                            <i class="fas fa-cash-register me-1 text-info"></i>
+                            {% if current_lang == 'ku' %}نیشاندان لە POS{% elif current_lang == 'ar' %}إظهار في POS{% else %}Show in POS{% endif %}
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input type="checkbox" id="stadium-booking" class="form-check-input" checked>
+                        <label class="form-check-label" for="stadium-booking">
+                            <i class="fas fa-globe me-1 text-warning"></i>
+                            {% if current_lang == 'ku' %}نیشاندان لە مەوزوو{% elif current_lang == 'ar' %}إظهار في الموقع{% else %}Show in Website{% endif %}
+                        </label>
+                    </div>
+
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancel') }}</button>
@@ -129,6 +159,8 @@ document.querySelectorAll('.btn-edit').forEach(btn => {
         document.getElementById('stadium-location').value = this.dataset.location;
         document.getElementById('stadium-price').value = this.dataset.price;
         document.getElementById('stadium-active').checked = this.dataset.active === 'True';
+        document.getElementById('stadium-pos').checked = this.dataset.pos === 'True';
+        document.getElementById('stadium-booking').checked = this.dataset.booking === 'True';
         modal.show();
     });
 });
@@ -158,7 +190,9 @@ document.getElementById('stadiumForm').addEventListener('submit', async function
         description: document.getElementById('stadium-description').value,
         location: document.getElementById('stadium-location').value,
         price_per_hour: parseInt(document.getElementById('stadium-price').value),
-        is_active: document.getElementById('stadium-active').checked
+        is_active: document.getElementById('stadium-active').checked,
+        show_in_pos: document.getElementById('stadium-pos').checked,
+        show_in_booking: document.getElementById('stadium-booking').checked
     };
 
     const url = id ? `/admin/api/stadium/${id}` : '/admin/api/stadium';
@@ -181,6 +215,8 @@ document.querySelector('[data-bs-target="#stadiumModal"]').addEventListener('cli
     document.getElementById('stadiumForm').reset();
     document.getElementById('stadium-id').value = '';
     document.getElementById('stadium-active').checked = true;
+    document.getElementById('stadium-pos').checked = true;
+    document.getElementById('stadium-booking').checked = true;
 });
 </script>
 {% endblock %}

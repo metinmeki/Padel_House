@@ -13,6 +13,8 @@ class Stadium(db.Model):
     price_per_hour = db.Column(db.Float, default=80000)
     is_active = db.Column(db.Boolean, default=True)
     image_url = db.Column(db.String(200))
+    show_in_pos = db.Column(db.Boolean, default=True)
+    show_in_booking = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -30,4 +32,5 @@ class Stadium(db.Model):
             'price_per_hour': self.price_per_hour,
             'is_active': self.is_active,
             'image_url': self.image_url
+
         }

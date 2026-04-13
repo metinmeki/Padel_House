@@ -1506,6 +1506,8 @@ def update_stadium(stadium_id):
         if 'price_per_hour' in data: stadium.price_per_hour = float(data['price_per_hour'])
         if 'is_active' in data: stadium.is_active = data['is_active']
         if 'image_url' in data: stadium.image_url = data['image_url']
+        if 'show_in_pos' in data: stadium.show_in_pos = bool(data['show_in_pos'])  # ✅
+        if 'show_in_booking' in data: stadium.show_in_booking = bool(data['show_in_booking'])  # ✅
         db.session.commit()
         try:
             log_activity(action="update_stadium", entity_type="stadium", entity_id=stadium.id,

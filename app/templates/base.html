@@ -33,12 +33,12 @@
     }
 
     footer{
-      background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+      background: linear-gradient(135deg, #0a0a0a, #111111);
       color:#fff;
     }
 
     footer a{color:rgba(255,255,255,.85);text-decoration:none;}
-    footer a:hover{color:var(--primary-color);}
+    footer a:hover{color:#fff;}
 
     .footer-social a{
       display:inline-flex;
@@ -46,14 +46,14 @@
       justify-content:center;
       width:44px;height:44px;
       border-radius:14px;
-      background:rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.10);
       transition: transform .18s ease, background .18s ease, border-color .18s ease;
     }
     .footer-social a:hover{
       transform: translateY(-1px);
-      border-color: rgba(229,118,37,.35);
-      background: rgba(229,118,37,.08);
+      border-color: rgba(255,255,255,.25);
+      background: rgba(255,255,255,.12);
     }
 
     .footer-divider-pro{
@@ -61,7 +61,7 @@
       margin-top:28px;
       margin-bottom:18px;
       border:0;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent);
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.1), transparent);
     }
 
     .footer-brandbar{
@@ -82,7 +82,7 @@
       font-size: 11px;
       letter-spacing: 2.5px;
       text-transform: uppercase;
-      color: rgba(255,255,255,.45);
+      color: rgba(255,255,255,.35);
       font-weight: 500;
     }
 
@@ -92,24 +92,26 @@
       gap:12px;
       padding: 10px 20px;
       border-radius: 18px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.10);
-      box-shadow: 0 18px 40px rgba(0,0,0,.18);
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 18px 40px rgba(0,0,0,.35);
       transition: transform .18s ease, border-color .18s ease, background .18s ease;
+      text-decoration: none !important;
     }
 
     .nova-lockup:hover{
       transform: translateY(-1px);
-      border-color: rgba(229,118,37,.35);
-      background: rgba(229,118,37,.07);
+      border-color: rgba(255,255,255,.2);
+      background: rgba(255,255,255,.08);
     }
 
     .nova-lockup-logo{
       width: 40px;
       height: 40px;
-      object-fit: cover;
-      border-radius: 12px;
-      filter: drop-shadow(0 10px 20px rgba(0,0,0,.35));
+      object-fit: contain;
+      border-radius: 10px;
+      background: #000;
+      padding: 4px;
     }
 
     .nova-lockup-text{
@@ -121,9 +123,9 @@
     }
 
     .nova-lockup-name{
-      font-size: 18px;
+      font-size: 20px;
       font-weight: 900;
-      letter-spacing: 5px;
+      letter-spacing: 6px;
       color:#fff;
       transition: color .18s ease;
     }
@@ -131,7 +133,7 @@
     .nova-lockup-sub{
       font-size: 12px;
       letter-spacing: 2px;
-      opacity:.75;
+      opacity:.55;
       color:#fff;
     }
 
@@ -139,27 +141,22 @@
       font-size: 10px;
       letter-spacing: 1.5px;
       text-transform: uppercase;
-      color: rgba(255,255,255,.45);
-      border-left: 1px solid rgba(255,255,255,.18);
+      color: rgba(255,255,255,.35);
+      border-left: 1px solid rgba(255,255,255,.15);
       padding-left: 10px;
       white-space: nowrap;
     }
 
     .nova-lockup:hover .nova-lockup-name{
-      color: var(--primary-color);
-    }
-
-    .nova-lockup:hover .nova-lockup-ict{
-      color: rgba(229,118,37,.8);
+      color: #e0e0e0;
     }
 
     .nova-glow{
-      width: 200px;
+      width: 160px;
       height: 2px;
       margin: 12px auto 0;
       border-radius: 999px;
-      background: linear-gradient(90deg, transparent, rgba(229,118,37,.75), transparent);
-      opacity: .85;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.3), transparent);
     }
 
     .site-flash-wrap{
@@ -401,9 +398,8 @@
     <div class="row g-4">
 
       <div class="col-lg-4">
-        <h4 style="color: var(--primary-color);">{{ t('site_name') }}</h4>
+        <h4 style="color: #fff;">{{ t('site_name') }}</h4>
         <p class="text-light opacity-75">{{ t('best_courts') }}</p>
-
         <div class="d-flex gap-3 mt-3 footer-social">
           <a href="https://www.instagram.com/padelhouse.iq" aria-label="Instagram">
             <i class="fab fa-instagram"></i>
@@ -436,20 +432,18 @@
     <hr class="footer-divider-pro">
 
     <div class="footer-brandbar">
-      <div class="nova-credit-wrap">
-        <p class="nova-credit-text">Developed &amp; Powered by</p>
-        <a class="nova-lockup" href="https://metinmeki.github.io/Nova-Soft-team/" aria-label="NOVA Tech for ICT Solutions">
-          <img src="/static/images/Nova-Logo.jpeg" class="nova-lockup-logo" alt="Nova Logo">
-          <span class="nova-lockup-text">
-            <span class="nova-lockup-name">NOVA</span>
-            <span class="nova-lockup-sub">TECH</span>
-          </span>
-          <span class="nova-lockup-ict">for ICT Solutions</span>
-        </a>
-      </div>
-    </div>
-
+  <div class="nova-credit-wrap">
+    <p class="nova-credit-text">Developed &amp; Powered by</p>
+    <a href="https://coda-agency.net/" aria-label="CODA Agency"
+       style="display:inline-flex;align-items:center;gap:12px;text-decoration:none;">
+      <img src="/static/images/coda-logo.png" alt="Coda Logo"
+           style="width:36px;height:36px;object-fit:contain;border-radius:8px;background:#000;padding:3px;">
+      <span style="font-size:20px;font-weight:900;letter-spacing:6px;color:#fff;">CODA</span>
+      <span style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.4);">AGENCY</span>
+    </a>
     <div class="nova-glow"></div>
+  </div>
+</div>
 
   </div>
 </footer>
@@ -459,7 +453,6 @@
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     const flashItems = document.querySelectorAll('.ph-flash[data-auto-hide="true"]');
-
     flashItems.forEach((item) => {
       setTimeout(() => {
         item.style.transition = 'opacity .35s ease, transform .35s ease';

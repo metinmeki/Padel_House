@@ -12,7 +12,7 @@ if __name__ == '__main__':
     # Set DEBUG=True only for local development
 
     # Get debug mode from environment variable (defaults to False for safety)
-    debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+    debug_mode = True
 
     print("🚀 Starting Padel House Server...")
     print(f"📍 Mode: {'Development (DEBUG ON)' if debug_mode else 'Production (DEBUG OFF)'}")

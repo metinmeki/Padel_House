@@ -119,7 +119,7 @@ def get_blocking_bookings(stadium_id: int, booking_date_obj):
 # -----------------------------
 @booking_bp.route('/')
 def booking_page():
-    stadiums = Stadium.query.filter_by(is_active=True).all()
+    stadiums = Stadium.query.filter_by(is_active=True, show_in_booking=True).all()
     settings = Settings.query.first()
     return render_template('booking/booking.html', stadiums=stadiums, settings=settings)
 

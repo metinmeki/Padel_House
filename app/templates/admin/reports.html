@@ -23,18 +23,71 @@
     </div>
 </div>
 
-<!-- ✅ NET PROFIT SUMMARY - NEW! -->
-<div class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="stat-card text-center" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 18px;">
-            <h6 class="mb-2 opacity-75">
-                {% if current_lang == 'ar' %}💰 إجمالي الإيرادات{% elif current_lang == 'ku' %}💰 کۆی داهات{% else %}💰 Total Revenue{% endif %}
-            </h6>
-            <h2 class="mb-0">{{ "{:,.0f}".format(total_revenue) }} {{ t('iqd') }}</h2>
+<!-- ✅ REVENUE SOURCES BREAKDOWN (replaces single Total Revenue card) -->
+<div class="table-card mb-4" style="border-top: 4px solid #28a745;">
+    <h6 class="text-muted mb-3">
+        <i class="fas fa-chart-pie me-2"></i>
+        {% if current_lang == 'ar' %}مصادر الإيرادات{% elif current_lang == 'ku' %}سەرچاوەکانی داهات{% else %}Revenue Sources{% endif %}
+    </h6>
+    <div class="row g-3">
+        <!-- POS Revenue -->
+        <div class="col-md-6">
+            <div class="revenue-source-card" style="border-left: 5px solid #6f42c1; background: rgba(111,66,193,0.06); border-radius: 14px; padding: 16px;">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="icon-sm bg-opacity-10 text-purple me-2" style="background:rgba(111,66,193,0.1); color:#6f42c1; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:8px;">
+                        <i class="fas fa-cash-register"></i>
+                    </div>
+                    <small class="text-muted fw-semibold">
+                        {% if current_lang == 'ar' %}إيرادات POS{% elif current_lang == 'ku' %}داهاتی POS{% else %}POS Revenue{% endif %}
+                    </small>
+                </div>
+                <h4 class="mb-0" style="color:#6f42c1;">{{ "{:,.0f}".format(pos_revenue) }} {{ t('iqd') }}</h4>
+                <small class="text-muted">
+                    <i class="fas fa-money-bill-wave me-1 text-success"></i>{{ "{:,.0f}".format(pos_cash) }}
+                    &nbsp;|&nbsp;
+                    <i class="fas fa-credit-card me-1 text-info"></i>{{ "{:,.0f}".format(pos_card) }}
+                </small>
+            </div>
+        </div>
+
+        <!-- Store / Order Revenue -->
+        <div class="col-md-6">
+            <div class="revenue-source-card" style="border-left: 5px solid #fd7e14; background: rgba(253,126,20,0.06); border-radius: 14px; padding: 16px;">
+                <div class="d-flex align-items-center mb-2">
+                    <div class="icon-sm bg-warning bg-opacity-10 text-warning me-2" style="width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:8px;">
+                        <i class="fas fa-shopping-bag"></i>
+                    </div>
+                    <small class="text-muted fw-semibold">
+                        {% if current_lang == 'ar' %}إيرادات المبيعات{% elif current_lang == 'ku' %}داهاتی فرۆشتن{% else %}Sales Revenue{% endif %}
+                    </small>
+                </div>
+                <h4 class="mb-0 text-warning">{{ "{:,.0f}".format(order_revenue) }} {{ t('iqd') }}</h4>
+                <small class="text-muted">{{ total_orders }}
+                    {% if current_lang == 'ar' %}طلب{% elif current_lang == 'ku' %}داواکاری{% else %}orders{% endif %}
+                </small>
+            </div>
         </div>
     </div>
 
-    <div class="col-md-4">
+    <!-- Visual revenue bar -->
+    {% set rev_total = pos_revenue + order_revenue %}
+    {% if rev_total > 0 %}
+    <div class="mt-3">
+        <div class="d-flex rounded-pill overflow-hidden" style="height: 10px;">
+            <div style="width: {{ (pos_revenue / rev_total * 100)|round }}%; background:#6f42c1;" title="POS"></div>
+            <div style="width: {{ (order_revenue / rev_total * 100)|round }}%; background:#fd7e14;" title="Sales"></div>
+        </div>
+        <div class="d-flex gap-3 mt-1">
+            <small><span class="dot" style="background:#6f42c1;"></span> POS {{ (pos_revenue / rev_total * 100)|round|int }}%</small>
+            <small><span class="dot" style="background:#fd7e14;"></span> {% if current_lang == 'ar' %}مبيعات{% else %}Sales{% endif %} {{ (order_revenue / rev_total * 100)|round|int }}%</small>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- NET PROFIT SUMMARY (2 cards now: Expenses + Net Profit) -->
+<div class="row g-4 mb-4">
+    <div class="col-md-6">
         <div class="stat-card text-center" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; border-radius: 18px;">
             <h6 class="mb-2 opacity-75">
                 {% if current_lang == 'ar' %}📉 إجمالي المصاريف{% elif current_lang == 'ku' %}📉 کۆی خەرجی{% else %}📉 Total Expenses{% endif %}
@@ -43,7 +96,7 @@
         </div>
     </div>
 
-    <div class="col-md-4">
+    <div class="col-md-6">
         <div class="stat-card text-center" style="background: linear-gradient(135deg, {% if net_profit|default(0) >= 0 %}#007bff{% else %}#ffc107{% endif %} 0%, {% if net_profit|default(0) >= 0 %}#0056b3{% else %}#e0a800{% endif %} 100%); color: white; border-radius: 18px;">
             <h6 class="mb-2 opacity-75">
                 {% if current_lang == 'ar' %}✅ صافي الربح{% elif current_lang == 'ku' %}✅ قازانجی پاک{% else %}✅ Net Profit{% endif %}
@@ -58,66 +111,7 @@
     </div>
 </div>
 
-<!-- Stats Cards Row 1 - Revenue -->
-<div class="row g-4 mb-4">
-    <div class="col-md-6 col-xl-3">
-        <div class="stat-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="text-muted mb-1">{{ t('bookings') }}</p>
-                    <h3 class="mb-0">{{ total_bookings }}</h3>
-                </div>
-                <div class="icon bg-primary bg-opacity-10 text-primary">
-                    <i class="fas fa-calendar-check"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6 col-xl-3">
-        <div class="stat-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="text-muted mb-1">{% if current_lang == 'ku' %}داهاتی حجز{% elif current_lang == 'ar' %}إيرادات الحجز{% else %}Booking Revenue{% endif %}</p>
-                    <h3 class="mb-0">{{ "{:,.0f}".format(booking_revenue) }} {{ t('iqd') }}</h3>
-                </div>
-                <div class="icon bg-success bg-opacity-10 text-success">
-                    <i class="fas fa-money-bill-wave"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6 col-xl-3">
-        <div class="stat-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="text-muted mb-1">{{ t('orders') }}</p>
-                    <h3 class="mb-0">{{ total_orders }}</h3>
-                </div>
-                <div class="icon bg-info bg-opacity-10 text-info">
-                    <i class="fas fa-shopping-bag"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6 col-xl-3">
-        <div class="stat-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="text-muted mb-1">{% if current_lang == 'ku' %}داهاتی فرۆشتن{% elif current_lang == 'ar' %}إيرادات المبيعات{% else %}Sales Revenue{% endif %}</p>
-                    <h3 class="mb-0">{{ "{:,.0f}".format(order_revenue) }} {{ t('iqd') }}</h3>
-                </div>
-                <div class="icon bg-warning bg-opacity-10 text-warning">
-                    <i class="fas fa-coins"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- POS Stats Cards Row 2 -->
+<!-- POS Stats Cards -->
 <div class="row g-4 mb-4">
     <div class="col-md-6 col-xl-3">
         <div class="stat-card">
@@ -132,27 +126,6 @@
                 </div>
                 <div class="icon bg-dark bg-opacity-10 text-dark">
                     <i class="fas fa-cash-register"></i>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-6 col-xl-3">
-        <div class="stat-card">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <p class="text-muted mb-1">POS Revenue</p>
-                    <h3 class="mb-0">{{ "{:,.0f}".format(pos_revenue) }} {{ t('iqd') }}</h3>
-                    <small class="text-muted">
-                        {% if current_lang == 'ar' %}نقد:{% else %}Cash:{% endif %}
-                        {{ "{:,.0f}".format(pos_cash) }}
-                        |
-                        {% if current_lang == 'ar' %}بطاقة:{% else %}Card:{% endif %}
-                        {{ "{:,.0f}".format(pos_card) }}
-                    </small>
-                </div>
-                <div class="icon bg-secondary bg-opacity-10 text-secondary">
-                    <i class="fas fa-receipt"></i>
                 </div>
             </div>
         </div>
@@ -226,7 +199,7 @@
     </div>
 </div>
 
-<!-- ✅ EXPENSES SECTION - NEW! -->
+<!-- EXPENSES SECTION -->
 <div class="table-card mb-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">
@@ -329,12 +302,12 @@
                         {% endif %}
                     </td>
                     <td>
-                        <button class="btn btn-sm btn-warning" onclick="editExpense({{ expense.id }}, '{{ expense.date.strftime('%Y-%m-%d') }}', '{{ expense.category }}', {{ expense.amount }}, '{{ expense.description or '' }}', '{{ expense.payment_method }}')">
+                        <button class="btn btn-sm btn-warning" onclick="editExpense({{ expense.id }}, '{{ expense.date.strftime('%Y-%m-%d') if expense.date else '' }}', '{{ expense.category }}', {{ expense.amount }}, '{{ (expense.description or '') | replace("'", "\\'") }}', '{{ expense.payment_method }}')">
                             <i class="fas fa-edit"></i>
                         </button>
                         <a href="{{ url_for('admin.delete_expense', expense_id=expense.id, from=from_date, to=to_date) }}"
                            class="btn btn-sm btn-danger"
-                           onclick="return confirm('{% if current_lang == 'ar' %}هل أنت متأكد؟{% else %}Are you sure?{% endif %}')">
+                           onclick="return confirm('Are you sure?')">
                             <i class="fas fa-trash"></i>
                         </a>
                     </td>
@@ -375,7 +348,6 @@
                     <label class="form-label">{% if current_lang == 'ar' %}التاريخ{% else %}Date{% endif %} *</label>
                     <input type="date" name="date" class="form-control" value="{{ from_date }}" required>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">{% if current_lang == 'ar' %}الفئة{% else %}Category{% endif %} *</label>
                     <select name="category" class="form-select" required>
@@ -392,17 +364,14 @@
                         <option value="other">{% if current_lang == 'ar' %}أخرى{% else %}Other{% endif %}</option>
                     </select>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">{% if current_lang == 'ar' %}المبلغ (IQD){% else %}Amount (IQD){% endif %} *</label>
                     <input type="number" name="amount" class="form-control" min="1" required>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">{% if current_lang == 'ar' %}الوصف{% else %}Description{% endif %}</label>
                     <input type="text" name="description" class="form-control">
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">{% if current_lang == 'ar' %}طريقة الدفع{% else %}Payment Method{% endif %}</label>
                     <select name="payment_method" class="form-select">
@@ -410,7 +379,6 @@
                         <option value="card">{% if current_lang == 'ar' %}بطاقة{% else %}Card{% endif %}</option>
                     </select>
                 </div>
-
                 <input type="hidden" name="from" value="{{ from_date }}">
                 <input type="hidden" name="to" value="{{ to_date }}">
             </div>
@@ -442,7 +410,6 @@
                     <label class="form-label">{% if current_lang == 'ar' %}التاريخ{% else %}Date{% endif %} *</label>
                     <input type="date" name="date" id="editDate" class="form-control" required>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">{% if current_lang == 'ar' %}الفئة{% else %}Category{% endif %} *</label>
                     <select name="category" id="editCategory" class="form-select" required>
@@ -458,17 +425,14 @@
                         <option value="other">{% if current_lang == 'ar' %}أخرى{% else %}Other{% endif %}</option>
                     </select>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">{% if current_lang == 'ar' %}المبلغ (IQD){% else %}Amount (IQD){% endif %} *</label>
                     <input type="number" name="amount" id="editAmount" class="form-control" min="1" required>
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">{% if current_lang == 'ar' %}الوصف{% else %}Description{% endif %}</label>
                     <input type="text" name="description" id="editDescription" class="form-control">
                 </div>
-
                 <div class="mb-3">
                     <label class="form-label">{% if current_lang == 'ar' %}طريقة الدفع{% else %}Payment Method{% endif %}</label>
                     <select name="payment_method" id="editPaymentMethod" class="form-select">
@@ -476,7 +440,6 @@
                         <option value="card">{% if current_lang == 'ar' %}بطاقة{% else %}Card{% endif %}</option>
                     </select>
                 </div>
-
                 <input type="hidden" name="from" value="{{ from_date }}">
                 <input type="hidden" name="to" value="{{ to_date }}">
             </div>
@@ -500,7 +463,6 @@
             <i class="fas fa-file-invoice-dollar me-2" style="color:#E57625;"></i>
             {% if current_lang == 'ar' %}ديون غير مدفوعة (تسجيل يدوي){% elif current_lang == 'ku' %}قەرزی نەدراو (دەستی){% else %}Manual Unpaid Debts{% endif %}
         </h5>
-
         <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addDebtModal">
             <i class="fas fa-plus me-1"></i>
             {% if current_lang == 'ar' %}إضافة دين{% elif current_lang == 'ku' %}زیادکردنی قەرز{% else %}Add Debt{% endif %}
@@ -543,7 +505,7 @@
                     <td class="text-muted">{{ d.note or '-' }}</td>
                     <td class="text-end">
                         {% if d.status != 'paid' %}
-                        <a href="{{ url_for('admin.mark_manual_debt_paid_route', debt_id=d.id, from=from_date, to=to_date) }}">
+                        <a href="{{ url_for('admin.mark_manual_debt_paid_route', debt_id=d.id, from=from_date, to=to_date) }}"
                            class="btn btn-sm btn-outline-success">
                             <i class="fas fa-check me-1"></i>
                             {% if current_lang == 'ar' %}تسديد{% else %}Mark Paid{% endif %}
@@ -574,7 +536,6 @@
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-
             <form method="POST" action="{{ url_for('admin.add_manual_debt') }}">
                 <div class="modal-body">
                     <div class="row g-3">
@@ -582,32 +543,26 @@
                             <label class="form-label">{% if current_lang == 'ar' %}الاسم{% else %}Name{% endif %}</label>
                             <input type="text" name="name" class="form-control" placeholder="{% if current_lang == 'ar' %}مثال: أحمد{% else %}e.g. Ahmed{% endif %}">
                         </div>
-
                         <div class="col-12">
                             <label class="form-label">{% if current_lang == 'ar' %}الهاتف (اختياري){% else %}Phone (optional){% endif %}</label>
                             <input type="text" name="phone" class="form-control" placeholder="07xx xxx xxxx">
                         </div>
-
                         <div class="col-md-6">
                             <label class="form-label">{% if current_lang == 'ar' %}المبلغ{% else %}Amount{% endif %}</label>
                             <input type="number" name="amount" class="form-control" required>
                         </div>
-
                         <div class="col-md-6">
                             <label class="form-label">{% if current_lang == 'ar' %}التاريخ{% else %}Date{% endif %}</label>
                             <input type="date" name="date" class="form-control" value="{{ to_date or from_date }}" required>
                         </div>
-
                         <div class="col-12">
                             <label class="form-label">{% if current_lang == 'ar' %}ملاحظة{% else %}Note{% endif %}</label>
                             <textarea name="note" class="form-control" rows="2"></textarea>
                         </div>
-
                         <input type="hidden" name="from" value="{{ from_date }}">
                         <input type="hidden" name="to" value="{{ to_date }}">
                     </div>
                 </div>
-
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">
                         {% if current_lang == 'ar' %}إلغاء{% else %}Cancel{% endif %}
@@ -687,13 +642,23 @@
 {% endblock %}
 
 <style>
-.stat-card{
+.stat-card {
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.06);
+    padding: 1.25rem;
+}
+.table-card {
+    background: #fff;
+    padding: 1.5rem;
     border-radius: 18px;
     box-shadow: 0 10px 30px rgba(0,0,0,.06);
 }
-.table-card{
-    border-radius: 18px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.06);
+.dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 4px;
 }
 </style>
 
@@ -712,7 +677,6 @@ function editExpense(id, date, category, amount, description, paymentMethod) {
     document.getElementById('editAmount').value = amount;
     document.getElementById('editDescription').value = description;
     document.getElementById('editPaymentMethod').value = paymentMethod;
-
     new bootstrap.Modal(document.getElementById('editExpenseModal')).show();
 }
 </script>

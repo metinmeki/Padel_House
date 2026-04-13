@@ -67,7 +67,7 @@ def compute_play_time_and_price(session: POSSession, settings: Settings):
 @pos_bp.route('/')
 @login_required
 def index():
-    stadiums = Stadium.query.filter_by(is_active=True).order_by(Stadium.id.asc()).limit(2).all()
+    stadiums = Stadium.query.filter_by(is_active=True, show_in_pos=True).order_by(Stadium.id.asc()).all()
     tables = Table.query.filter_by(is_active=True).order_by(Table.id.asc()).all()
 
     settings = Settings.query.first()

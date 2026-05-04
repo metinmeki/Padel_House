@@ -346,8 +346,25 @@
             </a>
         </li>
         {% endif %}
+        <hr>
+
 
         <hr>
+
+        {% if current_user.role == 'super_admin' or current_user.can_view_reports %}
+        <li class="nav-item">
+            <a href="{{ url_for('admin.receipt_archive') }}"
+   class="nav-link {% if request.endpoint == 'admin.receipt_archive' %}active{% endif %}">
+                <span>
+                    <i class="fas fa-archive me-2"></i>
+                    {% if current_lang == 'ku' %}ئەرشیفی پسووڵەکان
+                    {% elif current_lang == 'ar' %}أرشيف الفواتير
+                    {% else %}Receipts Archive{% endif %}
+                </span>
+            </a>
+        </li>
+        {% endif %}
+
 
         {% if current_user.role == 'super_admin' or current_user.can_manage_settings %}
         <li class="nav-item">

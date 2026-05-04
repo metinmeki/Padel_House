@@ -14,7 +14,7 @@
         text-align: center;
         min-width: 80px;
     }
-    .time-slot:hover:not(.booked) {
+    .time-slot:hover:not(.booked):not(.past) {
         border-color: #E57625;
         background: rgba(229, 118, 37, 0.1);
     }
@@ -29,6 +29,18 @@
         cursor: not-allowed;
         opacity: 0.7;
     }
+    .time-slot.past {
+        background: #e9ecef;
+        color: #adb5bd;
+        cursor: not-allowed;
+        opacity: 0.5;
+        border-color: #dee2e6;
+        text-decoration: line-through;
+    }
+    .time-slot.past::after {
+        content: '' !important;
+        display: none !important;
+    }
     .time-slot.discount {
         border-color: #28a745;
     }
@@ -41,8 +53,6 @@
     .time-slot.selected.discount::after {
         color: white;
     }
-
-    /* ✅ New: highlight the full range (for duration > 1) */
     .time-slot.in-range {
         background: rgba(229, 118, 37, 0.15);
         border-color: #E57625;
@@ -51,7 +61,6 @@
         background: rgba(40, 167, 69, 0.12);
         border-color: #28a745;
     }
-
     .stadium-card {
         cursor: pointer;
         transition: all 0.3s ease;
@@ -140,6 +149,9 @@
                     <div class="mb-3">
                         <span class="badge bg-success me-2">{{ t('available') }}</span>
                         <span class="badge bg-danger me-2">{{ t('booked') }}</span>
+                        <span class="badge bg-secondary me-2">
+                            {% if current_lang == 'ku' %}تێپەڕیوە{% elif current_lang == 'ar' %}منتهي{% else %}Past{% endif %}
+                        </span>
                         <span class="badge bg-outline-success border border-success text-success me-2">{{ t('discount') }} 25%</span>
                     </div>
                     <div id="time-slots" class="d-flex flex-wrap">
@@ -154,7 +166,6 @@
                         </p>
                     </div>
 
-                    <!-- ✅ New message area -->
                     <div id="range-warning" class="alert alert-warning mt-3" style="display:none;">
                         {% if current_lang == 'ku' %}
                         تکایە ماوەی هەڵبژێردراو بەردەست نییە. کاتێکی تر هەڵبژێرە یان ماوە کەم بکە.
@@ -184,7 +195,6 @@
                         <label class="btn btn-outline-warning" for="duration2">2 {{ t('hours') }}</label>
                     </div>
 
-                    <!-- ✅ Small hint -->
                     <div class="text-muted mt-2" style="font-size: 13px;">
                         {% if current_lang == 'ku' %}
                         دەتوانیت ١ یان ٢ کاتژمێر هەڵبژێریت، بەڵام دەبێت هەموو کاتەکان بەردەست بن.
@@ -289,22 +299,23 @@ const TRANSLATIONS = {
     fill_required: "{% if current_lang == 'ku' %}تکایە خانێن پێدڤی پڕ بکە{% elif current_lang == 'ar' %}يرجى ملء الحقول المطلوبة{% else %}Please fill required fields{% endif %}",
     duration_not_available: "{% if current_lang == 'ku' %}ماوەی هەڵبژێردراو بەردەست نییە{% elif current_lang == 'ar' %}المدة غير متاحة{% else %}Duration not available{% endif %}",
     black_court: "{% if current_lang == 'ku' %}یاریگای ڕەش{% elif current_lang == 'ar' %}الملعب الأسود{% else %}Black Court{% endif %}",
-    orange_court: "{% if current_lang == 'ku' %}یاریگای پرتەقاڵی{% elif current_lang == 'ar' %}الملعب البرتقالي{% else %}Orange Court{% endif %}"
+    orange_court: "{% if current_lang == 'ku' %}یاریگای پرتەقاڵی{% elif current_lang == 'ar' %}الملعب البرتقالي{% else %}Orange Court{% endif %}",
+    time_passed: "{% if current_lang == 'ku' %}ئەم کاتە تێپەڕیوە{% elif current_lang == 'ar' %}هذا الوقت قد مضى{% else %}This time has already passed{% endif %}"
 };
+
+// ✅ Must match your settings: closing_hour in Settings model
+// Hours below this value (0,1,2,3) belong to the NEXT day — never mark as past for today
+const CLOSING_HOUR = 4;
 
 class BookingSystem {
     constructor() {
         this.stadiumId = null;
         this.stadiumName = null;
         this.pricePerHour = 0;
-
         this.selectedDate = null;
-        this.selectedHour = null;     // start hour
+        this.selectedHour = null;
         this.duration = 1;
-
-        // ✅ store availability map: hour -> { booked, discount, display }
         this.slotsMap = new Map();
-
         this.init();
     }
 
@@ -330,12 +341,30 @@ class BookingSystem {
         document.querySelectorAll('input[name="duration"]').forEach(input => {
             input.addEventListener('change', (e) => {
                 this.duration = parseInt(e.target.value);
-                this.applyRangeUI();      // ✅ highlight range
-                this.updateSummary();     // ✅ validate + price
+                this.applyRangeUI();
+                this.updateSummary();
             });
         });
 
         document.getElementById('confirm-booking').addEventListener('click', () => this.confirmBooking());
+
+        // ✅ Real-time: reload slots every 60 seconds when viewing today
+        setInterval(() => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            if (this.stadiumId && this.selectedDate === todayStr) {
+                const prevSelected = this.selectedHour;
+                this.loadTimeSlots().then(() => {
+                    // If previously selected slot became past or booked, deselect it
+                    if (prevSelected !== null) {
+                        const info = this.slotsMap.get(prevSelected);
+                        if (!info || info.isPast || info.booked || info.pending) {
+                            this.selectedHour = null;
+                            this.updateSummary();
+                        }
+                    }
+                });
+            }
+        }, 60000);
     }
 
     selectStadium(card, index) {
@@ -343,7 +372,6 @@ class BookingSystem {
         card.classList.add('selected');
 
         this.stadiumId = card.dataset.stadiumId;
-        // ✅ Use translated names based on index
         this.stadiumName = index === 0 ? TRANSLATIONS.black_court : TRANSLATIONS.orange_court;
         this.pricePerHour = parseInt(card.dataset.price) || 50000;
 
@@ -373,31 +401,57 @@ class BookingSystem {
                 return;
             }
 
+            // Live clock for client-side past check
+            const now = new Date();
+            const todayStr = now.toISOString().split('T')[0];
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+
             slots.forEach(slot => {
-                const hour = parseInt(slot.hour);
-                const booked = slot.is_booked || slot.booked || false;
+                const hour    = parseInt(slot.hour);
+                const booked  = slot.is_booked || false;
+                const pending = slot.is_pending || false;
+                const discount = (slot.is_discount || false) && hour <= 16;
+                const display  = slot.time || `${hour}:00`;
 
-                // ✅ FIXED: Discount should show from 12:00 to 16:00 (hours 12, 13, 14, 15, 16)
-                // Discount window is 12-16 inclusive, which means: 12:00-16:59
-                const discount = (slot.is_discount || slot.discount || false) && hour <= 16;
+                // ✅ Backend is_past (handles midnight hours correctly via save_date logic)
+                const backendPast = slot.is_past || false;
 
-                const display = slot.time || slot.display || `${hour}:00`;
+                // ✅ Client-side past check:
+                // IMPORTANT: hours < CLOSING_HOUR (0,1,2,3) belong to NEXT day
+                // so they are NEVER past when viewing today's date
+                const isMidnightHour = hour < CLOSING_HOUR;
+                const clientPast = !isMidnightHour &&
+                                   (this.selectedDate === todayStr) &&
+                                   (hour < currentHour || (hour === currentHour && currentMinute > 0));
 
-                this.slotsMap.set(hour, { booked, discount, display });
+                // Combine both: backend is authoritative for midnight hours,
+                // client-side handles real-time updates for normal hours
+                const isPast = backendPast || clientPast;
+
+                this.slotsMap.set(hour, { booked, pending, discount, display, isPast });
 
                 const div = document.createElement('div');
-                div.className = `time-slot ${booked ? 'booked' : ''} ${discount ? 'discount' : ''}`;
+                div.className = 'time-slot';
                 div.dataset.hour = hour;
                 div.textContent = display;
 
-                if (!booked) {
+                if (isPast) {
+                    div.classList.add('past');
+                    div.title = TRANSLATIONS.time_passed;
+                } else if (booked) {
+                    div.classList.add('booked');
+                } else if (pending) {
+                    div.classList.add('booked');
+                    div.style.opacity = '0.85';
+                } else {
+                    if (discount) div.classList.add('discount');
                     div.addEventListener('click', () => this.selectTime(div, hour));
                 }
 
                 container.appendChild(div);
             });
 
-            // after reload, apply range highlight (if any)
             this.applyRangeUI();
             this.updateSummary();
 
@@ -408,6 +462,10 @@ class BookingSystem {
     }
 
     selectTime(element, hour) {
+        // ✅ Extra guard: never allow selecting a past slot
+        const info = this.slotsMap.get(hour);
+        if (info && info.isPast) return;
+
         document.querySelectorAll('.time-slot').forEach(s => {
             s.classList.remove('selected', 'in-range');
         });
@@ -419,14 +477,13 @@ class BookingSystem {
         this.updateSummary();
     }
 
-    // ✅ highlight range based on selectedHour + duration
     applyRangeUI() {
         document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('in-range'));
 
         if (this.selectedHour === null) return;
 
         const start = this.selectedHour;
-        const end = start + this.duration; // end is exclusive
+        const end = start + this.duration;
 
         document.querySelectorAll('.time-slot').forEach(el => {
             const h = parseInt(el.dataset.hour);
@@ -436,7 +493,6 @@ class BookingSystem {
         });
     }
 
-    // ✅ check if full duration is available (no booked in range)
     isDurationAvailable() {
         if (this.selectedHour === null) return false;
 
@@ -445,13 +501,11 @@ class BookingSystem {
 
         for (let h = start; h < end; h++) {
             const info = this.slotsMap.get(h);
-            // if missing hour or booked => not available
-            if (!info || info.booked) return false;
+            if (!info || info.booked || info.pending || info.isPast) return false;
         }
         return true;
     }
 
-    // ✅ discount hours inside range
     countDiscountHoursInRange() {
         if (this.selectedHour === null) return 0;
 
@@ -467,13 +521,11 @@ class BookingSystem {
     }
 
     showWarning() {
-        const box = document.getElementById('range-warning');
-        box.style.display = 'block';
+        document.getElementById('range-warning').style.display = 'block';
     }
 
     hideWarning() {
-        const box = document.getElementById('range-warning');
-        box.style.display = 'none';
+        document.getElementById('range-warning').style.display = 'none';
     }
 
     updateSummary() {
@@ -482,7 +534,6 @@ class BookingSystem {
         document.getElementById('summary-duration').textContent =
             `${this.duration} ${this.duration === 1 ? TRANSLATIONS.hour : TRANSLATIONS.hours}`;
 
-        // time range
         if (this.selectedHour !== null) {
             const start = this.selectedHour;
             const end = start + this.duration;
@@ -491,15 +542,11 @@ class BookingSystem {
             document.getElementById('summary-time').textContent = '-';
         }
 
-        // validate duration availability
         const okRange = this.isDurationAvailable();
         if (this.selectedHour !== null && !okRange) this.showWarning();
         else this.hideWarning();
 
-        // pricing
         const basePrice = this.pricePerHour * this.duration;
-
-        // ✅ discount only on discounted hours inside range
         const discountedHours = okRange ? this.countDiscountHoursInRange() : 0;
         const discount = discountedHours > 0 ? (this.pricePerHour * discountedHours * 0.25) : 0;
         const total = basePrice - discount;
@@ -516,13 +563,12 @@ class BookingSystem {
 
         document.getElementById('summary-total').textContent = `${total.toLocaleString()} ${TRANSLATIONS.iqd}`;
 
-        // ✅ enable confirm only if range is valid
         const canConfirm = this.stadiumId && this.selectedDate && this.selectedHour !== null && okRange;
         document.getElementById('confirm-booking').disabled = !canConfirm;
     }
 
     async confirmBooking() {
-        const customerName = document.getElementById('customer-name').value.trim();
+        const customerName  = document.getElementById('customer-name').value.trim();
         const customerPhone = document.getElementById('customer-phone').value.trim();
         const customerNotes = document.getElementById('customer-notes').value.trim();
 
@@ -545,13 +591,13 @@ class BookingSystem {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    stadium_id: this.stadiumId,
-                    date: this.selectedDate,
-                    start_hour: this.selectedHour,
+                    stadium_id:     this.stadiumId,
+                    date:           this.selectedDate,
+                    start_hour:     this.selectedHour,
                     duration_hours: this.duration,
-                    customer_name: customerName,
+                    customer_name:  customerName,
                     customer_phone: customerPhone,
-                    notes: customerNotes
+                    notes:          customerNotes
                 })
             });
 

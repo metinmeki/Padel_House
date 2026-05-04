@@ -4,7 +4,6 @@ import os
 
 # ✅ Create app instance
 app = create_app()
-
 if __name__ == '__main__':
     # ✅ PRODUCTION SETTINGS
 

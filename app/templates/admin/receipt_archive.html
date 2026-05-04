@@ -1,0 +1,494 @@
+{% extends 'admin/base_admin.html' %}
+
+{% block title %}أرشيف الفواتير - {{ t('site_name') }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  :root {
+    --ph: #E57625;
+    --ph-light: rgba(229,118,37,0.10);
+    --ph-mid: rgba(229,118,37,0.20);
+    --green: #28a745;
+    --red: #dc3545;
+    --blue: #3b82f6;
+    --gold: #f59e0b;
+    --border: #e9ecef;
+    --radius: 12px;
+    --shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+
+  /* ── HEADER ── */
+  .arch-header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+    border-radius: var(--radius);
+    padding: 22px 26px;
+    margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  }
+  .arch-header-left { display: flex; align-items: center; gap: 14px; }
+  .arch-header-icon {
+    width: 50px; height: 50px; border-radius: 13px;
+    background: var(--ph-light);
+    border: 1px solid rgba(229,118,37,0.30);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: var(--ph);
+  }
+  .arch-header-title { font-size: 19px; font-weight: 800; color: white; margin-bottom: 2px; }
+  .arch-header-sub   { font-size: 12px; color: rgba(255,255,255,0.55); }
+
+  /* ── STATS ── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(4,1fr);
+    gap: 12px; margin-bottom: 18px;
+  }
+  .stat-card {
+    background: white; border-radius: var(--radius);
+    border: 1px solid var(--border);
+    padding: 16px 18px; box-shadow: var(--shadow);
+    display: flex; align-items: center; gap: 12px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.10); }
+  .stat-icon {
+    width: 44px; height: 44px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .si-orange { background: var(--ph-light);            color: var(--ph); }
+  .si-green  { background: rgba(40,167,69,0.10);       color: var(--green); }
+  .si-red    { background: rgba(220,53,69,0.10);       color: var(--red); }
+  .si-blue   { background: rgba(59,130,246,0.10);      color: var(--blue); }
+  .stat-label { font-size: 11px; color: #6c757d; margin-bottom: 3px; font-weight: 600; }
+  .stat-value {
+    font-size: 19px; font-weight: 900; color: #1a1a2e;
+    font-family: 'Courier New', monospace;
+  }
+  .stat-value small { font-size: 10px; font-weight: 400; color: #adb5bd; }
+
+  /* ── FILTERS ── */
+  .filter-card {
+    background: white; border-radius: var(--radius);
+    border: 1px solid var(--border); padding: 16px 20px;
+    margin-bottom: 16px; box-shadow: var(--shadow);
+  }
+  .filter-title {
+    font-size: 11.5px; font-weight: 800; color: #adb5bd;
+    text-transform: uppercase; letter-spacing: 0.7px;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 6px;
+  }
+  .filter-title i { color: var(--ph); }
+  .filter-rows { display: flex; flex-direction: column; gap: 12px; }
+  .filter-row  { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .filter-row-label {
+    font-size: 12px; font-weight: 700; color: #6c757d;
+    min-width: 80px; flex-shrink: 0;
+  }
+  .pills { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill {
+    padding: 5px 14px; border-radius: 30px;
+    border: 1.5px solid var(--border); background: #f8f9fa;
+    font-size: 12px; font-weight: 600; color: #6c757d;
+    text-decoration: none; transition: all 0.18s;
+    display: inline-flex; align-items: center; gap: 5px;
+    white-space: nowrap; cursor: pointer;
+  }
+  .pill:hover { border-color: var(--ph); color: var(--ph); background: var(--ph-light); }
+  .pill.active { background: var(--ph); border-color: var(--ph); color: white; }
+  .filter-divider { height: 1px; background: var(--border); margin: 2px 0; }
+
+  .search-wrap { flex: 1; position: relative; min-width: 200px; }
+  .search-wrap i { position: absolute; top: 50%; transform: translateY(-50%); right: 13px; color: #adb5bd; font-size: 13px; }
+  .search-input {
+    width: 100%; padding: 8px 36px 8px 14px;
+    border: 1.5px solid var(--border); border-radius: 30px;
+    font-size: 13px; outline: none; background: #f8f9fa;
+    transition: all 0.2s; font-family: 'Cairo', sans-serif;
+  }
+  .search-input:focus { border-color: var(--ph); background: white; }
+  .btn-search {
+    padding: 8px 18px; background: var(--ph); color: white;
+    border: none; border-radius: 30px; font-size: 12.5px;
+    font-weight: 700; cursor: pointer; transition: background 0.18s;
+    font-family: 'Cairo', sans-serif;
+  }
+  .btn-search:hover { background: #cc6820; }
+  .btn-clear {
+    padding: 8px 13px; background: #f8f9fa; color: #6c757d;
+    border: 1.5px solid var(--border); border-radius: 30px;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 4px;
+    transition: all 0.18s;
+  }
+  .btn-clear:hover { border-color: var(--red); color: var(--red); }
+
+  .custom-date-box {
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    padding: 11px 14px; background: var(--ph-light);
+    border: 1.5px dashed rgba(229,118,37,0.35);
+    border-radius: 10px; margin-top: 4px;
+  }
+  .date-label { font-size: 12px; font-weight: 700; color: var(--ph); }
+  .date-input {
+    padding: 6px 11px; border: 1.5px solid var(--border);
+    border-radius: 8px; font-size: 12.5px; outline: none;
+    background: white; transition: border-color 0.2s;
+  }
+  .date-input:focus { border-color: var(--ph); }
+  .btn-apply {
+    padding: 6px 15px; background: var(--green); color: white;
+    border: none; border-radius: 8px; font-size: 12.5px;
+    font-weight: 700; cursor: pointer; font-family: 'Cairo', sans-serif;
+  }
+
+  /* ── TABLE ── */
+  .table-card {
+    background: white; border-radius: var(--radius);
+    border: 1px solid var(--border); box-shadow: var(--shadow); overflow: hidden;
+  }
+  .table-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; gap: 8px;
+  }
+  .table-card-title {
+    font-size: 14px; font-weight: 800; color: #1a1a2e;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .table-card-title i { color: var(--ph); }
+  .count-chip {
+    background: var(--ph-light); color: var(--ph);
+    border: 1px solid var(--ph-mid); padding: 3px 12px;
+    border-radius: 20px; font-size: 12px; font-weight: 800;
+  }
+
+  .table-scroll { overflow-x: auto; }
+  table.arch {
+    width: 100%; border-collapse: collapse; font-size: 13px; min-width: 960px;
+  }
+  table.arch thead th {
+    background: #f8f9fa; color: #6c757d;
+    padding: 11px 14px; font-size: 11px; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    white-space: nowrap; text-align: right;
+    border-bottom: 2px solid var(--border);
+  }
+  table.arch tbody tr { border-bottom: 1px solid #f1f3f5; transition: background 0.12s; }
+  table.arch tbody tr:last-child { border-bottom: none; }
+  table.arch tbody tr:hover { background: #fffaf6; }
+  table.arch td { padding: 11px 14px; vertical-align: middle; color: #1a1a2e; }
+
+  .cell-id    { font-size: 11.5px; font-weight: 800; color: #adb5bd; }
+  .cell-date  { font-weight: 700; white-space: nowrap; }
+  .cell-time  { font-size: 12px; color: #6c757d; white-space: nowrap; }
+  .cell-muted { color: #adb5bd; font-size: 12px; }
+  .cell-mono  { font-family: 'Courier New', monospace; font-weight: 700; }
+
+  .bdg {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700; white-space: nowrap;
+  }
+  .bdg.stadium  { background: rgba(229,118,37,0.10); color: var(--ph);    border: 1px solid rgba(229,118,37,0.25); }
+  .bdg.table-s  { background: rgba(40,167,69,0.10);  color: var(--green); border: 1px solid rgba(40,167,69,0.25); }
+  .bdg.takeaway { background: rgba(245,158,11,0.10); color: var(--gold);  border: 1px solid rgba(245,158,11,0.25); }
+  .bdg.cash { background: rgba(40,167,69,0.10);  color: var(--green); border: 1px solid rgba(40,167,69,0.25); }
+  .bdg.card { background: rgba(59,130,246,0.10); color: var(--blue);  border: 1px solid rgba(59,130,246,0.25); }
+  .bdg.debt { background: rgba(220,53,69,0.10);  color: var(--red);   border: 1px solid rgba(220,53,69,0.25); }
+
+  .amount-main { font-family:'Courier New',monospace; font-weight:900; font-size:14px; color:var(--ph); }
+  .amount-disc { font-family:'Courier New',monospace; font-weight:700; font-size:12.5px; color:var(--red); }
+  .amount-grn  { font-family:'Courier New',monospace; font-weight:700; font-size:12.5px; color:var(--green); }
+  .duration-v  { font-family:'Courier New',monospace; font-size:12px; color:var(--blue); font-weight:700; }
+
+  .btn-view {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 12px;
+    background: var(--ph-light); color: var(--ph);
+    border: 1px solid var(--ph-mid); border-radius: 8px;
+    font-size: 11.5px; font-weight: 700;
+    text-decoration: none; transition: all 0.18s;
+  }
+  .btn-view:hover { background: var(--ph); color: white; }
+
+  /* footer totals */
+  .table-footer {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; padding: 13px 20px;
+    border-top: 2px solid var(--border);
+    background: #fafafa; flex-wrap: wrap;
+  }
+  .fc {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 16px; border-radius: 30px;
+    font-size: 12.5px; font-weight: 700;
+    border: 1.5px solid var(--border); background: white;
+  }
+  .fc-label { color: #6c757d; font-weight: 500; }
+  .fc.total { border-color: var(--ph-mid); background: var(--ph-light); }
+  .fc.disc  { border-color: rgba(220,53,69,0.25); background: rgba(220,53,69,0.05); }
+  .fc.net   { border-color: rgba(40,167,69,0.25); background: rgba(40,167,69,0.07); }
+  .fc.total .fc-val { color: var(--ph); }
+  .fc.disc  .fc-val { color: var(--red); }
+  .fc.net   .fc-val { color: var(--green); }
+
+  /* empty */
+  .empty-state { text-align: center; padding: 60px 20px; color: #6c757d; }
+  .empty-icon {
+    width: 68px; height: 68px; border-radius: 18px;
+    background: var(--ph-light); color: var(--ph);
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 28px; margin-bottom: 12px;
+  }
+  .empty-state h5 { font-size: 15px; font-weight: 800; color: #1a1a2e; margin-bottom: 5px; }
+  .empty-state p  { font-size: 13px; }
+
+  @media (max-width: 1024px) { .stats-row { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 600px)  { .stats-row { grid-template-columns: 1fr 1fr; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3" style="max-width:1400px;">
+
+  <!-- Header -->
+  <div class="arch-header">
+    <div class="arch-header-left">
+      <div class="arch-header-icon"><i class="fas fa-archive"></i></div>
+      <div>
+        <div class="arch-header-title">أرشيف الفواتير</div>
+        <div class="arch-header-sub">سجل كامل لجميع الجلسات والمدفوعات</div>
+      </div>
+    </div>
+    <a href="{{ url_for('pos.index') }}" class="btn btn-sm btn-outline-light">
+      <i class="fas fa-cash-register me-1"></i> الذهاب للـ POS
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon si-orange"><i class="fas fa-receipt"></i></div>
+      <div>
+        <div class="stat-label">عدد الفواتير</div>
+        <div class="stat-value">{{ count }} <small>فاتورة</small></div>
+      </div>
+    </div>
+    </div>
+
+  <!-- Filters -->
+  <form method="GET" action="{{ url_for('admin.receipt_archive') }}" id="filterForm">
+    <input type="hidden" name="period"       id="h_period"       value="{{ period }}">
+    <input type="hidden" name="session_type" id="h_session_type" value="{{ session_type }}">
+    <input type="hidden" name="payment"      id="h_payment"      value="{{ payment }}">
+
+    <div class="filter-card">
+      <div class="filter-title"><i class="fas fa-filter"></i> خيارات التصفية</div>
+      <div class="filter-rows">
+
+        <!-- Period -->
+        <div class="filter-row">
+          <div class="filter-row-label"><i class="fas fa-calendar me-1"></i> الفترة</div>
+          <div class="pills">
+            {% for p, icon, label in [
+              ('today',     'fas fa-sun',           'اليوم'),
+              ('yesterday', 'fas fa-moon',          'أمس'),
+              ('week',      'fas fa-calendar-week', '7 أيام'),
+              ('month',     'fas fa-calendar',      'الشهر'),
+              ('all',       'fas fa-infinity',      'الكل'),
+              ('custom',    'fas fa-sliders',       'مخصص')
+            ] %}
+            <a href="{% if p != 'custom' %}{{ url_for('admin.receipt_archive', period=p, session_type=session_type, payment=payment, search=search) }}{% else %}#{% endif %}"
+               class="pill {{ 'active' if period == p }}"
+               {% if p == 'custom' %}onclick="toggleCustom(event)"{% endif %}>
+              <i class="{{ icon }}"></i> {{ label }}
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Custom date -->
+        <div id="customDateBox" style="{{ '' if period == 'custom' else 'display:none;' }}">
+          <div class="custom-date-box">
+            <span class="date-label">من:</span>
+            <input type="date" name="date_from" class="date-input" value="{{ date_from or '' }}">
+            <span class="date-label">إلى:</span>
+            <input type="date" name="date_to"   class="date-input" value="{{ date_to or '' }}">
+            <button type="submit" class="btn-apply"
+                    onclick="document.getElementById('h_period').value='custom'">
+              <i class="fas fa-check me-1"></i> تطبيق
+            </button>
+          </div>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <!-- Session type -->
+
+
+        <!-- Search -->
+        <div class="filter-row">
+          <div class="filter-row-label"><i class="fas fa-magnifying-glass me-1"></i> بحث</div>
+          <div class="search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" name="search" class="search-input"
+                   placeholder="اسم أو رقم هاتف الزبون..."
+                   value="{{ search }}">
+          </div>
+          <button type="submit" class="btn-search">
+            <i class="fas fa-search me-1"></i> بحث
+          </button>
+          {% if search %}
+          <a href="{{ url_for('admin.receipt_archive', period=period, session_type=session_type, payment=payment) }}"
+             class="btn-clear">
+            <i class="fas fa-xmark"></i> مسح
+          </a>
+          {% endif %}
+        </div>
+
+      </div>
+    </div>
+  </form>
+
+  <!-- Table -->
+  <div class="table-card">
+    <div class="table-card-header">
+      <div class="table-card-title">
+        <i class="fas fa-list-ul"></i> سجل الفواتير
+        <span class="count-chip">{{ count }} نتيجة</span>
+      </div>
+    </div>
+
+    {% if sessions %}
+    <div class="table-scroll">
+      <table class="arch">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>التاريخ</th>
+            <th>الوقت</th>
+            <th>النوع</th>
+            <th>الموقع</th>
+            <th>الزبون</th>
+            <th>الهاتف</th>
+            <th>مدة اللعب</th>
+            <th>سعر اللعب</th>
+            <th>المنتجات</th>
+            <th>الخصم</th>
+            <th>الدفع</th>
+            <th>الإجمالي</th>
+            <th>الفاتورة</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sessions %}
+          {% set disc = (s.auto_discount or 0) + (s.manual_discount or 0) %}
+          {% set orders_total = s.get_orders_total() %}
+          <tr>
+            <td><span class="cell-id">#{{ '%05d' % s.id }}</span></td>
+            <td><span class="cell-date">{{ s.created_at.strftime('%Y-%m-%d') }}</span></td>
+            <td><span class="cell-time">{{ s.created_at.strftime('%H:%M') }}</span></td>
+            <td>
+              {% if s.session_type == 'stadium' %}
+                <span class="bdg stadium"><i class="fas fa-table-tennis-paddle-ball"></i> ملعب</span>
+              {% elif s.session_type == 'table' %}
+                <span class="bdg table-s"><i class="fas fa-utensils"></i> طاولة</span>
+              {% else %}
+                <span class="bdg takeaway"><i class="fas fa-bolt"></i> سريع</span>
+              {% endif %}
+            </td>
+            <td style="font-weight:600; white-space:nowrap;">{{ s.get_location_name() }}</td>
+            <td style="font-weight:600;">{{ s.customer_name or '—' }}</td>
+            <td>
+              {% if s.customer_phone %}
+                <span class="cell-mono" style="font-size:12px;direction:ltr;display:inline-block;">{{ s.customer_phone }}</span>
+              {% else %}<span class="cell-muted">—</span>{% endif %}
+            </td>
+            <td>
+              {% if s.session_type == 'stadium' and s.play_time_minutes %}
+                {% set h = (s.play_time_minutes // 60)|int %}
+                {% set m = (s.play_time_minutes % 60)|int %}
+                <span class="duration-v">{% if h %}{{ h }}س{% endif %}{% if m %} {{ m }}د{% endif %}</span>
+              {% else %}<span class="cell-muted">—</span>{% endif %}
+            </td>
+            <td>
+              {% if s.play_time_price and s.play_time_price > 0 %}
+                <span class="cell-mono">{{ '{:,.0f}'.format(s.play_time_price) }}</span>
+              {% else %}<span class="cell-muted">—</span>{% endif %}
+            </td>
+            <td>
+              {% if orders_total > 0 %}
+                <span class="amount-grn">{{ '{:,.0f}'.format(orders_total) }}</span>
+              {% else %}<span class="cell-muted">—</span>{% endif %}
+            </td>
+            <td>
+              {% if disc > 0 %}
+                <span class="amount-disc">-{{ '{:,.0f}'.format(disc) }}</span>
+              {% else %}<span class="cell-muted">—</span>{% endif %}
+            </td>
+            <td>
+              {% if s.payment_method == 'cash' %}
+                <span class="bdg cash"><i class="fas fa-money-bill-wave"></i> نقدي</span>
+              {% elif s.payment_method == 'card' %}
+                <span class="bdg card"><i class="fas fa-credit-card"></i> بطاقة</span>
+              {% elif s.payment_method == 'debt' %}
+                <span class="bdg debt"><i class="fas fa-file-invoice-dollar"></i> دين</span>
+              {% else %}<span class="cell-muted">—</span>{% endif %}
+            </td>
+            <td>
+              <span class="amount-main">{{ '{:,.0f}'.format(s.total_amount or 0) }}</span>
+              <small class="cell-muted"> IQD</small>
+            </td>
+            <td>
+              <a href="{{ url_for('pos.receipt', session_id=s.id) }}"
+                 class="btn-view" target="_blank">
+                <i class="fas fa-receipt"></i> عرض
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-footer">
+      <div class="fc total">
+        <span class="fc-label">الإجمالي:</span>
+        <span class="fc-val cell-mono">{{ '{:,.0f}'.format(total_revenue) }} IQD</span>
+      </div>
+      <div class="fc disc">
+        <span class="fc-label">الخصومات:</span>
+        <span class="fc-val cell-mono">-{{ '{:,.0f}'.format(total_discount) }} IQD</span>
+      </div>
+      <div class="fc net">
+        <span class="fc-label">الصافي:</span>
+        <span class="fc-val cell-mono">{{ '{:,.0f}'.format(total_revenue - total_discount) }} IQD</span>
+      </div>
+    </div>
+
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon"><i class="fas fa-folder-open"></i></div>
+      <h5>لا توجد فواتير</h5>
+      <p>لم يتم العثور على فواتير بهذه التصفية. جرّب تغيير الفترة أو النوع.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+function toggleCustom(e) {
+  e.preventDefault();
+  const box = document.getElementById('customDateBox');
+  const showing = box.style.display !== 'none';
+  box.style.display = showing ? 'none' : 'block';
+  document.querySelectorAll('.pill').forEach(p => {
+    if (p.textContent.trim().includes('مخصص'))
+      p.classList.toggle('active', !showing);
+  });
+  if (!showing) document.getElementById('h_period').value = 'custom';
+}
+</script>
+{% endblock %}

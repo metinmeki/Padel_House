@@ -23,6 +23,27 @@
     </div>
 </div>
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<li class="nav-item">
+    <a href="{{ url_for('admin.receipt_archive') }}"
+       class="nav-link {% if 'receipt_archive' in request.endpoint %}active{% endif %}">
+        <span><i class="fas fa-archive me-2"></i>أرشيف الفواتير</span>
+    </a>
+</li>
+
 <!-- ✅ REVENUE SOURCES BREAKDOWN (replaces single Total Revenue card) -->
 <div class="table-card mb-4" style="border-top: 4px solid #28a745;">
     <h6 class="text-muted mb-3">

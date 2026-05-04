@@ -887,3 +887,87 @@ def toggle_table(table_id):
     db.session.commit()
     status = 'مفعّل' if table.is_active else 'مخفي'
     return jsonify({'success': True, 'is_active': table.is_active, 'message': f'{table.name} - {status}'})
+
+
+
+
+# ==================== RECEIPTS ARCHIVE ====================
+# Add this route to your existing pos.py file
+
+@pos_bp.route('/archive')
+@login_required
+def archive():
+    # Filters
+    period       = request.args.get('period', 'today')
+    session_type = request.args.get('session_type', 'all')
+    payment      = request.args.get('payment', 'all')
+    search       = (request.args.get('search') or '').strip()
+
+    today = datetime.now().date()
+
+    # Date range
+    if period == 'today':
+        start_date = datetime.combine(today, datetime.min.time())
+        end_date   = datetime.combine(today, datetime.max.time())
+    elif period == 'yesterday':
+        yesterday  = today - timedelta(days=1)
+        start_date = datetime.combine(yesterday, datetime.min.time())
+        end_date   = datetime.combine(yesterday, datetime.max.time())
+    elif period == 'week':
+        start_date = datetime.combine(today - timedelta(days=7), datetime.min.time())
+        end_date   = datetime.combine(today, datetime.max.time())
+    elif period == 'month':
+        start_date = datetime.combine(today.replace(day=1), datetime.min.time())
+        end_date   = datetime.combine(today, datetime.max.time())
+    elif period == 'all':
+        start_date = None
+        end_date   = None
+    else:
+        start_date = datetime.combine(today, datetime.min.time())
+        end_date   = datetime.combine(today, datetime.max.time())
+
+    # Base query — only paid sessions
+    query = POSSession.query.filter(POSSession.status == 'paid')
+
+    if start_date:
+        query = query.filter(POSSession.created_at >= start_date)
+    if end_date:
+        query = query.filter(POSSession.created_at <= end_date)
+
+    if session_type != 'all':
+        query = query.filter(POSSession.session_type == session_type)
+
+    if payment != 'all':
+        query = query.filter(POSSession.payment_method == payment)
+
+    if search:
+        query = query.filter(
+            db.or_(
+                POSSession.customer_name.ilike(f'%{search}%'),
+                POSSession.customer_phone.ilike(f'%{search}%'),
+            )
+        )
+
+    sessions = query.order_by(POSSession.created_at.desc()).all()
+
+    # Summary stats
+    total_revenue  = sum(s.total_amount or 0 for s in sessions)
+    total_discount = sum(
+        (getattr(s, 'auto_discount', 0) or 0) +
+        (getattr(s, 'manual_discount', 0) or 0) +
+        (getattr(s, 'discount_amount', 0) or 0)
+        for s in sessions
+    )
+    count = len(sessions)
+
+    return render_template(
+        'pos/archive.html',
+        sessions=sessions,
+        total_revenue=total_revenue,
+        total_discount=total_discount,
+        count=count,
+        period=period,
+        session_type=session_type,
+        payment=payment,
+        search=search,
+    )

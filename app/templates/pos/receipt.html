@@ -4,528 +4,453 @@
 
 {% block extra_css %}
 <style>
-  *{
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    box-sizing: border-box;
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Tajawal:wght@400;500;700;800&display=swap');
+
+  *{ box-sizing:border-box; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+
+  body{ background:#1a1a2e; min-height:100vh; }
+
+  .page-wrapper{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:2rem 1rem;
+    background: radial-gradient(ellipse at top, #16213e 0%, #0f0f1a 60%);
   }
 
-  body{ background:#f5f5f5; }
+  /* ── Controls ── */
+  .controls{
+    width:100%;
+    max-width:420px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:.75rem;
+    margin-bottom:1.5rem;
+    flex-wrap:wrap;
+  }
 
-  .receipt-wrapper{
+  .btn{
+    font-family:'Tajawal',sans-serif;
+    font-size:.88rem;
+    font-weight:600;
+    padding:.5rem 1.1rem;
+    border-radius:8px;
+    border:none;
+    cursor:pointer;
+    text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    gap:.4rem;
+    transition:all .18s;
+  }
+  .btn:hover{ transform:translateY(-1px); }
+  .btn-ghost{ background:rgba(255,255,255,.08); color:#e2e8f0; border:1px solid rgba(255,255,255,.15); }
+  .btn-ghost:hover{ background:rgba(255,255,255,.14); }
+  .btn-print{ background:#c084fc; color:#fff; }
+  .btn-print:hover{ background:#a855f7; }
+  .btn-new{ background:#34d399; color:#064e3b; }
+  .btn-new:hover{ background:#10b981; }
+  .btn-session{ background:#60a5fa; color:#1e3a5f; }
+  .btn-session:hover{ background:#3b82f6; }
+
+  /* ── Success badge ── */
+  .success-badge{
+    font-family:'Tajawal',sans-serif;
+    font-size:.95rem;
+    font-weight:700;
+    color:#34d399;
+    background:rgba(52,211,153,.12);
+    border:1px solid rgba(52,211,153,.3);
+    padding:.5rem 1.4rem;
+    border-radius:999px;
+    display:inline-flex;
+    align-items:center;
+    gap:.5rem;
+    margin-bottom:1.5rem;
+  }
+
+  /* ── Receipt card ── */
+  .receipt-card{
+    width:100%;
+    max-width:360px;
     background:#fff;
-    border-radius:15px;
-    padding:2rem;
-    box-shadow:0 4px 6px rgba(0,0,0,.1);
+    border-radius:4px 4px 0 0;
+    overflow:hidden;
+    /* torn top */
+    position:relative;
   }
 
-  .receipt-container{
-    background:#fff;
-    color:#000;
-    max-width:350px;
-    margin:0 auto;
-    padding:20px;
-    border:2px dashed #e9ecef;
-    border-radius:10px;
-    font-family: Arial, sans-serif;
-
-    /* RTL for Arabic layout */
-    direction: rtl;
-    text-align: right;
+  /* Jagged top edge SVG mask */
+  .receipt-card::before{
+    content:'';
+    display:block;
+    height:14px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='14'%3E%3Cpath d='M0 14 Q5 0 10 14 Q15 0 20 14Z' fill='%231a1a2e'/%3E%3C/svg%3E") repeat-x top center;
+    background-size:20px 14px;
+  }
+  .receipt-card::after{
+    content:'';
+    display:block;
+    height:14px;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='14'%3E%3Cpath d='M0 0 Q5 14 10 0 Q15 14 20 0Z' fill='%231a1a2e'/%3E%3C/svg%3E") repeat-x bottom center;
+    background-size:20px 14px;
   }
 
-  /* Reduce spacing */
-  .receipt-container *{ line-height:1.3; }
-  .receipt-header p,
-  .receipt-footer p{ margin:3px 0; }
-  .receipt-info,
-  .receipt-items{ margin-bottom:8px; }
-  .receipt-item{ padding:4px 0; }
+  .receipt-inner{
+    padding:1.2rem 1.4rem;
+    font-family:'IBM Plex Mono',monospace;
+    color:#111;
+    direction:rtl;
+  }
 
-  .receipt-header{
+  /* Header */
+  .r-header{
     text-align:center;
-    border-bottom:1px dashed #000;
-    padding-bottom:10px;
-    margin-bottom:10px;
-
-    /* keep English header centered & LTR */
+    margin-bottom:1rem;
+    padding-bottom:.8rem;
+    border-bottom:1px dashed #ccc;
     direction:ltr;
   }
-
-  .receipt-header h3{
-    color:#8b5cf6;
+  .r-logo{
+    font-family:'IBM Plex Mono',monospace;
     font-weight:700;
-    margin-bottom:6px;
     font-size:1.35rem;
+    letter-spacing:3px;
+    color:#111;
+    margin-bottom:2px;
+  }
+  .r-logo span{ color:#a855f7; }
+  .r-sub{
+    font-size:.72rem;
+    color:#555;
     letter-spacing:.5px;
   }
 
-  .receipt-header p{
-    color:#333;
-    font-size:.95rem;
+  /* Info rows */
+  .r-info{
+    background:#f8f8f8;
+    border-radius:6px;
+    padding:.7rem .9rem;
+    margin-bottom:.8rem;
+    font-size:.75rem;
   }
-
-  .receipt-info{
-    background:#f8f9fa;
-    padding:12px;
-    border-radius:8px;
-  }
-
-  .info-row{
+  .r-row{
     display:flex;
     justify-content:space-between;
     align-items:center;
-    gap:10px;
-    margin-bottom:6px;
+    padding:2px 0;
   }
-  .info-row:last-child{ margin-bottom:0; }
+  .r-label{ color:#888; }
+  .r-val{ font-weight:600; color:#111; }
 
-  .info-label{
-    color:#6c757d;
-    white-space:nowrap;
-  }
-  .info-value{
+  /* Invoice number special */
+  .r-invoice{
+    font-size:1.05rem;
     font-weight:700;
-    color:#000;
-    white-space:nowrap;
+    color:#a855f7;
   }
 
-  .receipt-items{
-    border-top:1px dashed #000;
-    border-bottom:1px dashed #000;
-    padding:10px 0;
-    margin:10px 0;
+  /* Divider */
+  .r-divider{
+    border:none;
+    border-top:1px dashed #ccc;
+    margin:.7rem 0;
   }
 
-  .receipt-item{
+  /* Items */
+  .r-items{ font-size:.75rem; }
+
+  .r-item{
     display:flex;
     justify-content:space-between;
-    align-items:center;
-    gap:10px;
-    font-size:.95rem;
+    align-items:flex-start;
+    padding:4px 0;
+    gap:8px;
   }
 
-  .item-name{
-    flex:1;
-    text-align:right;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-  }
+  .r-item-name{ flex:1; color:#222; }
+  .r-item-price{ font-weight:700; white-space:nowrap; color:#111; direction:ltr; }
 
-  .item-price{
+  .r-item.playtime{
+    background:#f3e8ff;
+    padding:6px 8px;
+    border-radius:5px;
+    margin:4px 0;
     font-weight:700;
-    white-space:nowrap;
-    text-align:left;
+    color:#6b21a8;
   }
 
-  .receipt-item.play-time{
-    background:#fff3cd;
-    padding:8px 10px;
-    border-radius:8px;
-    margin:6px 0;
+  .r-item.subtotal{
+    border-top:1px dashed #ccc;
+    margin-top:6px;
+    padding-top:6px;
     font-weight:700;
-  }
-
-  .receipt-item.subtotal{
-    border-top:1px dashed #999;
-    margin-top:8px;
-    padding-top:8px;
-    font-weight:700;
-  }
-
-  .discount-row{
-    color:#28a745;
-    font-weight:700;
-  }
-
-  /* TOTAL (RTL fixed) */
-  .receipt-total{
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    color:#fff;
-    font-size:1.25rem;
-    font-weight:900;
-    text-align:center;
-    padding:10px 12px;
-    border-radius:10px;
-    margin:10px 0;
-
-    display:flex;
-    justify-content:space-between;
-    gap:10px;
-    direction: rtl;
-  }
-  .receipt-total span:last-child{
-    direction:ltr;
-    unicode-bidi: bidi-override;
-    font-weight:900;
-  }
-
-  .payment-method{
-    text-align:center;
-    padding:8px 10px;
-    background:#f8f9fa;
-    border-radius:8px;
-    margin:8px 0;
-    font-weight:700;
-  }
-
-  .receipt-footer{
-    text-align:center;
-    padding-top:10px;
-    font-size:.82rem;
-    border-top:1px dashed #000;
     color:#111;
-    direction:ltr;
-  }
-  .receipt-footer strong{ color:#000; font-weight:900; }
-  .receipt-footer hr{
-    border:0;
-    border-top:1px dashed #000;
-    margin:10px 0;
   }
 
-  .success-badge{
-    background:#d4edda;
-    color:#155724;
-    padding:10px 20px;
-    border-radius:25px;
-    display:inline-block;
+  .r-item.discount{ color:#16a34a; }
+
+  /* Total */
+  .r-total{
+    background:#111;
+    color:#fff;
+    padding:.8rem 1rem;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-radius:6px;
+    margin:.8rem 0;
+    direction:rtl;
+  }
+  .r-total-label{
+    font-family:'Tajawal',sans-serif;
+    font-size:1rem;
+    font-weight:800;
+    letter-spacing:.5px;
+  }
+  .r-total-amount{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:1.1rem;
     font-weight:700;
-    margin-bottom:1rem;
+    direction:ltr;
+    color:#c084fc;
   }
 
-  /* ===================== */
-  /* PERFECT PRINT 80mm     */
-  /* ===================== */
+  /* Payment */
+  .r-payment{
+    text-align:center;
+    font-size:.73rem;
+    color:#555;
+    background:#f8f8f8;
+    border-radius:5px;
+    padding:.4rem;
+    margin-bottom:.6rem;
+    font-weight:600;
+  }
+
+  /* Footer */
+  .r-footer{
+    text-align:center;
+    font-size:.65rem;
+    color:#888;
+    padding-top:.6rem;
+    border-top:1px dashed #ccc;
+    direction:ltr;
+    line-height:1.6;
+  }
+  .r-footer strong{ color:#111; }
+  .r-footer .brand{ font-size:.72rem; font-weight:700; color:#a855f7; letter-spacing:1px; }
+  .r-footer .tagline{ font-style:italic; color:#aaa; font-size:.62rem; }
+
+  /* ===================== PRINT ===================== */
   @media print{
     @page{ size:80mm auto; margin:0; }
 
-    body{ margin:0; padding:0; background:#fff !important; }
-
+    body, .page-wrapper{ background:#fff !important; padding:0 !important; margin:0 !important; }
     body *{ visibility:hidden !important; }
     #receipt, #receipt *{ visibility:visible !important; }
 
+    .no-print, .no-print *{ display:none !important; }
+
     #receipt{
       position:fixed !important;
-      left:0 !important;
-      top:0 !important;
-      width:72mm !important;
-      max-width:72mm !important;
-      margin:0 !important;
-      padding:3mm !important;
-      border:none !important;
-      border-radius:0 !important;
-      box-shadow:none !important;
+      left:0; top:0;
+      width:76mm !important;
+      max-width:76mm !important;
       background:#fff !important;
-      direction: rtl !important;
-      font-size: 11px !important;
-    }
-
-    #receipt * {
-      font-size: 11px !important;
-      line-height: 1.4 !important;
-    }
-
-    #receipt .receipt-header h3 { font-size: 14px !important; }
-    #receipt .receipt-total      { font-size: 13px !important; }
-
-    .receipt-wrapper{
-      background:transparent !important;
-      box-shadow:none !important;
       border:none !important;
-      padding:0 !important;
-      margin:0 !important;
+      box-shadow:none !important;
       border-radius:0 !important;
     }
+    #receipt::before, #receipt::after{ display:none !important; }
 
-    #receipt .info-row {
-      display:flex !important;
-      justify-content:space-between !important;
-      align-items:flex-start !important;
-      gap: 4px !important;
-      margin-bottom: 4px !important;
-    }
+    .receipt-inner{ padding:4mm 4mm !important; }
 
-    #receipt .info-label {
-      flex-shrink: 0 !important;
-      white-space: nowrap !important;
-    }
+    #receipt *{ font-size:10px !important; line-height:1.45 !important; }
+    .r-logo{ font-size:13px !important; }
+    .r-total-label{ font-size:11px !important; }
+    .r-total-amount{ font-size:12px !important; }
 
-    #receipt .info-value {
-      text-align: left !important;
-      word-break: break-all !important;
-      white-space: normal !important;
-    }
-
-    #receipt .receipt-item {
-      display:flex !important;
-      justify-content:space-between !important;
-      align-items:center !important;
-      gap: 4px !important;
-    }
-
-    #receipt .item-name {
-      flex: 1 !important;
-      white-space: normal !important;
-      overflow: visible !important;
-      text-overflow: unset !important;
-    }
-
-    #receipt .item-price {
-      flex-shrink: 0 !important;
-      white-space: nowrap !important;
-    }
-
-    #receipt .receipt-total {
-      display:flex !important;
-      justify-content:space-between !important;
-      align-items:center !important;
-    }
-
-    .receipt-total,
-    .receipt-total span,
-    .receipt-total span:first-child,
-    .receipt-total span:last-child {
+    .r-total{
       background:#000 !important;
       color:#fff !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
+      border-radius:0 !important;
     }
+    .r-total-amount{ color:#fff !important; }
 
-    .no-print, .no-print *{
-      display:none !important;
-      visibility:hidden !important;
-    }
-
-    #receipt .receipt-header h3,
-    #receipt .receipt-header p,
-    #receipt .info-label,
-    #receipt .info-value,
-    #receipt .item-name,
-    #receipt .item-price,
-    #receipt .receipt-footer,
-    #receipt .receipt-footer p,
-    #receipt .receipt-footer strong{
-      color:#000 !important;
-    }
-
-    #receipt .discount-row,
-    #receipt .discount-row .item-name,
-    #receipt .discount-row .item-price{
-      color:#28a745 !important;
-    }
-
-    #receipt .receipt-info {
-      background: transparent !important;
-      padding: 4px 0 !important;
-    }
-
-    #receipt .payment-method {
-      background: transparent !important;
-      border: 1px solid #000 !important;
-      padding: 4px 6px !important;
-    }
+    .r-info{ background:transparent !important; border:1px solid #ddd; }
+    .r-item.playtime{ background:transparent !important; border:1px solid #ddd; }
+    .r-payment{ background:transparent !important; border:1px solid #ddd; }
   }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-  <div class="col-lg-6">
+<div class="page-wrapper">
 
-    <!-- Success Message -->
-    <div class="text-center mb-4 no-print">
-      <span class="success-badge">
-        <i class="fas fa-check-circle me-2"></i>
-        تم الدفع بنجاح
-      </span>
-    </div>
+  <!-- Success -->
+  <div class="success-badge no-print">
+    <i class="fas fa-check-circle"></i>
+    تم الدفع بنجاح
+  </div>
 
-    <!-- Controls -->
-    <div class="d-flex justify-content-between mb-4 no-print gap-2">
-      <a href="{{ url_for('pos.index') }}" class="btn btn-outline-secondary">
-        <i class="fas fa-arrow-right me-2"></i>رجوع
+  <!-- Controls -->
+  <div class="controls no-print">
+    <a href="{{ url_for('pos.index') }}" class="btn btn-ghost">
+      <i class="fas fa-arrow-right"></i> رجوع
+    </a>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;">
+      <button onclick="printReceipt(false)" class="btn btn-print">
+        <i class="fas fa-print"></i> طباعة
+      </button>
+      <a href="{{ url_for('pos.quick_sale') }}" class="btn btn-new">
+        <i class="fas fa-bolt"></i> بيع سريع
       </a>
-      <div class="d-flex gap-2">
-        <button onclick="printReceipt(false)" class="btn btn-primary">
-          <i class="fas fa-print me-2"></i>طباعة
-        </button>
-        <a href="{{ url_for('pos.quick_sale') }}" class="btn btn-warning">
-          <i class="fas fa-bolt me-2"></i>بيع سريع جديد
-        </a>
-        <a href="{{ url_for('pos.index') }}" class="btn btn-success">
-          <i class="fas fa-plus me-2"></i>جلسة جديدة
-        </a>
-      </div>
+      <a href="{{ url_for('pos.index') }}" class="btn btn-session">
+        <i class="fas fa-plus"></i> جلسة جديدة
+      </a>
     </div>
+  </div>
 
-    <!-- Receipt -->
-    <div class="receipt-wrapper">
-      <div class="receipt-container" id="receipt">
+  <!-- Receipt -->
+  <div class="receipt-card" id="receipt">
+    <div class="receipt-inner">
 
-        <!-- Header -->
-        <div class="receipt-header">
-          <h3>PADEL HOUSE</h3>
-          <p>دهوك، العراق</p>
-          <p>+964 750 066 7676</p>
+      <!-- Header -->
+      <div class="r-header">
+        <div class="r-logo">PADEL <span>HOUSE</span></div>
+        <div class="r-sub">دهوك، العراق &nbsp;|&nbsp; +964 750 066 7676</div>
+      </div>
+
+      <!-- Info -->
+      <div class="r-info">
+        <div class="r-row">
+          <span class="r-label">رقم الفاتورة:</span>
+          <span class="r-val r-invoice">#{{ '%05d' % session.id }}</span>
         </div>
-
-        <!-- Info -->
-        <div class="receipt-info">
-          <div class="info-row">
-            <span class="info-label">رقم الفاتورة:</span>
-            <strong class="info-value">#{{ '%05d' % session.id }}</strong>
-          </div>
-          <div class="info-row">
-            <span class="info-label">التاريخ:</span>
-            <strong class="info-value">{{ session.created_at.strftime('%Y-%m-%d') }}</strong>
-          </div>
-          <div class="info-row">
-            <span class="info-label">الوقت:</span>
-            <strong class="info-value">
-              {{ session.start_time.strftime('%H:%M') }}
-              {% if session.end_time %} - {{ session.end_time.strftime('%H:%M') }}{% endif %}
-            </strong>
-          </div>
-          <div class="info-row">
-            <span class="info-label">الموقع:</span>
-            <strong class="info-value">{{ session.get_location_name() }}</strong>
-          </div>
-          {% if session.customer_name %}
-          <div class="info-row">
-            <span class="info-label">الزبون:</span>
-            <strong class="info-value">{{ session.customer_name }}</strong>
-          </div>
-          {% endif %}
+        <div class="r-row">
+          <span class="r-label">التاريخ:</span>
+          <span class="r-val">{{ session.created_at.strftime('%Y-%m-%d') }}</span>
         </div>
+        <div class="r-row">
+          <span class="r-label">الوقت:</span>
+          <span class="r-val">
+            {{ session.start_time.strftime('%H:%M') }}{% if session.end_time %} – {{ session.end_time.strftime('%H:%M') }}{% endif %}
+          </span>
+        </div>
+        <div class="r-row">
+          <span class="r-label">الموقع:</span>
+          <span class="r-val">{{ session.get_location_name() }}</span>
+        </div>
+        {% if session.customer_name %}
+        <div class="r-row">
+          <span class="r-label">الزبون:</span>
+          <span class="r-val">{{ session.customer_name }}</span>
+        </div>
+        {% endif %}
+      </div>
 
-        <!-- Items -->
-        {% set subtotal = session.play_time_price + session.get_orders_total() %}
-        {% set has_discount = (session.auto_discount > 0) or (session.manual_discount > 0) or (session.discount_amount is defined and session.discount_amount > 0) %}
-        {% set show_items = (session.session_type == 'stadium' and session.play_time_price > 0) or (items|length > 0) or has_discount %}
+      <!-- Items -->
+      {% set subtotal = session.play_time_price + session.get_orders_total() %}
+      {% set has_discount = (session.auto_discount > 0) or (session.manual_discount > 0) or (session.discount_amount is defined and session.discount_amount > 0) %}
+      {% set show_items = (session.session_type == 'stadium' and session.play_time_price > 0) or (items|length > 0) or has_discount %}
 
-        {% if show_items %}
-        <div class="receipt-items">
+      {% if show_items %}
+      <hr class="r-divider">
+      <div class="r-items">
 
-          {% if session.session_type == 'stadium' and session.play_time_price > 0 %}
-          <div class="receipt-item play-time">
-            <span class="item-name">
-              <i class="fas fa-stopwatch"></i>
-              وقت اللعب ({{ (session.play_time_minutes / 60)|int }} ساعة)
-            </span>
-            <span class="item-price">{{ '{:,.0f}'.format(session.play_time_price) }} IQD</span>
-          </div>
-          {% endif %}
-
-          {% for item in items %}
-          <div class="receipt-item">
-            <span class="item-name">{{ item.product.name_ku }} × {{ item.quantity }}</span>
-            <span class="item-price">{{ '{:,.0f}'.format(item.price * item.quantity) }} IQD</span>
-          </div>
-          {% endfor %}
-
-          <!-- Subtotal — only show when there's a discount -->
-          {% if has_discount %}
-          <div class="receipt-item subtotal">
-            <span class="item-name">المجموع الفرعي:</span>
-            <span class="item-price">{{ '{:,.0f}'.format(subtotal) }} IQD</span>
-          </div>
-          {% endif %}
-
-          <!-- Auto discount (time-based, e.g. 12-16 hour slot) -->
-          {% if session.auto_discount > 0 %}
-          <div class="receipt-item discount-row">
-            <span class="item-name"><i class="fas fa-tag"></i> خصم تلقائي:</span>
-            <span class="item-price">-{{ '{:,.0f}'.format(session.auto_discount) }} IQD</span>
-          </div>
-          {% endif %}
-
-          <!-- Manual discount from old session checkout -->
-          {% if session.manual_discount > 0 %}
-          <div class="receipt-item discount-row">
-            <span class="item-name"><i class="fas fa-percentage"></i> خصم يدوي:</span>
-            <span class="item-price">-{{ '{:,.0f}'.format(session.manual_discount) }} IQD</span>
-          </div>
-          {% endif %}
-
-          <!-- Quick Sale discount (new field) -->
-          {% if session.discount_amount is defined and session.discount_amount > 0 %}
-          <div class="receipt-item discount-row">
-            <span class="item-name">
-              <i class="fas fa-tag"></i>
-              خصم
-              {% if session.discount_type == 'pct' and session.discount_value is defined and session.discount_value > 0 %}
-                ({{ session.discount_value|int }}%)
-              {% endif %}:
-            </span>
-            <span class="item-price">-{{ '{:,.0f}'.format(session.discount_amount) }} IQD</span>
-          </div>
-          {% endif %}
-
+        {% if session.session_type == 'stadium' and session.play_time_price > 0 %}
+        <div class="r-item playtime">
+          <span class="r-item-name">وقت اللعب ({{ (session.play_time_minutes / 60)|int }} ساعة)</span>
+          <span class="r-item-price">{{ '{:,.0f}'.format(session.play_time_price) }} IQD</span>
         </div>
         {% endif %}
 
-        <!-- Net Total -->
-        <div class="receipt-total">
-          <span>الصافي:</span>
-          <span>{{ '{:,.0f}'.format(session.total_amount) }} IQD</span>
+        {% for item in items %}
+        <div class="r-item">
+          <span class="r-item-name">{{ item.product.name_ku }} × {{ item.quantity }}</span>
+          <span class="r-item-price">{{ '{:,.0f}'.format(item.price * item.quantity) }} IQD</span>
         </div>
+        {% endfor %}
 
-        <!-- Payment Method -->
-        <div class="payment-method">
-          <i class="fas fa-{{ 'money-bill-wave' if session.payment_method == 'cash' else 'credit-card' }}"></i>
-          طريقة الدفع: {{ 'نقدي' if session.payment_method == 'cash' else 'بطاقة' }}
+        {% if has_discount %}
+        <div class="r-item subtotal">
+          <span class="r-item-name">المجموع الفرعي:</span>
+          <span class="r-item-price">{{ '{:,.0f}'.format(subtotal) }} IQD</span>
         </div>
+        {% endif %}
 
-        <!-- Footer -->
-        <div class="receipt-footer">
-          <hr>
-          <p>Developed by <strong>Coda For ICT Solutions</strong></p>
-          <p>Web Systems • POS • Software • AI</p>
-          <p><i class="fas fa-phone"></i> +964 750 730 8005</p>
-          <p><i class="fas fa-phone"></i> +964 750 236 5028</p>
-          <hr>
-          <p><i class="fas fa-heart"></i> Thank you for your visit</p>
-          <p><strong>PADEL HOUSE</strong></p>
+        {% if session.auto_discount > 0 %}
+        <div class="r-item discount">
+          <span class="r-item-name">خصم تلقائي:</span>
+          <span class="r-item-price">-{{ '{:,.0f}'.format(session.auto_discount) }} IQD</span>
         </div>
+        {% endif %}
+
+        {% if session.manual_discount > 0 %}
+        <div class="r-item discount">
+          <span class="r-item-name">خصم يدوي:</span>
+          <span class="r-item-price">-{{ '{:,.0f}'.format(session.manual_discount) }} IQD</span>
+        </div>
+        {% endif %}
+
+        {% if session.discount_amount is defined and session.discount_amount > 0 %}
+        <div class="r-item discount">
+          <span class="r-item-name">
+            خصم{% if session.discount_type == 'pct' and session.discount_value is defined and session.discount_value > 0 %} ({{ session.discount_value|int }}%){% endif %}:
+          </span>
+          <span class="r-item-price">-{{ '{:,.0f}'.format(session.discount_amount) }} IQD</span>
+        </div>
+        {% endif %}
 
       </div>
-    </div>
+      {% endif %}
 
+      <!-- Total -->
+      <div class="r-total">
+        <span class="r-total-label">الصافي:</span>
+        <span class="r-total-amount">{{ '{:,.0f}'.format(session.total_amount) }} IQD</span>
+      </div>
+
+      <!-- Payment -->
+      <div class="r-payment">
+        طريقة الدفع: {{ 'نقدي' if session.payment_method == 'cash' else 'بطاقة' }}
+      </div>
+
+      <!-- Footer -->
+      <div class="r-footer">
+        <div class="brand">CODA FOR ICT SOLUTIONS</div>
+        <div>Web Systems &bull; POS &bull; Software &bull; AI</div>
+        <div>+964 750 730 8005 &nbsp;&bull;&nbsp; +964 750 236 5028</div>
+        <div class="tagline" style="margin-top:6px;">Thank you for your visit &mdash; <strong>PADEL HOUSE</strong></div>
+      </div>
+
+    </div>
   </div>
+
 </div>
 
 <script>
   const POS_MAIN_URL = "{{ url_for('pos.index') }}";
 
   function goBackToPOS(){
-    if (window.__redirected) return;
+    if(window.__redirected) return;
     window.__redirected = true;
     window.location.replace(POS_MAIN_URL);
   }
 
-  function printReceipt(autoBack = false){
-    const receipt = document.getElementById('receipt');
-    if(receipt){
-      receipt.style.display = 'block';
-      receipt.style.visibility = 'visible';
-    }
-
+  function printReceipt(autoBack=false){
     if(autoBack){
-      window.onafterprint = function(){
-        goBackToPOS();
-      };
+      window.onafterprint = goBackToPOS;
       setTimeout(goBackToPOS, 2500);
     }
-
-    setTimeout(() => window.print(), 150);
+    setTimeout(()=>window.print(), 150);
   }
 
   {% if request.args.get('autoprint') == '1' %}
-  window.addEventListener('load', function(){
-    setTimeout(function(){ printReceipt(true); }, 400);
-  });
+  window.addEventListener('load', ()=>{ setTimeout(()=>printReceipt(true), 400); });
   {% endif %}
 </script>
 {% endblock %}

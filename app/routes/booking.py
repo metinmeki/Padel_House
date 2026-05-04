@@ -4,7 +4,7 @@ from app.models.stadium import Stadium
 from app.models.booking import Booking
 from app.models.settings import Settings
 from datetime import datetime, date, time, timedelta
-
+from datetime import timezone, timedelta
 booking_bp = Blueprint('booking', __name__)
 
 BASE_PRICE_PER_HOUR = 40000
@@ -35,9 +35,6 @@ def safe_notify_admins(
 # Helpers
 # -----------------------------
 def build_hours_list(opening: int, closing: int):
-    """
-    opening=12, closing=4 => [12,13,...,23,0,1,2,3]
-    """
     opening = int(opening or 12)
     closing = int(closing or 4)
     return list(range(opening, 24)) + list(range(0, closing))
@@ -69,11 +66,6 @@ def is_discount_hour(hour: int, discount_start: int, discount_end: int):
 
 
 def booking_record_slots(booking: Booking):
-    """
-    Expand a booking into (date, hour) slots.
-    date=2026-03-20, start=00:00, duration=2 => [(Mar20,0),(Mar20,1)]
-    date=2026-03-20, start=23:00, duration=2 => [(Mar20,23),(Mar21,0)]
-    """
     if not booking.start_time:
         return []
     start_dt = datetime.combine(booking.date, booking.start_time)
@@ -86,10 +78,6 @@ def booking_record_slots(booking: Booking):
 
 
 def get_midnight_save_date(booking_date_obj, start_hour: int, settings=None):
-    """
-    الساعات بعد منتصف الليل (0..closing) تُحفظ على اليوم التالي.
-    مثال: user picks date=Mar19, hour=1 → saved as date=Mar20, start=01:00
-    """
     if settings is None:
         settings = Settings.query.first()
     opening_hour = int(settings.opening_hour or 12) if settings else 12
@@ -100,10 +88,6 @@ def get_midnight_save_date(booking_date_obj, start_hour: int, settings=None):
 
 
 def get_blocking_bookings(stadium_id: int, booking_date_obj):
-    """
-    جلب الحجوزات التي تؤثر على اليوم المطلوب.
-    نجلب اليوم السابق أيضاً لأن حجز 23:00 لمدة ساعتين يمتد لليوم التالي.
-    """
     return Booking.query.filter(
         Booking.stadium_id == stadium_id,
         Booking.date.in_([
@@ -171,21 +155,13 @@ def get_availability_slots(stadium_id, booking_date):
     discount_percentage = int(settings.discount_percentage or 25)
     price_per_hour = int(BASE_PRICE_PER_HOUR)
 
-    # ✅ المنطق الصحيح:
-    # كل ساعة في قائمة العرض لها "save_date" فعلي في قاعدة البيانات.
-    # نبني خريطة: hour → real_date_in_db
-    # ثم نفحص الحجوزات بناءً على (real_date, hour) وليس بشروط معقدة.
-
     hours = build_hours_list(opening, closing)
 
-    # بناء خريطة hour → real_save_date
     hour_to_save_date = {}
     for h in hours:
         hour_to_save_date[h] = get_midnight_save_date(booking_date_obj, h, settings)
 
-    # جمع كل التواريخ الفعلية المطلوبة
     all_save_dates = set(hour_to_save_date.values())
-    # أضف اليوم السابق لأن حجز 23:00 قد يمتد
     all_save_dates.add(booking_date_obj - timedelta(days=1))
 
     existing_bookings = Booking.query.filter(
@@ -194,7 +170,6 @@ def get_availability_slots(stadium_id, booking_date):
         Booking.status.in_(["pending", "confirmed", "pending_cancel"])
     ).all()
 
-    # بناء مجموعة (date, hour) لكل حالة
     confirmed_slots = set()
     pending_slots = set()
     pending_cancel_slots = set()
@@ -209,6 +184,12 @@ def get_availability_slots(stadium_id, booking_date):
             elif b.status == 'pending_cancel':
                 pending_cancel_slots.add(key)
 
+
+    iraq_tz = timezone(timedelta(hours=3))
+    now = datetime.now(iraq_tz)
+    today = now.date()
+    current_hour = now.hour
+
     slots = []
     for hour in hours:
         real_date = hour_to_save_date[hour]
@@ -218,6 +199,14 @@ def get_availability_slots(stadium_id, booking_date):
         is_pending = key in pending_slots
         is_pending_cancel = key in pending_cancel_slots
         is_disc = is_discount_hour(hour, discount_start, discount_end)
+
+        # ✅ FIXED: past = strictly less than current hour
+        # At 09:30 → hours 0–8 are past, hour 9 onwards is available
+        # For after-midnight hours (00:00–closing), they belong to tonight, never past
+        opening = int(settings.opening_hour or 12)
+        closing = int(settings.closing_hour or 4)
+        is_after_midnight_hour = (opening > closing) and (hour < closing)
+        is_past = (booking_date_obj == today) and (hour < current_hour) and (not is_after_midnight_hour)
 
         slot_price = price_per_hour
         if is_disc:
@@ -230,6 +219,7 @@ def get_availability_slots(stadium_id, booking_date):
             'is_pending': is_pending,
             'is_pending_cancel': is_pending_cancel,
             'is_discount': is_disc,
+            'is_past': is_past,
             'discount_percentage': discount_percentage if is_disc else 0,
             'price': slot_price
         })
@@ -261,6 +251,16 @@ def check_availability():
 
     settings = Settings.query.first()
     save_date = get_midnight_save_date(booking_date_obj, start_hour, settings)
+
+    now = datetime.now()
+    today = date.today()
+
+    if save_date < today:
+        return jsonify({'available': False, 'message': 'Cannot book past dates'}), 400
+
+    # ✅ FIXED: block only if strictly before current hour
+    if save_date == today and start_hour < now.hour:
+        return jsonify({'available': False, 'message': 'Cannot book a time that has already passed'}), 400
 
     requested_start_dt = datetime.combine(save_date, time(hour=start_hour, minute=0))
     requested_slots = set()
@@ -298,11 +298,17 @@ def create_booking():
         start_hour = int(data['start_hour']) % 24
         duration = safe_duration(data.get('duration_hours', 1))
 
-        # ✅ التاريخ الفعلي للحفظ
         save_date = get_midnight_save_date(booking_date, start_hour, settings)
 
-        if save_date < date.today():
+        now = datetime.now()
+        today = date.today()
+
+        if save_date < today:
             return jsonify({'success': False, 'message': 'Cannot book past dates'}), 400
+
+        # ✅ FIXED: block only if strictly before current hour
+        if save_date == today and start_hour < now.hour:
+            return jsonify({'success': False, 'message': 'Cannot book a time that has already passed'}), 400
 
         stadium = Stadium.query.get(stadium_id)
         if not stadium:
